@@ -1,12 +1,12 @@
 import '@mantine/core/styles.css';
 import { MantineProvider } from '@mantine/core';
 import { theme } from './styles/theme';
-import { LoginPage } from './pages/Login';
+import { MenuInicial } from './pages/MenuInicial';
 
 function App() {
   return (
     <MantineProvider theme={theme}>
-      <LoginPage />
+      <MenuInicial />
     </MantineProvider>
   )
 }
