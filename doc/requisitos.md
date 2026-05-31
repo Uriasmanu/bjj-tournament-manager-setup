@@ -59,6 +59,7 @@ O sistema será distribuído como software desktop utilizando Electron.
 ## Componentes Visuais
 
 * Mantine UI
+* Tabler Icons
 
 ---
 
