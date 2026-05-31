@@ -12,6 +12,7 @@ import { CriarTorneio } from './pages/CriarTorneio';
 import { ImportarTorneio } from './pages/ImportarTorneio';
 import { ListarTorneios } from './pages/ListarTorneios';
 import { AdminAthletes } from './pages/AdminAthletes';
+import { AthletesMenu } from './pages/AthletesMenu';
 import { ActivationScreen } from './components/ActivationScreen';
 
 function MainApp() {
@@ -23,7 +24,8 @@ function MainApp() {
         <Route path="/admin/criar-torneio" element={<CriarTorneio />} />
         <Route path="/admin/importar-torneio" element={<ImportarTorneio />} />
         <Route path="/admin/listar-torneios" element={<ListarTorneios />} />
-        <Route path="/admin/atletas" element={<AdminAthletes />} />
+        <Route path="/admin/atletas" element={<AthletesMenu />} />
+        <Route path="/admin/atletas/lista" element={<AdminAthletes />} />
       </Routes>
     </BrowserRouter>
   )

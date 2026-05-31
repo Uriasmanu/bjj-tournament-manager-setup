@@ -1,6 +1,6 @@
 import { Modal, TextInput, NumberInput, Select, Button, Group, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Atleta, Faixa } from '../types/athlete';
 
 const faixas: { group: string; items: { value: Faixa; label: string }[] }[] = [
@@ -31,11 +31,19 @@ const anoAtual = new Date().getFullYear();
 interface AthleteFormProps {
   opened: boolean;
   onClose: () => void;
-  onSave: (athlete: Atleta) => Promise<void>;
+  onSave: (athlete: Atleta) => Promise<boolean>;
   athlete?: Atleta | null;
 }
 
 export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormProps) {
+  const formKey = useRef(0);
+
+  useEffect(() => {
+    if (opened) {
+      formKey.current += 1;
+    }
+  }, [opened]);
+
   const form = useForm({
     mode: 'uncontrolled',
     initialValues: {
@@ -82,20 +90,21 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
     const now = new Date().toISOString();
     const data: Atleta = {
       id: athlete?.id || crypto.randomUUID(),
-      nome: values.nome,
-      equipe: values.equipe,
+      nome: values.nome.trim().toLowerCase(),
+      equipe: values.equipe.trim().toLowerCase(),
       pesoKg: Number(values.pesoKg),
       faixa: values.faixa as Faixa,
       anoNascimento: Number(values.anoNascimento),
       createdAt: athlete?.createdAt || now,
       updatedAt: now,
     };
-    await onSave(data);
-    onClose();
+    const saved = await onSave(data);
+    if (saved) onClose();
   };
 
   return (
     <Modal
+      key={formKey.current}
       opened={opened}
       onClose={onClose}
       title={athlete ? 'Editar Atleta' : 'Novo Atleta'}

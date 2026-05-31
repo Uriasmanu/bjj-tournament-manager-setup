@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('update-athlete', athlete),
   deleteAthlete: (id: string) =>
     ipcRenderer.invoke('delete-athlete', id),
+  importAthletes: () =>
+    ipcRenderer.invoke('import-athletes'),
 })
 
 contextBridge.exposeInMainWorld('activation', {

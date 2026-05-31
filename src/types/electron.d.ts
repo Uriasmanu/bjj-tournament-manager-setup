@@ -23,6 +23,7 @@ interface ElectronAPI {
   saveAthlete: (athlete: Atleta) => Promise<Atleta[]>;
   updateAthlete: (athlete: Atleta) => Promise<Atleta[]>;
   deleteAthlete: (id: string) => Promise<Atleta[]>;
+  importAthletes: () => Promise<{ imported: number; skipped: number }>;
 }
 
 interface ActivationAPI {

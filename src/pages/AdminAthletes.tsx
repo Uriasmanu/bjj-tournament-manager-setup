@@ -1,6 +1,6 @@
 import { Container, Paper, Title, Text, Button, Stack, Group, Loader, Center, Modal } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus } from '@tabler/icons-react';
+import { IconPlus, IconFileUpload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState } from 'react';
 import type { Atleta } from '../types/athlete';
@@ -49,7 +49,21 @@ export function AdminAthletes() {
     openDelete();
   };
 
-  const handleSave = async (athlete: Atleta) => {
+  const handleSave = async (athlete: Atleta): Promise<boolean> => {
+    const duplicate = athletes.some(
+      (a) =>
+        a.id !== athlete.id &&
+        a.nome.trim().toLowerCase() === athlete.nome.trim().toLowerCase() &&
+        a.anoNascimento === athlete.anoNascimento
+    );
+    if (duplicate) {
+      notifications.show({
+        title: 'Erro',
+        message: 'Já existe um atleta cadastrado com este nome e ano de nascimento.',
+        color: 'red',
+      });
+      return false;
+    }
     try {
       if (selectedAthlete) {
         await window.electronAPI.updateAthlete(athlete);
@@ -59,8 +73,10 @@ export function AdminAthletes() {
         notifications.show({ title: 'Sucesso', message: 'Atleta cadastrado com sucesso!', color: 'green' });
       }
       await loadAthletes();
+      return true;
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao salvar o atleta.', color: 'red' });
+      return false;
     }
   };
 
@@ -74,6 +90,18 @@ export function AdminAthletes() {
       await loadAthletes();
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao excluir o atleta.', color: 'red' });
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const result = await window.electronAPI.importAthletes();
+      if (result.imported === 0 && result.skipped === 0) return;
+      const msg = `${result.imported} atleta(s) importado(s)${result.skipped > 0 ? `, ${result.skipped} ignorado(s) (já existentes)` : ''}.`;
+      notifications.show({ title: 'Sucesso', message: msg, color: 'green' });
+      await loadAthletes();
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao importar atletas.', color: 'red' });
     }
   };
 
@@ -101,12 +129,17 @@ export function AdminAthletes() {
   }
 
   return (
-    <PageLayout title="Cadastro de Atletas" backRoute="/admin/dashboard">
+    <PageLayout title="Cadastro de Atletas" backRoute="/admin/atletas">
       <Group mb="md" justify="space-between">
         <Title order={2} style={{ flex: 1 }}>Cadastro de Atletas</Title>
-        <Button leftSection={<IconPlus size={16} />} onClick={handleNew}>
-          Novo Atleta
-        </Button>
+        <Group>
+          <Button variant="outline" leftSection={<IconFileUpload size={16} />} onClick={handleImport}>
+            Importar
+          </Button>
+          <Button leftSection={<IconPlus size={16} />} onClick={handleNew}>
+            Cadastrar
+          </Button>
+        </Group>
       </Group>
 
       {athletes.length === 0 ? (

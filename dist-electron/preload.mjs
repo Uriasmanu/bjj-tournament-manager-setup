@@ -14,7 +14,8 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   loadAthletes: () => electron.ipcRenderer.invoke("load-athletes"),
   saveAthlete: (athlete) => electron.ipcRenderer.invoke("save-athlete", athlete),
   updateAthlete: (athlete) => electron.ipcRenderer.invoke("update-athlete", athlete),
-  deleteAthlete: (id) => electron.ipcRenderer.invoke("delete-athlete", id)
+  deleteAthlete: (id) => electron.ipcRenderer.invoke("delete-athlete", id),
+  importAthletes: () => electron.ipcRenderer.invoke("import-athletes")
 });
 electron.contextBridge.exposeInMainWorld("activation", {
   check: () => electron.ipcRenderer.invoke("check-activation"),

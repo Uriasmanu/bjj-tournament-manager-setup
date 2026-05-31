@@ -1,4 +1,4 @@
-import { app } from 'electron'
+import { app, dialog } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
 import type { Atleta } from '../src/types/athlete'
@@ -39,4 +39,56 @@ function deleteAthlete(id: string): Atleta[] {
   return list
 }
 
-export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete }
+function importAthletesFromFile(filePath: string): { imported: number; skipped: number } {
+  const raw = fs.readFileSync(filePath, 'utf-8')
+  const incoming: Atleta[] = JSON.parse(raw)
+
+  if (!Array.isArray(incoming)) {
+    throw new Error('Arquivo inválido: o conteúdo deve ser um array de atletas.')
+  }
+
+  for (const a of incoming) {
+    if (!a.id || !a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome || 'sem nome'}" — campos obrigatórios ausentes.`)
+    }
+  }
+
+  const current = loadAthletes()
+  let imported = 0
+  let skipped = 0
+
+  for (const a of incoming) {
+    const nomeLower = a.nome.trim().toLowerCase()
+    const equipeLower = a.equipe.trim().toLowerCase()
+    const exists = current.some(
+      ex =>
+        ex.id === a.id ||
+        (ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento)
+    )
+    if (!exists) {
+      a.nome = nomeLower
+      a.equipe = equipeLower
+      current.push({
+        ...a,
+        createdAt: a.createdAt || new Date().toISOString(),
+        updatedAt: a.updatedAt || new Date().toISOString(),
+      })
+      imported++
+    } else {
+      skipped++
+    }
+  }
+
+  fs.writeFileSync(FILE, JSON.stringify(current, null, 2), 'utf-8')
+  return { imported, skipped }
+}
+
+async function openAthleteFileDialog(): Promise<string | null> {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
+}
+
+export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog }

@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerTournamentHandlers } from './tournament'
-import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete } from './athletes'
+import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog } from './athletes'
 import { checkActivation, validatePassword, activateLicense } from './activation'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -83,6 +83,12 @@ function registerAthleteHandlers(): void {
 
   ipcMain.handle('delete-athlete', (_event, id: string): ReturnType<typeof deleteAthlete> => {
     return deleteAthlete(id)
+  })
+
+  ipcMain.handle('import-athletes', async (): Promise<{ imported: number; skipped: number }> => {
+    const filePath = await openAthleteFileDialog()
+    if (!filePath) return { imported: 0, skipped: 0 }
+    return importAthletesFromFile(filePath)
   })
 }
 

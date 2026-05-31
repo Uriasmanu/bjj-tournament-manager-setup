@@ -152,6 +152,49 @@ function deleteAthlete(id) {
   fs.writeFileSync(FILE, JSON.stringify(list, null, 2), "utf-8");
   return list;
 }
+function importAthletesFromFile(filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const incoming = JSON.parse(raw);
+  if (!Array.isArray(incoming)) {
+    throw new Error("Arquivo inválido: o conteúdo deve ser um array de atletas.");
+  }
+  for (const a of incoming) {
+    if (!a.id || !a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome || "sem nome"}" — campos obrigatórios ausentes.`);
+    }
+  }
+  const current = loadAthletes();
+  let imported = 0;
+  let skipped = 0;
+  for (const a of incoming) {
+    const nomeLower = a.nome.trim().toLowerCase();
+    const equipeLower = a.equipe.trim().toLowerCase();
+    const exists = current.some(
+      (ex) => ex.id === a.id || ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento
+    );
+    if (!exists) {
+      a.nome = nomeLower;
+      a.equipe = equipeLower;
+      current.push({
+        ...a,
+        createdAt: a.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: a.updatedAt || (/* @__PURE__ */ new Date()).toISOString()
+      });
+      imported++;
+    } else {
+      skipped++;
+    }
+  }
+  fs.writeFileSync(FILE, JSON.stringify(current, null, 2), "utf-8");
+  return { imported, skipped };
+}
+async function openAthleteFileDialog() {
+  const result = await dialog.showOpenDialog({
+    properties: ["openFile"],
+    filters: [{ name: "JSON", extensions: ["json"] }]
+  });
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
+}
 const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "57a8d2d84be94e9bdae407ad8352065346269c6997b0be31ff32101fc51e7c3e";
 const ACTIVATION_FILE = "activation.json";
 function getActivationPath() {
@@ -240,6 +283,11 @@ function registerAthleteHandlers() {
   });
   ipcMain.handle("delete-athlete", (_event, id) => {
     return deleteAthlete(id);
+  });
+  ipcMain.handle("import-athletes", async () => {
+    const filePath = await openAthleteFileDialog();
+    if (!filePath) return { imported: 0, skipped: 0 };
+    return importAthletesFromFile(filePath);
   });
 }
 function registerActivationHandlers() {
