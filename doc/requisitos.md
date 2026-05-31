@@ -10,88 +10,233 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 ---
 
-## 2. Objetivos do Sistema
+## 2. Status da Implementação
 
-O sistema deverá permitir:
+### 2.1. Implementado (MVP)
 
-* Criação, importação, listagem e exportação de torneios.
-* Inicialização de torneio (definir torneio ativo para gerenciamento).
-* Cadastro de atletas.
-* Cadastro de equipes.
-* Cadastro de campeonatos.
-* Cadastro de categorias.
-* Controle de inscrições.
-* Controle de pesagem.
-* Geração automática de chaves.
-* Gerenciamento de áreas de luta.
-* Gerenciamento de árbitros.
-* Controle de chamadas para as lutas.
-* Controle de placares.
-* Registro de resultados.
-* Definição automática dos vencedores das chaves.
-* Exibição de rankings e medalhistas.
-* Emissão de relatórios.
-* Exportação e importação de dados.
-* Operação totalmente offline.
+| Módulo | Status | Observação |
+|---|---|---|
+| Menu Inicial | ✅ Completo | Tela com 3 cartões (Criar, Importar, Listar) + teclas 1/2/3 |
+| Criar Torneio | ✅ Completo | Formulário com nome (opcional), data (futura), validação, IPC |
+| Importar Torneio | ✅ Completo | Upload JSON, validação de estrutura, modal de sobrescrita |
+| Listar Torneios | ⚡ Parcial | Tabela com Iniciar/Exportar implementados; faltam Editar e Excluir |
+| Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (electron/tournament.ts) |
+| Tema Mantine UI | ✅ Completo | Tema azul royal, fonte Inter |
+
+### 2.2. Não Implementado (Planejado)
+
+| Módulo | Status | Observação |
+|---|---|---|
+| Editar Torneio (navegar para Dashboard) | ❌ Pendente | Botão de editar na listagem |
+| Excluir Torneio | ❌ Pendente | Botão de excluir com modal de confirmação na listagem |
+| Cadastro de Atletas | ❌ Pendente | Spec existente em spec/cadastro-atletas.md |
+| Cadastro de Equipes | ❌ Pendente | Apenas mencionado |
+| Cadastro de Categorias | ❌ Pendente | Apenas mencionado |
+| Controle de Inscrições | ❌ Pendente | Apenas mencionado |
+| Controle de Pesagem | ❌ Pendente | Apenas mencionado |
+| Geração de Chaves | ❌ Pendente | Apenas mencionado |
+| Áreas de Luta | ❌ Pendente | Apenas mencionado |
+| Árbitros | ❌ Pendente | Apenas mencionado |
+| Chamadas / Placar / Resultados | ❌ Pendente | Apenas mencionado |
+| Ranking / Medalhistas | ❌ Pendente | Apenas mencionado |
+| Relatórios | ❌ Pendente | Apenas mencionado |
+| Exportação/Importação de dados completos | ❌ Pendente | Apenas exportação do JSON do torneio |
+| Dashboard Administrativo | ❌ Pendente | Rota `/admin/dashboard` existe mas sem tela |
+| Tela de Login/Ativação | ❌ Pendente | Spec em spec/validacao-credential.md; Login.tsx não integrado |
 
 ---
 
-## 3. Plataforma
+## 3. Regras de Negócio
+
+### 3.1. Torneio
+
+- **Entidade raiz do sistema:** Para acessar qualquer funcionalidade administrativa (atletas, chaves, categorias), é necessário primeiro **iniciar um torneio** (defini-lo como ativo).
+- **Múltiplos torneios:** O sistema suporta múltiplos torneios simultaneamente, cada um armazenado em arquivo JSON individual.
+- **Torneio ativo:** Apenas um torneio pode estar ativo por vez. O ID do torneio ativo é armazenado em `torneio-ativo.json`.
+- **Título do torneio:** Se o campo `nome` for preenchido, o título exibido é o nome informado. Caso contrário, o título é "Torneio {data}" no formato `dd/MM/yyyy`.
+- **Data futura:** A data do torneio deve ser posterior ao dia atual (dia atual e passados são rejeitados).
+- **ID único:** Cada torneio recebe um UUID v4 gerado no momento da criação.
+- **Persistência imediata:** O arquivo JSON do torneio é criado no momento da confirmação do formulário ou da importação.
+
+### 3.2. Criação de Torneio
+
+- Campo `nome` é opcional (string vazia se não informado).
+- Campo `data` é obrigatório e deve ser uma data futura.
+- Data é armazenada em ISO (`YYYY-MM-DD`) e exibida no formato brasileiro (`DD/MM/YYYY`).
+- Após criar, o usuário é redirecionado para a listagem de torneios.
+
+### 3.3. Importação de Torneio
+
+- Apenas arquivos com extensão `.json` são aceitos.
+- O arquivo deve conter os campos obrigatórios: `id`, `data`, `nome`.
+- Se o `id` do torneio importado já existir no diretório, o sistema pergunta se deseja sobrescrever.
+- Após importar, o usuário é redirecionado para a listagem de torneios.
+
+### 3.4. Exportação de Torneio
+
+- Abre diálogo nativo "Salvar como" para o usuário escolher o destino.
+- Gera uma cópia exata do arquivo JSON do torneio.
+- Nome padrão sugerido: `{nome}_Torneio_{data}.json` (caracteres especiais substituídos por `_`).
+
+### 3.5. Inicialização de Torneio (Iniciar)
+
+- Define o torneio como ativo escrevendo seu `id` em `torneio-ativo.json`.
+- Após iniciar, redireciona para o Dashboard Administrativo (`/admin/dashboard`).
+- Apenas um torneio pode estar ativo por vez (iniciar um novo substitui o anterior).
+
+### 3.6. Edição de Torneio
+
+- Cada torneio na listagem exibe um botão "Editar" (ícone de lápis).
+- Ao clicar em "Editar", o torneio é definido como ativo (mesmo comportamento de "Iniciar") e redireciona para o Dashboard Administrativo (`/admin/dashboard`).
+- O Dashboard é a tela onde o usuário poderá gerenciar todas as configurações do torneio (nome, data, categorias, atletas, etc.).
+
+### 3.7. Exclusão de Torneio
+
+- Cada torneio na listagem exibe um botão "Excluir" (ícone de lixeira).
+- Ao clicar em "Excluir", abre um modal de confirmação: "Deseja realmente excluir este torneio? Esta ação não pode ser desfeita."
+- Se confirmado, o arquivo JSON do torneio é removido do diretório `{userData}/data/torneios/`.
+- Se o torneio excluído for o torneio ativo, o arquivo `torneio-ativo.json` também deve ser removido.
+- Notificação de sucesso é exibida e a listagem é atualizada.
+- Se houver erro, notificação de erro é exibida.
+
+### 3.6. Atletas (a implementar)
+
+- Nome e equipe são obrigatórios (mínimo 2 caracteres).
+- Peso deve estar entre 1 e 300 kg.
+- Faixa segue enum: infantil (branca, cinza, amarela, laranja, verde) e adulto (branca, azul, roxa, marrom, preta).
+- Ano de nascimento entre 1920 e ano atual.
+- Idade é calculada dinamicamente (`ano atual - ano nascimento`), não persistida.
+
+### 3.7. Ativação do Software (a implementar)
+
+- Na primeira execução, exige senha de ativação fornecida pelo desenvolvedor.
+- Senha validada por hash SHA-256 (nunca armazenada em texto puro).
+- Após ativação bem-sucedida, gera token HMAC vinculado ao hardware (UUID da máquina).
+- Token salvo em `userData`; execuções subsequentes verificam o token automaticamente.
+
+---
+
+## 4. Plataforma
 
 A aplicação será desenvolvida para:
 
-* Windows 10
-* Windows 11
+- Windows 10
+- Windows 11
 
 O sistema será distribuído como software desktop utilizando Electron.
 
 ---
 
-## 4. Stack Tecnológica
+## 5. Stack Tecnológica
 
 ### Desktop
 
-* Electron
+- Electron 30
 
 ### Interface
 
-* React
-* TypeScript
+- React 18
+- TypeScript 5
+- Vite 5
+- Mantine UI 7
+- Tabler Icons 3
+- React Router 6
+- dayjs
 
-### Componentes Visuais
+### Formulários
 
-* Mantine UI
-* Tabler Icons
+- `@mantine/form` com validação
 
-### Navegação
+### Build
 
-* React Router
+- electron-builder
+- vite-plugin-electron
 
 ---
 
-## 5. Persistência de Dados
+## 6. Persistência de Dados
 
-O sistema utilizará exclusivamente arquivos JSON para armazenamento local.
+O sistema utiliza exclusivamente arquivos JSON para armazenamento local.
 
-Não haverá dependência de banco de dados externo.
+Não há dependência de banco de dados externo.
 
-Toda a operação deverá funcionar offline.
+Toda a operação deve funcionar offline.
 
-### 5.1. Geração dos Arquivos JSON
+### 6.1. Geração dos Arquivos JSON
 
 Cada entidade do sistema é persistida em um ou mais arquivos JSON. Os torneios são armazenados em arquivos individuais dentro do diretório `{userData}/data/torneios/`. O arquivo JSON de cada torneio é gerado **no momento da criação** (ao preencher Nome + Data e confirmar) ou no momento da **importação** (ao selecionar um JSON válido). Antes dessas ações o arquivo não existe em disco.
 
 O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que armazena o `id` do torneio em uso.
 
+### 6.2. Estrutura de Diretórios
+
+```
+{userData}/
+  data/
+    torneios/
+      {id}.json           # Arquivo individual de cada torneio
+    torneio-ativo.json    # { "id": "uuid-do-torneio-ativo" }
+```
+
 ---
 
-## 6. Identidade Visual
+## 7. Comunicação Main <> Renderer (IPC)
 
-### 6.1 Tema Principal
+| Canal | Direção | Status | Descrição |
+|---|---|---|---|
+| `create-tournament` | Renderer → Main | ✅ | Cria novo torneio e salva no diretório |
+| `list-tournaments` | Renderer → Main → Renderer | ✅ | Retorna array com todos os torneios |
+| `start-tournament` | Renderer → Main | ✅ | Define torneio como ativo |
+| `get-active-tournament` | Renderer → Main → Renderer | ✅ | Retorna torneio ativo ou null |
+| `export-tournament` | Renderer → Main | ✅ | Abre diálogo para exportar JSON |
+| `import-tournament` | Renderer → Main | ✅ | Importa JSON para diretório de torneios |
+| `import-tournament-overwrite` | Renderer → Main | ✅ | Sobrescreve torneio existente |
+| `read-file` | Renderer → Main → Renderer | ✅ | Lê conteúdo de arquivo do disco |
+| `update-tournament` | Renderer → Main | ❌ | Pendente — atualizar dados do torneio |
+| `delete-tournament` | Renderer → Main | ❌ | Pendente — remover arquivo JSON do torneio |
+| `load-athletes` | Renderer → Main → Renderer | ❌ | Pendente — carregar atletas |
+| `save-athlete` | Renderer → Main | ❌ | Pendente — salvar atleta |
+| `update-athlete` | Renderer → Main | ❌ | Pendente — atualizar atleta |
+| `delete-athlete` | Renderer → Main | ❌ | Pendente — remover atleta |
+
+---
+
+## 8. Rotas da Aplicação
+
+| Rota | Componente | Status | Descrição |
+|---|---|---|---|
+| `/` | MenuInicial | ✅ | Menu principal com 3 opções |
+| `/admin/criar-torneio` | CriarTorneio | ✅ | Formulário de criação |
+| `/admin/importar-torneio` | ImportarTorneio | ✅ | Tela de importação |
+| `/admin/listar-torneios` | ListarTorneios | ✅ | Lista com Iniciar / Exportar / Editar / Excluir |
+| `/admin/dashboard` | — | ❌ | Pendente — Dashboard Administrativo |
+
+### Fluxo de Navegação
+
+```
+[Menu Inicial]
+  ├── Criar Torneio      → /admin/criar-torneio
+  │                        └── (após criar) → /admin/listar-torneios
+  │
+  ├── Importar Torneio   → /admin/importar-torneio
+  │                        └── (após importar) → /admin/listar-torneios
+  │
+   └── Listar Torneios    → /admin/listar-torneios
+                           ├── [Iniciar] → /admin/dashboard
+                           ├── [Editar] → /admin/dashboard (define como ativo)
+                           ├── [Exportar] → diálogo "Salvar como"
+                           └── [Excluir] → modal de confirmação → remove arquivo
+```
+
+---
+
+## 9. Identidade Visual
+
+### 9.1 Tema Principal
 
 A identidade visual do sistema será inspirada em aplicações administrativas modernas, utilizando cores que transmitam organização, confiança e profissionalismo.
 
-#### 6.1.1 Paleta de Cores
+#### 9.1.1 Paleta de Cores
 
 | Elemento | Cor | Uso |
 |---|---|---|
@@ -104,33 +249,33 @@ A identidade visual do sistema será inspirada em aplicações administrativas m
 | **Confirmação** | Verde (`#2E7D32`) | Resultados positivos, status concluídos, aprovações |
 | **Alerta** | Amarelo Royal | Alertas, avisos, destaques temporários, indicadores de atenção |
 
-#### 6.1.2 Tipografia
+#### 9.1.2 Tipografia
 
 | Elemento | Fonte | Peso | Tamanho |
 |---|---|---|---|
-| **Título principal** | Sans-serif | Bold (700) | 28px–36px |
-| **Opções do menu** | Sans-serif | Semibold (600) | 18px–22px |
-| **Texto auxiliar** | Sans-serif | Regular (400) | 14px |
+| **Título principal** | Inter, sans-serif | Bold (700) | 28px–36px (clamp) |
+| **Opções do menu** | Inter, sans-serif | Semibold (600) | 18px–22px |
+| **Texto auxiliar** | Inter, sans-serif | Regular (400) | 14px |
 
 ---
 
-## 7. Tela Inicial — Menu de Seleção
+## 10. Tela Inicial — Menu de Seleção
 
-### 7.1 User Story
+### 10.1 User Story
 
 O usuário principal, após fechar as inscrições em seu sistema externo, abre o BJJ Tournament Manager para organizar o torneio que acontecerá no futuro. Ele então escolhe entre **criar um novo torneio** ou **importar um torneio** previamente exportado. Também pode **listar os torneios** já cadastrados para iniciar ou exportar um deles.
 
-### 7.2 Descrição
+### 10.2 Descrição
 
 A primeira tela do sistema exibe um menu com três opções principais:
 
 1. **Criar Torneio** — Abertura do formulário de cadastro de um novo torneio.
 2. **Importar Torneio** — Importação de um torneio a partir de um arquivo JSON.
-3. **Listar Torneios** — Visualização de todos os torneios cadastrados, com ações de iniciar (definir como ativo) ou exportar (salvar JSON em outro local).
+3. **Listar Torneios** — Visualização de todos os torneios cadastrados, com ações de iniciar, editar, exportar ou excluir cada um.
 
-> **Fluxo:** Criar e importar geram o arquivo JSON do torneio no disco. Para acessar o Dashboard Administrativo é necessário primeiro **iniciar um torneio** pela lista.
+> **Fluxo:** Criar e importar geram o arquivo JSON do torneio no disco. Para acessar o Dashboard Administrativo é necessário primeiro **iniciar** ou **editar** um torneio pela lista.
 
-### 7.3 Layout
+### 10.3 Layout
 
 ```
 +--------------------------------------------------+
@@ -163,18 +308,18 @@ A primeira tela do sistema exibe um menu com três opções principais:
 +--------------------------------------------------+
 ```
 
-### 7.4 Componentes da Tela
+### 10.4 Componentes da Tela
 
-1. **Logotipo / Título:** Centralizado no topo. Pode conter um ícone ou símbolo (kimono/faixa) antes do texto.
+1. **Logotipo / Título:** Centralizado no topo.
 2. **Cartões de opção:** Cada opção é um cartão (Card do Mantine) com:
-   - Ícone representativo (32px–40px) na cor Azul Royal.
+   - Ícone representativo (36px) na cor Azul Royal.
    - Título da opção em negrito.
    - Descrição curta em cinza (`#666`).
    - Sombra suave (box-shadow) para elevação.
-   - Borda arredondada (`border-radius: 8px–12px`).
+   - Borda arredondada (`border-radius: md`).
 3. **Instrução de navegação:** Texto centralizado na parte inferior indicando as teclas `1`, `2` ou `3`.
 
-### 7.5 Comportamento
+### 10.5 Comportamento
 
 #### Abertura do sistema
 - Ao iniciar o Electron, esta tela é carregada imediatamente como rota padrão (`/`).
@@ -187,10 +332,10 @@ O usuário pode selecionar uma opção de três formas:
 - **Tab + Enter:** Navega entre os cartões com Tab e confirma com Enter.
 
 #### Feedback visual
-- **Hover:** Cartão eleva-se ligeiramente (sombra mais pronunciada), borda sutil com Azul Royal.
+- **Hover:** Cartão eleva-se ligeiramente (sombra mais pronunciada, translateY(-2px)).
 - **Focus (teclado):** Anel de foco visível (outline Azul Royal) ao redor do cartão.
 - **Active/Pressionado:** Efeito de clique (escala 0.98, sombra reduzida).
-- **Transição:** Animações suaves de 200ms–300ms para hover, focus e active.
+- **Transição:** Animações suaves de 200ms para hover, focus e active.
 
 #### Navegação pós-seleção
 
@@ -200,25 +345,23 @@ O usuário pode selecionar uma opção de três formas:
 | **Importar Torneio** | Redireciona para `/admin/importar-torneio`. |
 | **Listar Torneios** | Redireciona para `/admin/listar-torneios`. |
 
-### 7.6 Estados da Tela
+### 10.6 Estados da Tela
 
 | Estado | Descrição |
 |---|---|
 | **Normal** | Tela exibida com as três opções prontas para seleção. |
-| **Fallback / Erro** | Se ocorrer um erro grave ao carregar configurações, exibir mensagem amigável com botão "Tentar novamente". |
 
-### 7.7 Acessibilidade
+### 10.7 Acessibilidade
 
-- Cartões devem ser elementos `<button>` ou `<a>` semânticos, ou utilizar `Card` do Mantine com `role="button"`, `tabIndex={0}` e `onKeyDown`.
-- Atributos `aria-label` nos cartões: "Criar Torneio", "Importar Torneio" e "Listar Torneios".
-- Suporte a `prefers-reduced-motion`: desabilitar animações se o usuário optar por redução de movimento.
-- Contraste de cores deve atender WCAG AA (taxa de contraste mínima de 4.5:1 para texto normal).
+- Cartões utilizam `role="button"`, `tabIndex={0}` e `onKeyDown`.
+- Atributos `aria-label` nos cartões.
+- Suporte a navegação por teclado (Tab, Enter, teclas numéricas).
 
 ---
 
-## 8. Requisitos Não Funcionais
+## 11. Requisitos Não Funcionais
 
-### 8.1 Requisitos Gerais
+### 11.1 Requisitos Gerais
 
 O sistema deverá:
 
@@ -233,18 +376,66 @@ O sistema deverá:
 - Seguir os princípios **SOLID** em toda a arquitetura do código.
 - Seguir as **boas práticas de programação** (código limpo, legível, testável e de fácil manutenção).
 
-### 8.2 Responsividade
+### 11.2 Responsividade
 
 | Dispositivo | Largura típica | Comportamento |
 |---|---|---|
-| **Desktop / Notebook** | ≥ 1024px | Layout centralizado, cartões com largura máxima de 480px. |
+| **Desktop / Notebook** | ≥ 1024px | Layout centralizado, cartões com largura máxima. |
 | **Tablet** | 768px – 1023px | Cartões empilhados verticalmente, fonte ajustada. |
-| **TV (monitor grande)** | ≥ 1920px | Escala proporcional: título maior (40px+), cartões com mais padding. |
-| **Resoluções muito baixas** | < 768px | Rolagem vertical se necessário; fonte reduzida proporcionalmente. |
+| **TV (monitor grande)** | ≥ 1920px | Escala proporcional. |
+| **Resoluções muito baixas** | < 768px | Rolagem vertical se necessário; fonte reduzida. |
 
-### 8.3 Acessibilidade
+### 11.3 Acessibilidade
 
 - Contraste de cores deve atender WCAG AA (taxa mínima de 4.5:1 para texto normal).
 - Suporte a `prefers-reduced-motion`.
 - Navegação por teclado (Tab, Enter, teclas numéricas).
 - Atributos `aria-label` em todos os elementos interativos.
+
+---
+
+## 12. Estrutura de Arquivos (Implementada)
+
+```
+bjj-tournament-manager-setup/
+├── electron/
+│   ├── main.ts              ← Registro dos handlers IPC, criação da janela
+│   ├── preload.ts           ← Exposição dos canais IPC (contextBridge)
+│   ├── tournament.ts        ← Lógica CRUD de torneios no sistema de arquivos
+│   └── electron-env.d.ts    ← Tipos de ambiente Electron
+│
+├── src/
+│   ├── main.tsx             ← Entry point React
+│   ├── App.tsx              ← Rotas e providers (Mantine, Notifications, Router)
+│   ├── vite-env.d.ts
+│   ├── pages/
+│   │   ├── MenuInicial.tsx      ← Tela inicial (Criar / Importar / Listar)
+│   │   ├── CriarTorneio.tsx     ← Formulário de criação de torneio
+│   │   ├── ImportarTorneio.tsx  ← Tela de importação com upload e validação
+│   │   ├── ListarTorneios.tsx   ← Lista com ações Iniciar / Editar / Exportar / Excluir
+│   │   └── Login.tsx            ← Tela de login (não integrada ao App)
+│   ├── types/
+│   │   ├── tournament.ts        ← Interfaces Torneio, CreateTorneioInput
+│   │   └── electron.d.ts        ← Tipos globais do Window.electronAPI
+│   ├── styles/
+│   │   ├── theme.ts             ← Tema Mantine UI (cores, fontes, componentes)
+│   │   └── global.css           ← Reset e estilos globais
+│   └── assets/                  ← (vazio)
+│
+├── spec/
+│   ├── tela-inicial-menu.md     ← Spec da tela inicial
+│   ├── criar-torneio.md         ← Spec do gerenciamento de torneios
+│   ├── cadastro-atletas.md      ← Spec do cadastro de atletas (não implementado)
+│   └── validacao-credential.md  ← Spec da ativação do software (não implementado)
+│
+├── doc/
+│   └── requisitos.md            ← Este documento
+│
+├── package.json
+├── vite.config.ts
+├── tsconfig.json
+├── tsconfig.node.json
+├── electron-builder.json5
+├── .eslintrc.cjs
+└── .gitignore
+```
