@@ -31,6 +31,23 @@ export function Dashboard() {
   const navigate = useNavigate();
   const [torneio, setTorneio] = useState<Torneio | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cols, setCols] = useState(4);
+
+  const updateCols = () => {
+    const w = window.innerWidth;
+    if (w < 700) setCols(1);
+    else if (w < 1000) setCols(2);
+    else if (w < 1400) setCols(2);
+    else if (w < 1800) setCols(3);
+    else setCols(4);
+  };
+
+  useEffect(() => {
+    updateCols();
+    const onResize = () => updateCols();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     window.electronAPI.getActiveTournament().then((t) => {
@@ -38,6 +55,8 @@ export function Dashboard() {
       setLoading(false);
     });
   }, []);
+
+  const span = Math.floor(12 / cols);
 
   const formatDate = (isoDate: string) => dayjs(isoDate).format('DD/MM/YYYY');
 
@@ -80,13 +99,13 @@ export function Dashboard() {
               const Icon = card.icon;
               const isImplemented = card.status === 'implemented';
               return (
-                <Grid.Col span={{ base: 12, sm: 6, md: 4, lg: 3 }}>
+                <Grid.Col key={card.label} span={span}>
                   <Card
-                  key={card.label}
                   withBorder
                   shadow="sm"
                   padding="lg"
                   radius="md"
+                  h={140}
                   role="button"
                   tabIndex={isImplemented ? 0 : -1}
                   aria-label={card.label}
@@ -94,6 +113,8 @@ export function Dashboard() {
                     cursor: isImplemented ? 'pointer' : 'not-allowed',
                     opacity: isImplemented ? 1 : 0.5,
                     transition: 'transform 0.2s, box-shadow 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
                   }}
                   onMouseEnter={(e) => {
                     if (!isImplemented) return;

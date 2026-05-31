@@ -23,8 +23,8 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (electron/tournament.ts) |
 | Tema Mantine UI | ✅ Completo | Tema azul royal, fonte Inter |
 | Cadastro de Atletas | ✅ Completo | CRUD com modal, validação, tabela, IPC (spec/cadastro-atletas.md) |
-| Dashboard Administrativo | ✅ Completo | Tela com cards de funcionalidades (rota /admin/dashboard) |
-| Tela de Ativação | ✅ Completo | Senha SHA-256, token HMAC por hardware (spec/validacao-credential.md) |
+| Dashboard Administrativo | ✅ Completo | Tela com cards em grid, funcionalidades implementadas × planejadas (rota /admin/dashboard) |
+| Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
 
 ### 2.2. Não Implementado (Planejado)
 
@@ -87,9 +87,10 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 - O Dashboard é a tela central de administração do torneio ativo, acessível via `/admin/dashboard`.
 - Exibe o nome e data do torneio ativo, além de um badge com a data de início.
-- Contém cards para cada funcionalidade do sistema: Atletas, Equipes, Categorias, Inscrições, Pesagem, Chaves, Áreas de Luta, Árbitros, Placar, Resultados, Relatórios.
-- Cards de funcionalidades não implementadas são exibidos com opacidade reduzida e badge "Em breve".
-- O botão "Voltar" retorna ao Menu Inicial.
+- Contém cards em layout **grid** (responsivo: 1 coluna mobile, 2 tablet, 3 desktop, 4 widescreen) para cada funcionalidade: Atletas, Equipes, Categorias, Inscrições, Pesagem, Chaves, Áreas de Luta, Árbitros, Placar, Resultados, Relatórios.
+- Cards de funcionalidades implementadas são clicáveis com hover elevado (translateY(-2px)).
+- Cards de funcionalidades não implementadas são exibidos com opacidade 0.5 e badge "Em breve".
+- O botão "Voltar" (ícone de seta) retorna ao Menu Inicial.
 
 ### 3.7. Exclusão de Torneio
 
@@ -108,6 +109,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Ano de nascimento entre 1920 e ano atual.
 - Idade é calculada dinamicamente (`ano atual - ano nascimento`), não persistida.
 - CRUD completo via modal com validação em tempo real, notificações e confirmação de exclusão.
+- Atletas são armazenados em arquivo global `{userData}/data/atletas.json` (não vinculado a um torneio específico).
 
 ### 3.9. Ativação do Software (Implementado)
 
@@ -179,6 +181,7 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
     torneios/
       {id}.json           # Arquivo individual de cada torneio
     torneio-ativo.json    # { "id": "uuid-do-torneio-ativo" }
+    atletas.json          # Lista global de atletas (compartilhada entre torneios)
 ```
 
 ---
@@ -195,7 +198,7 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
 | `import-tournament` | Renderer → Main | ✅ | Importa JSON para diretório de torneios |
 | `import-tournament-overwrite` | Renderer → Main | ✅ | Sobrescreve torneio existente |
 | `read-file` | Renderer → Main → Renderer | ✅ | Lê conteúdo de arquivo do disco |
-| `update-tournament` | Renderer → Main | ❌ | Pendente — atualizar dados do torneio |
+| `update-tournament` | Renderer → Main | ✅ | Atualizar dados do torneio |
 | `delete-tournament` | Renderer → Main | ✅ | Remove arquivo JSON do torneio |
 | `load-athletes` | Renderer → Main → Renderer | ✅ | Carregar atletas do JSON |
 | `save-athlete` | Renderer → Main | ✅ | Adicionar novo atleta ao JSON |
@@ -447,21 +450,24 @@ bjj-tournament-manager-setup/
 │   │   ├── MenuInicial.tsx      ← Tela inicial (Criar / Importar / Listar)
 │   │   ├── CriarTorneio.tsx     ← Formulário de criação de torneio
 │   │   ├── ImportarTorneio.tsx  ← Tela de importação com upload e validação
-│   │   ├── ListarTorneios.tsx   ← Lista com ações Iniciar / Editar / Exportar / Excluir
-│   │   └── Login.tsx            ← Tela de login (não integrada ao App)
+│   │   ├── ListarTorneios.tsx   ← Lista com ações Iniciar / Exportar / Excluir
+│   │   ├── Dashboard.tsx        ← Dashboard Administrativo do torneio ativo
+│   │   └── AdminAthletes.tsx    ← Gerenciamento de atletas
+│   ├── components/
+│   │   └── ActivationScreen.tsx ← Tela de ativação do software (bloqueia até senha correta)
 │   ├── types/
 │   │   ├── tournament.ts        ← Interfaces Torneio, CreateTorneioInput
-│   │   └── electron.d.ts        ← Tipos globais do Window.electronAPI
+│   │   ├── athlete.ts           ← Interface Atleta e tipo Faixa
+│   │   └── electron.d.ts        ← Tipos globais do Window.electronAPI e Window.activation
 │   ├── styles/
 │   │   ├── theme.ts             ← Tema Mantine UI (cores, fontes, componentes)
 │   │   └── global.css           ← Reset e estilos globais
 │   └── assets/                  ← (vazio)
 │
 ├── spec/
-│   ├── tela-inicial-menu.md     ← Spec da tela inicial
-│   ├── criar-torneio.md         ← Spec do gerenciamento de torneios
-│   ├── cadastro-atletas.md      ← Spec do cadastro de atletas (não implementado)
-│   └── validacao-credential.md  ← Spec da ativação do software (não implementado)
+│   ├── spec.md                  ← Spec da correção de rota /admin/dashboard
+│   ├── cadastro-atletas.md      ← Spec completo do cadastro de atletas (implementado)
+│   └── validacao-credential.md  ← Spec da ativação do software (implementado)
 │
 ├── doc/
 │   └── requisitos.md            ← Este documento
