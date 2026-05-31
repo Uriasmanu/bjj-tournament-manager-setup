@@ -22,7 +22,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Listar Torneios | ✅ Completo | Tabela com Iniciar/Exportar/Excluir; registro de startedAt no Play |
 | Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (electron/tournament.ts) |
 | Tema Mantine UI | ✅ Completo | Tema azul royal, fonte Inter |
-| Cadastro de Atletas | ✅ Completo | CRUD com modal, validação, tabela, IPC (spec/cadastro-atletas.md) |
+| Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal, validação, tabela, duplicata, normalização de texto, IPC (spec/cadastro-atletas.md) |
 | Dashboard Administrativo | ✅ Completo | Tela com cards em grid, funcionalidades implementadas × planejadas (rota /admin/dashboard) |
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
 
@@ -103,12 +103,19 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 ### 3.8. Atletas (Implementado)
 
-- Nome e equipe são obrigatórios (mínimo 2 caracteres).
+- **Menu intermediário:** Ao clicar no card "Atletas" no Dashboard, o usuário é levado a um menu (`/admin/atletas`) com 3 cartões: "Cadastrar Atleta", "Listar Atletas" e "Importar Atletas".
+- **Cadastrar e Listar** redirecionam para `/admin/atletas/lista`, que exibe a tela unificada de CRUD com tabela e botões de ação.
+- **Importar** dispara o diálogo nativo de seleção de arquivo JSON diretamente do menu.
+- **Botão "Cadastrar"** no topo da tela de listagem abre o modal de formulário. Após salvamento bem-sucedido, o modal é fechado automaticamente. Em caso de erro (duplicata, falha de IPC), o modal permanece aberto e uma notificação é exibida.
+- Nome e equipe são obrigatórios (mínimo 2 caracteres) e armazenados em minúsculo (normalizados no submit).
 - Peso deve estar entre 1 e 300 kg.
 - Faixa segue enum: infantil (branca, cinza, amarela, laranja, verde) e adulto (branca, azul, roxa, marrom, preta).
 - Ano de nascimento entre 1920 e ano atual.
 - Idade é calculada dinamicamente (`ano atual - ano nascimento`), não persistida.
-- CRUD completo via modal com validação em tempo real, notificações e confirmação de exclusão.
+- **Duplicata:** Um atleta é considerado duplicata de outro quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**. A verificação ocorre:
+  - No renderer (`AdminAthletes.tsx:handleSave`) antes de chamar o IPC, tanto para cadastro quanto para edição (ignorando o próprio `id` na edição).
+  - No main process (`athletes.ts:importAthletesFromFile`) durante importação em massa.
+- **Modal de formulário** usa `key` incremental para forçar remontagem limpa a cada abertura, evitando sujeira de estado entre criações e edições consecutivas.
 - Atletas são armazenados em arquivo global `{userData}/data/atletas.json` (não vinculado a um torneio específico).
 
 ### 3.9. Ativação do Software (Implementado)
@@ -219,7 +226,8 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
 | `/admin/importar-torneio` | ImportarTorneio | ✅ | Tela de importação |
 | `/admin/listar-torneios` | ListarTorneios | ✅ | Lista com Iniciar / Exportar / Excluir |
 | `/admin/dashboard` | Dashboard | ✅ | Dashboard Administrativo do torneio ativo |
-| `/admin/atletas` | AdminAthletes | ✅ | Gerenciamento de atletas |
+| `/admin/atletas` | AthletesMenu | ✅ | Menu de atletas com 3 cartões (Cadastrar, Listar, Importar) |
+| `/admin/atletas/lista` | AdminAthletes | ✅ | Gerenciamento de atletas (tabela CRUD + botões) |
 
 ### Fluxo de Navegação
 
@@ -241,7 +249,10 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
 
 ```
 [Dashboard /admin/dashboard]
-    ├── Atletas     → /admin/atletas (Implementado)
+    ├── Atletas     → /admin/atletas (AthletesMenu)
+    │                 ├── Cadastrar Atleta → /admin/atletas/lista (AdminAthletes)
+    │                 ├── Listar Atletas   → /admin/atletas/lista (AdminAthletes)
+    │                 └── Importar Atletas → diálogo nativo de arquivo JSON
     ├── Equipes     → (Em breve)
     ├── Categorias  → (Em breve)
     ├── Inscrições  → (Em breve)
@@ -442,6 +453,8 @@ bjj-tournament-manager-setup/
 │   ├── main.ts              ← Registro dos handlers IPC, criação da janela
 │   ├── preload.ts           ← Exposição dos canais IPC (contextBridge)
 │   ├── tournament.ts        ← Lógica CRUD de torneios no sistema de arquivos
+│   ├── athletes.ts          ← Lógica CRUD de atletas + importação em massa
+│   ├── activation.ts        ← Lógica de ativação do software
 │   └── electron-env.d.ts    ← Tipos de ambiente Electron
 │
 ├── src/
@@ -454,9 +467,12 @@ bjj-tournament-manager-setup/
 │   │   ├── ImportarTorneio.tsx  ← Tela de importação com upload e validação
 │   │   ├── ListarTorneios.tsx   ← Lista com ações Iniciar / Exportar / Excluir
 │   │   ├── Dashboard.tsx        ← Dashboard Administrativo do torneio ativo
-│   │   └── AdminAthletes.tsx    ← Gerenciamento de atletas
+│   │   ├── AthletesMenu.tsx     ← Menu intermediário de atletas (3 cartões)
+│   │   └── AdminAthletes.tsx    ← Gerenciamento de atletas (tabela CRUD)
 │   ├── components/
-│   │   └── ActivationScreen.tsx ← Tela de ativação do software (bloqueia até senha correta)
+│   │   ├── AthleteForm.tsx      ← Modal de cadastro/edição de atleta
+│   │   ├── AthleteTable.tsx     ← Tabela de listagem de atletas
+│   │   └── ActivationScreen.tsx ← Tela de ativação do software
 │   ├── types/
 │   │   ├── tournament.ts        ← Interfaces Torneio, CreateTorneioInput
 │   │   ├── athlete.ts           ← Interface Atleta e tipo Faixa
