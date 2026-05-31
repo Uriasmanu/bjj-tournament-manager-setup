@@ -1,7 +1,8 @@
-import { Container, Title, Text, Card, Center, Stack, Group } from '@mantine/core';
+import { Title, Text, Card, Center, Stack, Group } from '@mantine/core';
 import { IconPlus, IconFileUpload, IconList } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { PageLayout } from '../components/PageLayout';
 
 const menuOptions = [
   {
@@ -44,7 +45,7 @@ export function MenuInicial() {
   }, [navigate]);
 
   return (
-    <Container size="xs" py="xl" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+    <PageLayout title="BJJ TOURNAMENT MANAGER">
       <Stack align="center" gap="xs" mb="xl">
         <Title order={1} ta="center" style={{ fontSize: 'clamp(28px, 5vw, 36px)', fontWeight: 700 }}>
           BJJ TOURNAMENT MANAGER
@@ -101,7 +102,7 @@ export function MenuInicial() {
                   <Text fw={600} size="lg">
                     {option.label}
                   </Text>
-                  <Text size="sm" c="#666">
+                  <Text size="sm" c="#6c757d">
                     {option.description}
                   </Text>
                 </div>
@@ -114,6 +115,6 @@ export function MenuInicial() {
       <Text ta="center" size="sm" c="dimmed" mt="xl">
         Pressione 1, 2 ou 3 para selecionar
       </Text>
-    </Container>
+    </PageLayout>
   );
 }

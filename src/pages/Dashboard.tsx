@@ -1,9 +1,10 @@
-import { Container, Paper, Title, Text, Card, Center, Stack, Group, Badge, ActionIcon, Loader, Grid } from '@mantine/core';
-import { IconUsers, IconBuildingSkyscraper, IconCategory, IconClipboardText, IconScale, IconBrackets, IconMapPin, IconUserShield, IconScoreboard, IconTrophy, IconFileReport, IconArrowLeft } from '@tabler/icons-react';
+import { Container, Paper, Title, Text, Card, Center, Stack, Group, Badge, Loader, Grid } from '@mantine/core';
+import { IconUsers, IconBuildingSkyscraper, IconCategory, IconClipboardText, IconScale, IconBrackets, IconMapPin, IconUserShield, IconScoreboard, IconTrophy, IconFileReport } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import type { Torneio } from '../types/tournament';
+import { PageLayout } from '../components/PageLayout';
 
 interface DashboardCard {
   label: string;
@@ -71,12 +72,9 @@ export function Dashboard() {
   }
 
   return (
-    <Container size="md" py="xl">
+    <PageLayout title="Dashboard" backRoute="/">
       <Stack gap="lg">
         <Group>
-          <ActionIcon variant="subtle" onClick={() => navigate('/')} aria-label="Voltar">
-            <IconArrowLeft size={20} />
-          </ActionIcon>
           <div style={{ flex: 1 }}>
             <Title order={2}>Dashboard</Title>
             {torneio && (
@@ -101,54 +99,53 @@ export function Dashboard() {
               return (
                 <Grid.Col key={card.label} span={span}>
                   <Card
-                  withBorder
-                  shadow="sm"
-                  padding="lg"
-                  radius="md"
-                  h={140}
-                  role="button"
-                  tabIndex={isImplemented ? 0 : -1}
-                  aria-label={card.label}
-                  style={{
-                    cursor: isImplemented ? 'pointer' : 'not-allowed',
-                    opacity: isImplemented ? 1 : 0.5,
-                    transition: 'transform 0.2s, box-shadow 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isImplemented) return;
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = '';
-                    e.currentTarget.style.boxShadow = '';
-                  }}
-                  onClick={() => {
-                    if (isImplemented && card.route) navigate(card.route);
-                  }}
-                >
-                  <Group>
-                    <Center>
-                      <Icon size={28} />
-                    </Center>
-                    <div style={{ flex: 1 }}>
-                      <Text fw={600} size="lg">{card.label}</Text>
-                      <Text size="sm" c="#666">{card.description}</Text>
-                    </div>
-                    {!isImplemented && (
-                      <Badge color="gray" variant="light" size="sm">Em breve</Badge>
-                    )}
-                  </Group>
+                    withBorder
+                    shadow="sm"
+                    padding="lg"
+                    radius="md"
+                    h={140}
+                    role="button"
+                    tabIndex={isImplemented ? 0 : -1}
+                    aria-label={card.label}
+                    style={{
+                      cursor: isImplemented ? 'pointer' : 'not-allowed',
+                      opacity: isImplemented ? 1 : 0.5,
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isImplemented) return;
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = '';
+                      e.currentTarget.style.boxShadow = '';
+                    }}
+                    onClick={() => {
+                      if (isImplemented && card.route) navigate(card.route);
+                    }}
+                  >
+                    <Group>
+                      <Center>
+                        <Icon size={28} />
+                      </Center>
+                      <div style={{ flex: 1 }}>
+                        <Text fw={600} size="lg">{card.label}</Text>
+                        <Text size="sm" c="#666">{card.description}</Text>
+                      </div>
+                      {!isImplemented && (
+                        <Badge color="gray" variant="light" size="sm">Em breve</Badge>
+                      )}
+                    </Group>
                   </Card>
                 </Grid.Col>
-
               );
             })}
-            </Grid>
+          </Grid>
         </Paper>
       </Stack>
-    </Container>
+    </PageLayout>
   );
 }

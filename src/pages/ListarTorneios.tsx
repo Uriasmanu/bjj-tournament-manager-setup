@@ -1,11 +1,12 @@
-import { Container, Paper, Title, Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal } from '@mantine/core';
+import { Container, Paper, Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlayerPlay, IconDownload, IconTrash, IconArrowLeft } from '@tabler/icons-react';
+import { IconPlayerPlay, IconDownload, IconTrash } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import type { Torneio } from '../types/tournament';
+import { PageLayout } from '../components/PageLayout';
 
 export function ListarTorneios() {
   const navigate = useNavigate();
@@ -117,24 +118,16 @@ export function ListarTorneios() {
   }
 
   return (
-    <Container size="clamp(360px, 95vw, 720px)" py="xl">
-      <Paper withBorder shadow="sm" p="clamp(12px, 2vw, 24px)" radius="md">
-        <Group mb="md">
-          <ActionIcon variant="subtle" onClick={() => navigate('/')} aria-label="Voltar">
-            <IconArrowLeft size={20} />
-          </ActionIcon>
-          <Title order={2}>Torneios Cadastrados</Title>
-        </Group>
-
-        {torneios.length === 0 ? (
-          <Stack align="center" gap="md" py="xl">
-            <Text c="dimmed">Nenhum torneio cadastrado</Text>
-            <Button onClick={() => navigate('/admin/criar-torneio')}>
-              Criar primeiro torneio
-            </Button>
-          </Stack>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
+    <PageLayout title="Torneios Cadastrados" backRoute="/">
+      {torneios.length === 0 ? (
+        <Stack align="center" gap="md" py="xl">
+          <Text c="dimmed">Nenhum torneio cadastrado</Text>
+          <Button onClick={() => navigate('/admin/criar-torneio')}>
+            Criar primeiro torneio
+          </Button>
+        </Stack>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
           <Table horizontalSpacing="clamp(4px, 1.5vw, 12px)">
             <Table.Thead>
               <Table.Tr>
@@ -183,9 +176,8 @@ export function ListarTorneios() {
               ))}
             </Table.Tbody>
           </Table>
-          </div>
-        )}
-      </Paper>
+        </div>
+      )}
 
       <Modal
         opened={opened}
@@ -206,6 +198,6 @@ export function ListarTorneios() {
           <Button color="red" onClick={handleDeleteConfirm}>Excluir</Button>
         </Group>
       </Modal>
-    </Container>
+    </PageLayout>
   );
 }

@@ -1,9 +1,10 @@
-import { Container, Paper, Title, Text, TextInput, Button, Stack, Group } from '@mantine/core';
+import { Title, Text, TextInput, Button, Stack, Group } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
+import { PageLayout } from '../components/PageLayout';
 
 export function CriarTorneio() {
   const navigate = useNavigate();
@@ -52,43 +53,38 @@ export function CriarTorneio() {
   };
 
   return (
-    <Container size="clamp(360px, 90vw, 480px)" py="xl">
-      <Paper withBorder shadow="sm" p="clamp(16px, 3vw, 24px)" radius="md">
-        <Stack align="center" gap="xs" mb="lg">
-          <Title order={2}>BJJ TOURNAMENT MANAGER</Title>
-          <Text c="#1565C0" fw={500}>Cadastre um novo torneio</Text>
+    <PageLayout title="Criar Torneio" backRoute="/">
+      <Stack align="center" gap="xs" mb="lg">
+        <Title order={2}>BJJ TOURNAMENT MANAGER</Title>
+        <Text c="#1565C0" fw={500}>Cadastre um novo torneio</Text>
+      </Stack>
+
+      <form onSubmit={form.onSubmit(handleSubmit)}>
+        <Stack gap="md">
+          <TextInput
+            label="Nome do Torneio (opcional)"
+            placeholder="Digite o nome do torneio"
+            key={form.key('nome')}
+            {...form.getInputProps('nome')}
+          />
+
+          <DatePickerInput
+            label="Data do Evento"
+            placeholder="__/__/____"
+            valueFormat="DD/MM/YYYY"
+            minDate={dayjs().add(1, 'day').toDate()}
+            clearable
+            key={form.key('data')}
+            {...form.getInputProps('data')}
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button type="submit">
+              Criar Torneio
+            </Button>
+          </Group>
         </Stack>
-
-        <form onSubmit={form.onSubmit(handleSubmit)}>
-          <Stack gap="md">
-            <TextInput
-              label="Nome do Torneio (opcional)"
-              placeholder="Digite o nome do torneio"
-              key={form.key('nome')}
-              {...form.getInputProps('nome')}
-            />
-
-            <DatePickerInput
-              label="Data do Evento"
-              placeholder="__/__/____"
-              valueFormat="DD/MM/YYYY"
-              minDate={dayjs().add(1, 'day').toDate()}
-              clearable
-              key={form.key('data')}
-              {...form.getInputProps('data')}
-            />
-
-            <Group justify="space-between" mt="md">
-              <Button variant="outline" onClick={() => navigate('/')}>
-                Voltar
-              </Button>
-              <Button type="submit">
-                Criar Torneio
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Paper>
-    </Container>
+      </form>
+    </PageLayout>
   );
 }

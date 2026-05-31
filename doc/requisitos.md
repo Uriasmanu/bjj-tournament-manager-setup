@@ -265,22 +265,24 @@ A identidade visual do sistema será inspirada em aplicações administrativas m
 
 | Elemento | Cor | Uso |
 |---|---|---|
-| **Fundo principal** | Branco (`#FFFFFF`) | Fundo da interface |
-| **Título principal** | Preto | Títulos e logotipo |
+| **Fundo principal** | `#f8f9fa` (Gray 0) | Fundo da interface |
+| **Título principal** | `#212529` (Gray 9) | Títulos e logotipo |
 | **Botões / Destaques** | Azul Royal (`#1565C0`) | Botões primários, barra superior, menus ativos, indicadores, links |
-| **Hover/Focus** | Azul escuro (`#0D47A1`) | Feedback visual em interações |
-| **Texto secundário** | Cinza (`#666`) | Descrições e textos auxiliares |
-| **Divisores/Bordas** | Cinza claro (`#E0E0E0`) | Separar elementos |
+| **Hover/Focus** | Azul escuro (`#0d47a1`) | Feedback visual em interações |
+| **Texto secundário** | `#6c757d` (Gray 6) | Descrições e textos auxiliares |
+| **Divisores/Bordas** | `#e9ecef` (Gray 2) | Separar elementos |
 | **Confirmação** | Verde (`#2E7D32`) | Resultados positivos, status concluídos, aprovações |
 | **Alerta** | Amarelo Royal | Alertas, avisos, destaques temporários, indicadores de atenção |
 
-#### 9.1.2 Tipografia
+### 9.2 Minimalist Design Approach
+
+The design of the system follows a minimalist approach, focusing on clarity and usability. The interface is designed to be clean and uncluttered, with a focus on the essential elements. The use of a limited color palette and clear typography contributes to a professional and easy-to-use experience.
 
 | Elemento | Fonte | Peso | Tamanho |
 |---|---|---|---|
-| **Título principal** | Inter, sans-serif | Bold (700) | 28px–36px (clamp) |
-| **Opções do menu** | Inter, sans-serif | Semibold (600) | 18px–22px |
-| **Texto auxiliar** | Inter, sans-serif | Regular (400) | 14px |
+| **Título principal** | Inter, sans-serif | Bold (700) | `clamp(28px, 2vw, 36px)` |
+| **Opções do menu** | Inter, sans-serif | Semibold (600) | `clamp(18px, 1.5vw, 22px)` |
+| **Texto auxiliar** | Inter, sans-serif | Regular (400) | `clamp(14px, 1vw, 16px)` |
 
 ---
 

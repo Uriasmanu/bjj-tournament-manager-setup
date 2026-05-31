@@ -1,15 +1,14 @@
-import { Container, Paper, Title, Text, Button, Stack, Group, ActionIcon, Loader, Center, Modal } from '@mantine/core';
+import { Container, Paper, Title, Text, Button, Stack, Group, Loader, Center, Modal } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowLeft, IconPlus } from '@tabler/icons-react';
+import { IconPlus } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import { AthleteForm } from '../components/AthleteForm';
 import { AthleteTable } from '../components/AthleteTable';
+import { PageLayout } from '../components/PageLayout';
 
 export function AdminAthletes() {
-  const navigate = useNavigate();
   const [athletes, setAthletes] = useState<Atleta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -102,36 +101,31 @@ export function AdminAthletes() {
   }
 
   return (
-    <Container size="clamp(360px, 95vw, 720px)" py="xl">
-      <Paper withBorder shadow="sm" p="clamp(12px, 2vw, 24px)" radius="md">
-        <Group mb="md">
-          <ActionIcon variant="subtle" onClick={() => navigate('/admin/dashboard')} aria-label="Voltar">
-            <IconArrowLeft size={20} />
-          </ActionIcon>
-          <Title order={2} style={{ flex: 1 }}>Cadastro de Atletas</Title>
-          <Button leftSection={<IconPlus size={16} />} onClick={handleNew}>
-            Novo Atleta
-          </Button>
-        </Group>
+    <PageLayout title="Cadastro de Atletas" backRoute="/admin/dashboard">
+      <Group mb="md" justify="space-between">
+        <Title order={2} style={{ flex: 1 }}>Cadastro de Atletas</Title>
+        <Button leftSection={<IconPlus size={16} />} onClick={handleNew}>
+          Novo Atleta
+        </Button>
+      </Group>
 
-        {athletes.length === 0 ? (
-          <Stack align="center" gap="md" py="xl">
-            <Text c="dimmed">Nenhum atleta cadastrado</Text>
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={handleNew}
-            >
-              Cadastrar primeiro atleta
-            </Button>
-          </Stack>
-        ) : (
-          <AthleteTable
-            athletes={athletes}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
-        )}
-      </Paper>
+      {athletes.length === 0 ? (
+        <Stack align="center" gap="md" py="xl">
+          <Text c="dimmed">Nenhum atleta cadastrado</Text>
+          <Button
+            leftSection={<IconPlus size={16} />}
+            onClick={handleNew}
+          >
+            Cadastrar primeiro atleta
+          </Button>
+        </Stack>
+      ) : (
+        <AthleteTable
+          athletes={athletes}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      )}
 
       <AthleteForm
         opened={formOpened}
@@ -159,6 +153,6 @@ export function AdminAthletes() {
           <Button color="red" onClick={handleDeleteConfirm}>Excluir</Button>
         </Group>
       </Modal>
-    </Container>
+    </PageLayout>
   );
 }
