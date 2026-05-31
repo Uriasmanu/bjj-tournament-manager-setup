@@ -19,17 +19,17 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Menu Inicial | ✅ Completo | Tela com 3 cartões (Criar, Importar, Listar) + teclas 1/2/3 |
 | Criar Torneio | ✅ Completo | Formulário com nome (opcional), data (futura), validação, IPC |
 | Importar Torneio | ✅ Completo | Upload JSON, validação de estrutura, modal de sobrescrita |
-| Listar Torneios | ⚡ Parcial | Tabela com Iniciar/Exportar implementados; faltam Editar e Excluir |
+| Listar Torneios | ✅ Completo | Tabela com Iniciar/Exportar/Excluir; registro de startedAt no Play |
 | Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (electron/tournament.ts) |
 | Tema Mantine UI | ✅ Completo | Tema azul royal, fonte Inter |
+| Cadastro de Atletas | ✅ Completo | CRUD com modal, validação, tabela, IPC (spec/cadastro-atletas.md) |
+| Dashboard Administrativo | ✅ Completo | Tela com cards de funcionalidades (rota /admin/dashboard) |
+| Tela de Ativação | ✅ Completo | Senha SHA-256, token HMAC por hardware (spec/validacao-credential.md) |
 
 ### 2.2. Não Implementado (Planejado)
 
 | Módulo | Status | Observação |
 |---|---|---|
-| Editar Torneio (navegar para Dashboard) | ❌ Pendente | Botão de editar na listagem |
-| Excluir Torneio | ❌ Pendente | Botão de excluir com modal de confirmação na listagem |
-| Cadastro de Atletas | ❌ Pendente | Spec existente em spec/cadastro-atletas.md |
 | Cadastro de Equipes | ❌ Pendente | Apenas mencionado |
 | Cadastro de Categorias | ❌ Pendente | Apenas mencionado |
 | Controle de Inscrições | ❌ Pendente | Apenas mencionado |
@@ -41,8 +41,6 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Ranking / Medalhistas | ❌ Pendente | Apenas mencionado |
 | Relatórios | ❌ Pendente | Apenas mencionado |
 | Exportação/Importação de dados completos | ❌ Pendente | Apenas exportação do JSON do torneio |
-| Dashboard Administrativo | ❌ Pendente | Rota `/admin/dashboard` existe mas sem tela |
-| Tela de Login/Ativação | ❌ Pendente | Spec em spec/validacao-credential.md; Login.tsx não integrado |
 
 ---
 
@@ -83,13 +81,15 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Define o torneio como ativo escrevendo seu `id` em `torneio-ativo.json`.
 - Após iniciar, redireciona para o Dashboard Administrativo (`/admin/dashboard`).
 - Apenas um torneio pode estar ativo por vez (iniciar um novo substitui o anterior).
+- Registra o timestamp `startedAt` no arquivo JSON do torneio no momento do Play.
 
-### 3.6. Edição de Torneio
+### 3.6. Dashboard Administrativo
 
-- Cada torneio na listagem exibe um botão "Editar" (ícone de lápis).
-- Ao clicar em "Editar", o torneio é definido como ativo (mesmo comportamento de "Iniciar") e redireciona para o Dashboard Administrativo (`/admin/dashboard`).
-- O Dashboard é a tela onde o usuário poderá gerenciar todas as configurações do torneio (nome, data, categorias, atletas, etc.).
-- **OBSERVAÇÃO:** "Editar" **não** é uma operação de update/rename do torneio na listagem. É uma navegação para o Dashboard com o torneio ativo. A implementação atual em `ListarTorneios.tsx:54` faz `startTournament(id)` + `navigate('/admin/dashboard')` — está correta. Não deve ser confundida com o canal IPC `update-tournament` (reservado para salvamento de configurações no Dashboard).
+- O Dashboard é a tela central de administração do torneio ativo, acessível via `/admin/dashboard`.
+- Exibe o nome e data do torneio ativo, além de um badge com a data de início.
+- Contém cards para cada funcionalidade do sistema: Atletas, Equipes, Categorias, Inscrições, Pesagem, Chaves, Áreas de Luta, Árbitros, Placar, Resultados, Relatórios.
+- Cards de funcionalidades não implementadas são exibidos com opacidade reduzida e badge "Em breve".
+- O botão "Voltar" retorna ao Menu Inicial.
 
 ### 3.7. Exclusão de Torneio
 
@@ -100,20 +100,22 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Notificação de sucesso é exibida e a listagem é atualizada.
 - Se houver erro, notificação de erro é exibida.
 
-### 3.8. Atletas (a implementar)
+### 3.8. Atletas (Implementado)
 
 - Nome e equipe são obrigatórios (mínimo 2 caracteres).
 - Peso deve estar entre 1 e 300 kg.
 - Faixa segue enum: infantil (branca, cinza, amarela, laranja, verde) e adulto (branca, azul, roxa, marrom, preta).
 - Ano de nascimento entre 1920 e ano atual.
 - Idade é calculada dinamicamente (`ano atual - ano nascimento`), não persistida.
+- CRUD completo via modal com validação em tempo real, notificações e confirmação de exclusão.
 
-### 3.7. Ativação do Software (a implementar)
+### 3.9. Ativação do Software (Implementado)
 
 - Na primeira execução, exige senha de ativação fornecida pelo desenvolvedor.
 - Senha validada por hash SHA-256 (nunca armazenada em texto puro).
 - Após ativação bem-sucedida, gera token HMAC vinculado ao hardware (UUID da máquina).
 - Token salvo em `userData`; execuções subsequentes verificam o token automaticamente.
+- Senha mestra padrão: `Bjj@2025!Secure` (hash SHA-256 incorporado no código).
 
 ---
 
@@ -187,18 +189,21 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
 |---|---|---|---|
 | `create-tournament` | Renderer → Main | ✅ | Cria novo torneio e salva no diretório |
 | `list-tournaments` | Renderer → Main → Renderer | ✅ | Retorna array com todos os torneios |
-| `start-tournament` | Renderer → Main | ✅ | Define torneio como ativo |
+| `start-tournament` | Renderer → Main | ✅ | Define torneio como ativo e registra startedAt |
 | `get-active-tournament` | Renderer → Main → Renderer | ✅ | Retorna torneio ativo ou null |
 | `export-tournament` | Renderer → Main | ✅ | Abre diálogo para exportar JSON |
 | `import-tournament` | Renderer → Main | ✅ | Importa JSON para diretório de torneios |
 | `import-tournament-overwrite` | Renderer → Main | ✅ | Sobrescreve torneio existente |
 | `read-file` | Renderer → Main → Renderer | ✅ | Lê conteúdo de arquivo do disco |
 | `update-tournament` | Renderer → Main | ❌ | Pendente — atualizar dados do torneio |
-| `delete-tournament` | Renderer → Main | ❌ | Pendente — remover arquivo JSON do torneio |
-| `load-athletes` | Renderer → Main → Renderer | ❌ | Pendente — carregar atletas |
-| `save-athlete` | Renderer → Main | ❌ | Pendente — salvar atleta |
-| `update-athlete` | Renderer → Main | ❌ | Pendente — atualizar atleta |
-| `delete-athlete` | Renderer → Main | ❌ | Pendente — remover atleta |
+| `delete-tournament` | Renderer → Main | ✅ | Remove arquivo JSON do torneio |
+| `load-athletes` | Renderer → Main → Renderer | ✅ | Carregar atletas do JSON |
+| `save-athlete` | Renderer → Main | ✅ | Adicionar novo atleta ao JSON |
+| `update-athlete` | Renderer → Main | ✅ | Atualizar atleta existente |
+| `delete-athlete` | Renderer → Main | ✅ | Remover atleta do JSON |
+| `check-activation` | Renderer → Main → Renderer | ✅ | Verificar se o software está ativado |
+| `validate-password` | Renderer → Main → Renderer | ✅ | Validar senha de ativação |
+| `activate-license` | Renderer → Main → Renderer | ✅ | Gerar e salvar token de ativação |
 
 ---
 
@@ -209,8 +214,9 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
 | `/` | MenuInicial | ✅ | Menu principal com 3 opções |
 | `/admin/criar-torneio` | CriarTorneio | ✅ | Formulário de criação |
 | `/admin/importar-torneio` | ImportarTorneio | ✅ | Tela de importação |
-| `/admin/listar-torneios` | ListarTorneios | ✅ | Lista com Iniciar / Exportar / Editar / Excluir |
-| `/admin/dashboard` | — | ❌ | Pendente — Dashboard Administrativo |
+| `/admin/listar-torneios` | ListarTorneios | ✅ | Lista com Iniciar / Exportar / Excluir |
+| `/admin/dashboard` | Dashboard | ✅ | Dashboard Administrativo do torneio ativo |
+| `/admin/atletas` | AdminAthletes | ✅ | Gerenciamento de atletas |
 
 ### Fluxo de Navegação
 
@@ -223,11 +229,26 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
   │                        └── (após importar) → /admin/listar-torneios
   │
    └── Listar Torneios    → /admin/listar-torneios
-                           ├── [Iniciar] → /admin/dashboard
-                           ├── [Editar] → /admin/dashboard (define como ativo)
-                           ├── [Exportar] → diálogo "Salvar como"
-                           └── [Excluir] → modal de confirmação → remove arquivo
+                            ├── [Iniciar] → /admin/dashboard (registra startedAt)
+                            ├── [Exportar] → diálogo "Salvar como"
+                            └── [Excluir] → modal de confirmação → remove arquivo
 ```
+
+#### Fluxo Dashboard → Funcionalidades
+
+```
+[Dashboard /admin/dashboard]
+    ├── Atletas     → /admin/atletas (Implementado)
+    ├── Equipes     → (Em breve)
+    ├── Categorias  → (Em breve)
+    ├── Inscrições  → (Em breve)
+    ├── Pesagem     → (Em breve)
+    ├── Chaves      → (Em breve)
+    ├── Áreas       → (Em breve)
+    ├── Árbitros    → (Em breve)
+    ├── Placar      → (Em breve)
+    ├── Resultados  → (Em breve)
+    └── Relatórios  → (Em breve)
 
 ---
 

@@ -1,6 +1,6 @@
 import { Container, Paper, Title, Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlayerPlay, IconPencil, IconDownload, IconTrash, IconArrowLeft } from '@tabler/icons-react';
+import { IconPlayerPlay, IconDownload, IconTrash, IconArrowLeft } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -46,19 +46,6 @@ export function ListarTorneios() {
       notifications.show({
         title: 'Erro',
         message: 'Erro ao iniciar o torneio.',
-        color: 'red',
-      });
-    }
-  };
-
-  const handleEdit = async (torneio: Torneio) => {
-    try {
-      await window.electronAPI.startTournament(torneio.id);
-      navigate('/admin/dashboard');
-    } catch {
-      notifications.show({
-        title: 'Erro',
-        message: 'Erro ao acessar o torneio.',
         color: 'red',
       });
     }
@@ -170,14 +157,6 @@ export function ListarTorneios() {
                         aria-label={`Iniciar ${t.nome || formatDate(t.data)}`}
                       >
                         <IconPlayerPlay size={18} />
-                      </ActionIcon>
-                      <ActionIcon
-                        variant="light"
-                        color="yellow"
-                        onClick={() => handleEdit(t)}
-                        aria-label={`Editar ${t.nome || formatDate(t.data)}`}
-                      >
-                        <IconPencil size={18} />
                       </ActionIcon>
                       <ActionIcon
                         variant="light"

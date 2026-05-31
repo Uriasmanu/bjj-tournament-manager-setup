@@ -1,0 +1,21 @@
+export type Faixa =
+  | 'branca'
+  | 'cinza'
+  | 'amarela'
+  | 'laranja'
+  | 'verde'
+  | 'azul'
+  | 'roxa'
+  | 'marrom'
+  | 'preta';
+
+export interface Atleta {
+  id: string;
+  nome: string;
+  equipe: string;
+  pesoKg: number;
+  faixa: Faixa;
+  anoNascimento: number;
+  createdAt: string;
+  updatedAt: string;
+}

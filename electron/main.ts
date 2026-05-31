@@ -1,7 +1,9 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerTournamentHandlers } from './tournament'
+import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete } from './athletes'
+import { checkActivation, validatePassword, activateLicense } from './activation'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -66,7 +68,41 @@ app.on('activate', () => {
   }
 })
 
+function registerAthleteHandlers(): void {
+  ipcMain.handle('load-athletes', (): ReturnType<typeof loadAthletes> => {
+    return loadAthletes()
+  })
+
+  ipcMain.handle('save-athlete', (_event, athlete: Parameters<typeof saveAthlete>[0]): ReturnType<typeof saveAthlete> => {
+    return saveAthlete(athlete)
+  })
+
+  ipcMain.handle('update-athlete', (_event, athlete: Parameters<typeof updateAthlete>[0]): ReturnType<typeof updateAthlete> => {
+    return updateAthlete(athlete)
+  })
+
+  ipcMain.handle('delete-athlete', (_event, id: string): ReturnType<typeof deleteAthlete> => {
+    return deleteAthlete(id)
+  })
+}
+
+function registerActivationHandlers(): void {
+  ipcMain.handle('check-activation', (): boolean => {
+    return checkActivation()
+  })
+
+  ipcMain.handle('validate-password', (_event, password: string): boolean => {
+    return validatePassword(password)
+  })
+
+  ipcMain.handle('activate-license', (): boolean => {
+    return activateLicense()
+  })
+}
+
 app.whenReady().then(() => {
   registerTournamentHandlers()
+  registerAthleteHandlers()
+  registerActivationHandlers()
   createWindow()
 })

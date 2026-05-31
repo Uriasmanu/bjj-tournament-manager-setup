@@ -3,11 +3,12 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
-const DATA_DIR = path.join(app.getPath("userData"), "data");
-const TORNEIOS_DIR = path.join(DATA_DIR, "torneios");
-const ATIVO_FILE = path.join(DATA_DIR, "torneio-ativo.json");
+import { execSync } from "node:child_process";
+const DATA_DIR$1 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR = path.join(DATA_DIR$1, "torneios");
+const ATIVO_FILE = path.join(DATA_DIR$1, "torneio-ativo.json");
 function ensureDirs() {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(DATA_DIR$1)) fs.mkdirSync(DATA_DIR$1, { recursive: true });
   if (!fs.existsSync(TORNEIOS_DIR)) fs.mkdirSync(TORNEIOS_DIR, { recursive: true });
 }
 function getTorneioPath(id) {
@@ -37,6 +38,15 @@ function registerTournamentHandlers() {
   ipcMain.handle("start-tournament", (_event, id) => {
     ensureDirs();
     fs.writeFileSync(ATIVO_FILE, JSON.stringify({ id }), "utf-8");
+    const filePath = getTorneioPath(id);
+    if (fs.existsSync(filePath)) {
+      const torneio = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      torneio.startedAt = (/* @__PURE__ */ new Date()).toISOString();
+      torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      fs.writeFileSync(filePath, JSON.stringify(torneio, null, 2), "utf-8");
+      return torneio;
+    }
+    throw new Error("Torneio não encontrado");
   });
   ipcMain.handle("get-active-tournament", () => {
     ensureDirs();
@@ -112,6 +122,77 @@ function registerTournamentHandlers() {
     return fs.readFileSync(filePath, "utf-8");
   });
 }
+const DATA_DIR = path.join(app.getPath("userData"), "data");
+const FILE = path.join(DATA_DIR, "atletas.json");
+function ensureDataDir() {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+function loadAthletes() {
+  ensureDataDir();
+  if (!fs.existsSync(FILE)) return [];
+  return JSON.parse(fs.readFileSync(FILE, "utf-8"));
+}
+function saveAthlete(athlete) {
+  const list = loadAthletes();
+  list.push(athlete);
+  fs.writeFileSync(FILE, JSON.stringify(list, null, 2), "utf-8");
+  return list;
+}
+function updateAthlete(updated) {
+  const list = loadAthletes();
+  const index = list.findIndex((a) => a.id === updated.id);
+  if (index === -1) throw new Error("Atleta não encontrado");
+  list[index] = updated;
+  fs.writeFileSync(FILE, JSON.stringify(list, null, 2), "utf-8");
+  return list;
+}
+function deleteAthlete(id) {
+  let list = loadAthletes();
+  list = list.filter((a) => a.id !== id);
+  fs.writeFileSync(FILE, JSON.stringify(list, null, 2), "utf-8");
+  return list;
+}
+const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "57a8d2d84be94e9bdae407ad8352065346269c6997b0be31ff32101fc51e7c3e";
+const ACTIVATION_FILE = "activation.json";
+function getActivationPath() {
+  return path.join(app.getPath("userData"), ACTIVATION_FILE);
+}
+function getMachineId() {
+  try {
+    const uuid = execSync("wmic csproduct get uuid", { encoding: "utf-8" });
+    const lines = uuid.split("\n").map((l) => l.trim()).filter(Boolean);
+    return lines[1] || crypto.randomUUID();
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+function checkActivation() {
+  try {
+    const filePath = getActivationPath();
+    if (!fs.existsSync(filePath)) return false;
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const machineId = getMachineId();
+    const expectedToken = crypto.createHmac("sha256", MASTER_PASSWORD_HASH).update(machineId).digest("hex");
+    return data.token === expectedToken;
+  } catch {
+    return false;
+  }
+}
+function validatePassword(password) {
+  const hash = crypto.createHash("sha256").update(password).digest("hex");
+  return hash === MASTER_PASSWORD_HASH;
+}
+function activateLicense() {
+  try {
+    const machineId = getMachineId();
+    const token = crypto.createHmac("sha256", MASTER_PASSWORD_HASH).update(machineId).digest("hex");
+    const filePath = getActivationPath();
+    fs.writeFileSync(filePath, JSON.stringify({ token, activatedAt: (/* @__PURE__ */ new Date()).toISOString() }), "utf-8");
+    return true;
+  } catch {
+    return false;
+  }
+}
 const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname$1, "..");
 const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -147,8 +228,35 @@ app.on("activate", () => {
     createWindow();
   }
 });
+function registerAthleteHandlers() {
+  ipcMain.handle("load-athletes", () => {
+    return loadAthletes();
+  });
+  ipcMain.handle("save-athlete", (_event, athlete) => {
+    return saveAthlete(athlete);
+  });
+  ipcMain.handle("update-athlete", (_event, athlete) => {
+    return updateAthlete(athlete);
+  });
+  ipcMain.handle("delete-athlete", (_event, id) => {
+    return deleteAthlete(id);
+  });
+}
+function registerActivationHandlers() {
+  ipcMain.handle("check-activation", () => {
+    return checkActivation();
+  });
+  ipcMain.handle("validate-password", (_event, password) => {
+    return validatePassword(password);
+  });
+  ipcMain.handle("activate-license", () => {
+    return activateLicense();
+  });
+}
 app.whenReady().then(() => {
   registerTournamentHandlers();
+  registerAthleteHandlers();
+  registerActivationHandlers();
   createWindow();
 });
 export {

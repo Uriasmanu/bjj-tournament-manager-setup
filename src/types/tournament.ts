@@ -4,6 +4,7 @@ export interface Torneio {
   data: string;
   createdAt: string;
   updatedAt: string;
+  startedAt?: string;
 }
 
 export interface CreateTorneioInput {

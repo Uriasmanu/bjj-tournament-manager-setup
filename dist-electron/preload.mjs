@@ -10,5 +10,14 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   getActiveTournament: () => electron.ipcRenderer.invoke("get-active-tournament"),
   updateTournament: (data) => electron.ipcRenderer.invoke("update-tournament", data),
   deleteTournament: (id) => electron.ipcRenderer.invoke("delete-tournament", id),
-  readFile: (path) => electron.ipcRenderer.invoke("read-file", path)
+  readFile: (path) => electron.ipcRenderer.invoke("read-file", path),
+  loadAthletes: () => electron.ipcRenderer.invoke("load-athletes"),
+  saveAthlete: (athlete) => electron.ipcRenderer.invoke("save-athlete", athlete),
+  updateAthlete: (athlete) => electron.ipcRenderer.invoke("update-athlete", athlete),
+  deleteAthlete: (id) => electron.ipcRenderer.invoke("delete-athlete", id)
+});
+electron.contextBridge.exposeInMainWorld("activation", {
+  check: () => electron.ipcRenderer.invoke("check-activation"),
+  validate: (password) => electron.ipcRenderer.invoke("validate-password", password),
+  activate: () => electron.ipcRenderer.invoke("activate-license")
 });

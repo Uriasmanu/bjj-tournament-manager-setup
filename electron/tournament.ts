@@ -40,9 +40,18 @@ export function registerTournamentHandlers(): void {
     });
   });
 
-  ipcMain.handle('start-tournament', (_event, id: string): void => {
+  ipcMain.handle('start-tournament', (_event, id: string): Torneio => {
     ensureDirs();
     fs.writeFileSync(ATIVO_FILE, JSON.stringify({ id }), 'utf-8');
+    const filePath = getTorneioPath(id);
+    if (fs.existsSync(filePath)) {
+      const torneio = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Torneio;
+      torneio.startedAt = new Date().toISOString();
+      torneio.updatedAt = new Date().toISOString();
+      fs.writeFileSync(filePath, JSON.stringify(torneio, null, 2), 'utf-8');
+      return torneio;
+    }
+    throw new Error('Torneio não encontrado');
   });
 
   ipcMain.handle('get-active-tournament', (): Torneio | null => {

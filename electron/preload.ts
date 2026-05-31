@@ -21,4 +21,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('delete-tournament', id),
   readFile: (path: string) =>
     ipcRenderer.invoke('read-file', path),
+  loadAthletes: () =>
+    ipcRenderer.invoke('load-athletes'),
+  saveAthlete: (athlete: { id: string; nome: string; equipe: string; pesoKg: number; faixa: string; anoNascimento: number; createdAt: string; updatedAt: string }) =>
+    ipcRenderer.invoke('save-athlete', athlete),
+  updateAthlete: (athlete: { id: string; nome: string; equipe: string; pesoKg: number; faixa: string; anoNascimento: number; createdAt: string; updatedAt: string }) =>
+    ipcRenderer.invoke('update-athlete', athlete),
+  deleteAthlete: (id: string) =>
+    ipcRenderer.invoke('delete-athlete', id),
+})
+
+contextBridge.exposeInMainWorld('activation', {
+  check: () => ipcRenderer.invoke('check-activation'),
+  validate: (password: string) => ipcRenderer.invoke('validate-password', password),
+  activate: () => ipcRenderer.invoke('activate-license'),
 })
