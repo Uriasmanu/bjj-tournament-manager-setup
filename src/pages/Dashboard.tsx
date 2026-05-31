@@ -1,4 +1,4 @@
-import { Container, Paper, Title, Text, Card, Center, Stack, Group, Badge, ActionIcon, Loader } from '@mantine/core';
+import { Container, Paper, Title, Text, Card, Center, Stack, Group, Badge, ActionIcon, Loader, Grid } from '@mantine/core';
 import { IconUsers, IconBuildingSkyscraper, IconCategory, IconClipboardText, IconScale, IconBrackets, IconMapPin, IconUserShield, IconScoreboard, IconTrophy, IconFileReport, IconArrowLeft } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -75,12 +75,13 @@ export function Dashboard() {
 
         <Paper withBorder shadow="sm" p="clamp(12px, 2vw, 24px)" radius="md">
           <Title order={4} mb="md">Administração do Torneio</Title>
-          <Stack gap="md">
+          <Grid>
             {dashboardCards.map((card) => {
               const Icon = card.icon;
               const isImplemented = card.status === 'implemented';
               return (
-                <Card
+                <Grid.Col span={{ base: 12, sm: 6, md: 4, lg: 3 }}>
+                  <Card
                   key={card.label}
                   withBorder
                   shadow="sm"
@@ -119,10 +120,12 @@ export function Dashboard() {
                       <Badge color="gray" variant="light" size="sm">Em breve</Badge>
                     )}
                   </Group>
-                </Card>
+                  </Card>
+                </Grid.Col>
+
               );
             })}
-          </Stack>
+            </Grid>
         </Paper>
       </Stack>
     </Container>
