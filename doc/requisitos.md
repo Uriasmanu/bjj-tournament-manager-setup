@@ -89,6 +89,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Cada torneio na listagem exibe um botão "Editar" (ícone de lápis).
 - Ao clicar em "Editar", o torneio é definido como ativo (mesmo comportamento de "Iniciar") e redireciona para o Dashboard Administrativo (`/admin/dashboard`).
 - O Dashboard é a tela onde o usuário poderá gerenciar todas as configurações do torneio (nome, data, categorias, atletas, etc.).
+- **OBSERVAÇÃO:** "Editar" **não** é uma operação de update/rename do torneio na listagem. É uma navegação para o Dashboard com o torneio ativo. A implementação atual em `ListarTorneios.tsx:54` faz `startTournament(id)` + `navigate('/admin/dashboard')` — está correta. Não deve ser confundida com o canal IPC `update-tournament` (reservado para salvamento de configurações no Dashboard).
 
 ### 3.7. Exclusão de Torneio
 
@@ -99,7 +100,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Notificação de sucesso é exibida e a listagem é atualizada.
 - Se houver erro, notificação de erro é exibida.
 
-### 3.6. Atletas (a implementar)
+### 3.8. Atletas (a implementar)
 
 - Nome e equipe são obrigatórios (mínimo 2 caracteres).
 - Peso deve estar entre 1 e 300 kg.
@@ -376,7 +377,9 @@ O sistema deverá:
 - Seguir os princípios **SOLID** em toda a arquitetura do código.
 - Seguir as **boas práticas de programação** (código limpo, legível, testável e de fácil manutenção).
 
-### 11.2 Responsividade
+### 11.2 UI Responsiva — Tamanhos Proporcionais à Tela
+
+Todos os elementos da interface (fontes, padding, margens, ícones, cartões, tabelas, modais, botões, inputs) devem ser proporcionais ao tamanho da janela, respeitando os princípios de UI e UX.
 
 | Dispositivo | Largura típica | Comportamento |
 |---|---|---|
@@ -384,6 +387,17 @@ O sistema deverá:
 | **Tablet** | 768px – 1023px | Cartões empilhados verticalmente, fonte ajustada. |
 | **TV (monitor grande)** | ≥ 1920px | Escala proporcional. |
 | **Resoluções muito baixas** | < 768px | Rolagem vertical se necessário; fonte reduzida. |
+
+**Diretrizes de implementação:**
+
+- **Viewport:** Usar `clamp()` para tamanhos de fonte e dimensões de componentes (ex.: `font-size: clamp(14px, 2vw, 18px)`).
+- **Unidades relativas:** Preferir `rem`, `em`, `%` e `vw` sobre `px` fixos sempre que possível.
+- **Espaçamentos:** `padding` e `margin` dos componentes Mantine devem usar valores relativos ou tokens de tema (`theme.spacing`), não `px` fixos.
+- **Tabelas:** Em resoluções baixas, considerar scroll horizontal ou colunas responsivas (esconder colunas menos importantes).
+- **Modais:** Largura do modal deve ser relativa à viewport (ex.: `90vw` em mobile, `40vw` em desktop).
+- **Cartões do menu inicial:** Largura deve ser relativa ao container, não fixa.
+- **Quebra de layout:** Testar em 1024px, 1280px, 1440px, 1920px e viewports menores que 768px.
+- **Zoom do sistema:** A interface não deve quebrar com zoom de 100% a 150%.
 
 ### 11.3 Acessibilidade
 

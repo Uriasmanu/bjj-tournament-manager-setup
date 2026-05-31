@@ -94,8 +94,8 @@ export function MenuInicial() {
               onClick={() => navigate(option.route)}
             >
               <Group>
-                <Center>
-                  <Icon size={36} color="#1565C0" />
+                <Center style={{ fontSize: 'clamp(28px, 4vw, 40px)' }}>
+                  <Icon size="1em" color="#1565C0" />
                 </Center>
                 <div>
                   <Text fw={600} size="lg">

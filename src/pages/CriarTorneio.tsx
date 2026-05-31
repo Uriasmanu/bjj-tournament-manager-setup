@@ -52,8 +52,8 @@ export function CriarTorneio() {
   };
 
   return (
-    <Container size="xs" py="xl">
-      <Paper withBorder shadow="sm" p="lg" radius="md">
+    <Container size="clamp(360px, 90vw, 480px)" py="xl">
+      <Paper withBorder shadow="sm" p="clamp(16px, 3vw, 24px)" radius="md">
         <Stack align="center" gap="xs" mb="lg">
           <Title order={2}>BJJ TOURNAMENT MANAGER</Title>
           <Text c="#1565C0" fw={500}>Cadastre um novo torneio</Text>

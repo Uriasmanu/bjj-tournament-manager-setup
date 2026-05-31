@@ -82,6 +82,32 @@ function registerTournamentHandlers() {
     const dest = getTorneioPath(data.id);
     fs.writeFileSync(dest, JSON.stringify(data, null, 2), "utf-8");
   });
+  ipcMain.handle("update-tournament", (_event, data) => {
+    ensureDirs();
+    const filePath = getTorneioPath(data.id);
+    if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+    const torneio = {
+      ...data,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    fs.writeFileSync(filePath, JSON.stringify(torneio, null, 2), "utf-8");
+    return torneio;
+  });
+  ipcMain.handle("delete-tournament", (_event, id) => {
+    ensureDirs();
+    const filePath = getTorneioPath(id);
+    if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+    fs.unlinkSync(filePath);
+    if (fs.existsSync(ATIVO_FILE)) {
+      try {
+        const { id: activeId } = JSON.parse(fs.readFileSync(ATIVO_FILE, "utf-8"));
+        if (activeId === id) {
+          fs.unlinkSync(ATIVO_FILE);
+        }
+      } catch {
+      }
+    }
+  });
   ipcMain.handle("read-file", async (_event, filePath) => {
     return fs.readFileSync(filePath, "utf-8");
   });

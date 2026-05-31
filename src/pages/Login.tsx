@@ -30,10 +30,10 @@ export function LoginPage() {
 
   return (
     <Center style={{ minHeight: '100vh', background: '#f5f7fa' }}>
-      <Container size={420}>
-        <Paper withBorder shadow="md" p={40} radius="md">
-          <Stack align="center" mb={30}>
-            <IconShield size={48} color="#1a6ad9" />
+      <Container size="clamp(360px, 90vw, 420px)">
+        <Paper withBorder shadow="md" p="clamp(24px, 4vw, 40px)" radius="md">
+          <Stack align="center" mb="clamp(20px, 3vw, 30px)">
+            <IconShield size="1em" color="#1a6ad9" style={{ fontSize: 'clamp(36px, 6vw, 48px)' }} />
             <Title order={2} ta="center">
               BJJ Tournament Manager
             </Title>

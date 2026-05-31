@@ -1,5 +1,6 @@
-import { Container, Paper, Title, Text, Button, Stack, Group, Table, ActionIcon, Loader, Center } from '@mantine/core';
-import { IconPlayerPlay, IconDownload, IconArrowLeft } from '@tabler/icons-react';
+import { Container, Paper, Title, Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal } from '@mantine/core';
+import { useDisclosure } from '@mantine/hooks';
+import { IconPlayerPlay, IconPencil, IconDownload, IconTrash, IconArrowLeft } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -11,6 +12,8 @@ export function ListarTorneios() {
   const [torneios, setTorneios] = useState<Torneio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Torneio | null>(null);
+  const [opened, { open, close }] = useDisclosure(false);
 
   const loadTorneios = async () => {
     setLoading(true);
@@ -48,6 +51,40 @@ export function ListarTorneios() {
     }
   };
 
+  const handleEdit = async (torneio: Torneio) => {
+    try {
+      await window.electronAPI.startTournament(torneio.id);
+      navigate('/admin/dashboard');
+    } catch {
+      notifications.show({
+        title: 'Erro',
+        message: 'Erro ao acessar o torneio.',
+        color: 'red',
+      });
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return;
+    try {
+      await window.electronAPI.deleteTournament(deleteTarget.id);
+      close();
+      setDeleteTarget(null);
+      notifications.show({
+        title: 'Sucesso',
+        message: 'Torneio excluído com sucesso!',
+        color: 'green',
+      });
+      loadTorneios();
+    } catch {
+      notifications.show({
+        title: 'Erro',
+        message: 'Erro ao excluir o torneio.',
+        color: 'red',
+      });
+    }
+  };
+
   const handleExport = async (id: string) => {
     try {
       await window.electronAPI.exportTournament(id);
@@ -71,7 +108,7 @@ export function ListarTorneios() {
 
   if (loading) {
     return (
-      <Container size="sm" py="xl">
+      <Container size="clamp(360px, 95vw, 720px)" py="xl">
         <Center py="xl">
           <Loader />
         </Center>
@@ -81,7 +118,7 @@ export function ListarTorneios() {
 
   if (error) {
     return (
-      <Container size="sm" py="xl">
+      <Container size="clamp(360px, 95vw, 720px)" py="xl">
         <Paper withBorder shadow="sm" p="lg" radius="md">
           <Stack align="center" gap="md">
             <Text c="red">Erro ao carregar torneios.</Text>
@@ -93,8 +130,8 @@ export function ListarTorneios() {
   }
 
   return (
-    <Container size="sm" py="xl">
-      <Paper withBorder shadow="sm" p="lg" radius="md">
+    <Container size="clamp(360px, 95vw, 720px)" py="xl">
+      <Paper withBorder shadow="sm" p="clamp(12px, 2vw, 24px)" radius="md">
         <Group mb="md">
           <ActionIcon variant="subtle" onClick={() => navigate('/')} aria-label="Voltar">
             <IconArrowLeft size={20} />
@@ -110,21 +147,22 @@ export function ListarTorneios() {
             </Button>
           </Stack>
         ) : (
-          <Table>
+          <div style={{ overflowX: 'auto' }}>
+          <Table horizontalSpacing="clamp(4px, 1.5vw, 12px)">
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Torneio</Table.Th>
                 <Table.Th>Data</Table.Th>
-                <Table.Th w={100}>Ações</Table.Th>
+                <Table.Th style={{ width: 'clamp(130px, 20vw, 190px)' }}>Ações</Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {torneios.map((t) => (
                 <Table.Tr key={t.id}>
-                  <Table.Td>{t.nome || `Torneio ${formatDate(t.data)}`}</Table.Td>
-                  <Table.Td>{formatDate(t.data)}</Table.Td>
+                  <Table.Td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 'clamp(120px, 30vw, 300px)' }}>{t.nome || `Torneio ${formatDate(t.data)}`}</Table.Td>
+                  <Table.Td style={{ whiteSpace: 'nowrap' }}>{formatDate(t.data)}</Table.Td>
                   <Table.Td>
-                    <Group gap="xs">
+                    <Group gap="xs" wrap="nowrap">
                       <ActionIcon
                         variant="light"
                         color="blue"
@@ -135,11 +173,30 @@ export function ListarTorneios() {
                       </ActionIcon>
                       <ActionIcon
                         variant="light"
+                        color="yellow"
+                        onClick={() => handleEdit(t)}
+                        aria-label={`Editar ${t.nome || formatDate(t.data)}`}
+                      >
+                        <IconPencil size={18} />
+                      </ActionIcon>
+                      <ActionIcon
+                        variant="light"
                         color="gray"
                         onClick={() => handleExport(t.id)}
                         aria-label={`Exportar ${t.nome || formatDate(t.data)}`}
                       >
                         <IconDownload size={18} />
+                      </ActionIcon>
+                      <ActionIcon
+                        variant="light"
+                        color="red"
+                        onClick={() => {
+                          setDeleteTarget(t);
+                          open();
+                        }}
+                        aria-label={`Excluir ${t.nome || formatDate(t.data)}`}
+                      >
+                        <IconTrash size={18} />
                       </ActionIcon>
                     </Group>
                   </Table.Td>
@@ -147,8 +204,29 @@ export function ListarTorneios() {
               ))}
             </Table.Tbody>
           </Table>
+          </div>
         )}
       </Paper>
+
+      <Modal
+        opened={opened}
+        onClose={close}
+        title="Excluir Torneio"
+        centered
+        size="clamp(320px, 90vw, 480px)"
+      >
+        <Text size="sm" mb="md">
+          Deseja realmente excluir o torneio{' '}
+          <Text component="span" fw={600}>
+            {deleteTarget?.nome || (deleteTarget ? `Torneio ${formatDate(deleteTarget.data)}` : '')}
+          </Text>
+          ? Esta ação não pode ser desfeita.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="outline" onClick={close}>Cancelar</Button>
+          <Button color="red" onClick={handleDeleteConfirm}>Excluir</Button>
+        </Group>
+      </Modal>
     </Container>
   );
 }

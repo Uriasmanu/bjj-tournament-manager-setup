@@ -8,5 +8,7 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   importTournament: (data) => electron.ipcRenderer.invoke("import-tournament", data),
   importTournamentOverwrite: (data) => electron.ipcRenderer.invoke("import-tournament-overwrite", data),
   getActiveTournament: () => electron.ipcRenderer.invoke("get-active-tournament"),
+  updateTournament: (data) => electron.ipcRenderer.invoke("update-tournament", data),
+  deleteTournament: (id) => electron.ipcRenderer.invoke("delete-tournament", id),
   readFile: (path) => electron.ipcRenderer.invoke("read-file", path)
 });

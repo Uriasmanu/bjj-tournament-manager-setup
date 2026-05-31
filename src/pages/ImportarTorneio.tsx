@@ -112,8 +112,8 @@ export function ImportarTorneio() {
   };
 
   return (
-    <Container size="xs" py="xl">
-      <Paper withBorder shadow="sm" p="lg" radius="md">
+    <Container size="clamp(360px, 90vw, 480px)" py="xl">
+      <Paper withBorder shadow="sm" p="clamp(16px, 3vw, 24px)" radius="md">
         <Stack align="center" gap="xs" mb="lg">
           <Title order={2}>BJJ TOURNAMENT MANAGER</Title>
           <Text c="#1565C0" fw={500}>Importar Torneio</Text>
@@ -141,7 +141,7 @@ export function ImportarTorneio() {
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
             onClick={() => fileInputRef.current?.click()}
           >
-            <IconFileUpload size={48} color="#1565C0" style={{ display: 'block', margin: '0 auto 8px' }} />
+            <IconFileUpload size="1em" color="#1565C0" style={{ display: 'block', margin: '0 auto 8px', fontSize: 'clamp(36px, 6vw, 56px)' }} />
             <Text size="sm" c="dimmed">
               {selectedFile ? selectedFile.name : 'Arraste o arquivo JSON aqui ou clique para selecionar'}
             </Text>
@@ -166,7 +166,7 @@ export function ImportarTorneio() {
         </Stack>
       </Paper>
 
-      <Modal opened={opened} onClose={close} title="Sobrescrever Torneio" centered>
+      <Modal opened={opened} onClose={close} title="Sobrescrever Torneio" centered size="clamp(320px, 90vw, 480px)">
         <Text size="sm" mb="md">
           Já existe um torneio com este ID. Deseja sobrescrever o arquivo existente?
         </Text>
