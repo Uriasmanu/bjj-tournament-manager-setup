@@ -70,3 +70,67 @@ Não haverá dependência de banco de dados externo.
 
 Toda a operação deverá funcionar offline.
 
+# 6. Identidade Visual
+
+## 6.1 Tema Principal
+
+A identidade visual do sistema será inspirada em aplicações administrativas modernas, utilizando cores que transmitam organização, confiança e profissionalismo.
+
+### 6.1.1 Cor Principal — Azul Royal
+
+Utilizada em:
+
+- Botões primários.
+- Barra superior.
+- Menus ativos.
+- Indicadores principais.
+- Elementos de destaque.
+
+### 6.1.2 Fundo Principal — Branco
+
+Utilizado como cor predominante da interface.
+
+### 6.1.3 Cor dos Textos — Preto
+
+Utilizado para garantir máxima legibilidade.
+
+### 6.1.4 Paleta Secundária
+
+**Preto** — Utilizado para:
+- Títulos.
+- Ícones.
+- Elementos de contraste.
+
+**Amarelo Royal** — Utilizado para:
+- Alertas.
+- Avisos.
+- Destaques temporários.
+- Indicadores de atenção.
+
+**Azul** — Utilizado para:
+- Informações.
+- Links.
+- Elementos auxiliares.
+
+**Verde** — Utilizado para:
+- Confirmações.
+- Resultados positivos.
+- Status concluídos.
+- Aprovações.
+
+---
+
+# 7. Requisitos Não Funcionais
+
+O sistema deverá:
+
+- Funcionar sem conexão com a internet.
+- Possuir carregamento rápido.
+- Ser capaz de armazenar milhares de atletas.
+- Permitir backup manual dos arquivos JSON.
+- Possuir interface responsiva para diferentes resoluções.
+- Ser simples de instalar.
+- Possuir estrutura de código organizada e escalável.
+- Utilizar TypeScript em todo o projeto.
+- Seguir os princípios **SOLID** em toda a arquitetura do código.
+- Seguir as **boas práticas de programação** (código limpo, legível, testável e de fácil manutenção).
