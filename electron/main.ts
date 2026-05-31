@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
+import { registerTournamentHandlers } from './tournament'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -26,12 +27,13 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
-    maximized: true,
     icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
     },
   })
+
+  win.maximize()
 
   // Test active push message to Renderer-process.
   win.webContents.on('did-finish-load', () => {
@@ -64,4 +66,7 @@ app.on('activate', () => {
   }
 })
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  registerTournamentHandlers()
+  createWindow()
+})

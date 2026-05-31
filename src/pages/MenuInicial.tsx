@@ -1,105 +1,119 @@
-import {
-  Container,
-  Paper,
-  Title,
-  Text,
-  SimpleGrid,
-  Card,
-  Center,
-  Group,
-  Badge,
-} from '@mantine/core';
-import {
-  IconUsers,
-  IconBuildingCommunity,
-  IconTrophy,
-  IconCategory,
-  IconBrackets,
-  IconMapPin,
-  IconUsersGroup,
-  IconScoreboard,
-  IconChartBar,
-  IconMedal,
-} from '@tabler/icons-react';
+import { Container, Title, Text, Card, Center, Stack, Group } from '@mantine/core';
+import { IconPlus, IconFileUpload, IconList } from '@tabler/icons-react';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
-const menuItems = [
-  { label: 'Atletas', icon: IconUsers, color: 'blue', description: 'Gerenciar atletas' },
-  { label: 'Equipes', icon: IconBuildingCommunity, color: 'teal', description: 'Gerenciar equipes' },
-  { label: 'Campeonatos', icon: IconTrophy, color: 'yellow', description: 'Gerenciar campeonatos' },
-  { label: 'Categorias', icon: IconCategory, color: 'violet', description: 'Gerenciar categorias' },
-  { label: 'Chaves', icon: IconBrackets, color: 'orange', description: 'Gerenciar chaves' },
-  { label: 'Áreas de Luta', icon: IconMapPin, color: 'red', description: 'Gerenciar áreas' },
-  { label: 'Árbitros', icon: IconUsersGroup, color: 'grape', description: 'Gerenciar árbitros' },
-  { label: 'Placar', icon: IconScoreboard, color: 'indigo', description: 'Controlar placar' },
-  { label: 'Relatórios', icon: IconChartBar, color: 'cyan', description: 'Emitir relatórios' },
-  { label: 'Medalhistas', icon: IconMedal, color: 'pink', description: 'Ranking e medalhistas' },
+const menuOptions = [
+  {
+    label: 'Criar Torneio',
+    description: 'Cadastre um novo torneio',
+    icon: IconPlus,
+    route: '/admin/criar-torneio',
+    ariaLabel: 'Criar Torneio',
+    key: '1',
+  },
+  {
+    label: 'Importar Torneio',
+    description: 'Importe torneio de arquivo JSON',
+    icon: IconFileUpload,
+    route: '/admin/importar-torneio',
+    ariaLabel: 'Importar Torneio',
+    key: '2',
+  },
+  {
+    label: 'Listar Torneios',
+    description: 'Veja todos os torneios cadastrados',
+    icon: IconList,
+    route: '/admin/listar-torneios',
+    ariaLabel: 'Listar Torneios',
+    key: '3',
+  },
 ];
 
 export function MenuInicial() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === '1') navigate('/admin/criar-torneio');
+      if (e.key === '2') navigate('/admin/importar-torneio');
+      if (e.key === '3') navigate('/admin/listar-torneios');
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [navigate]);
+
   return (
-    <>
-      <Paper
-        withBorder
-        shadow="sm"
-        p="md"
-        style={{
-          borderBottom: '2px solid var(--mantine-color-blue-6)',
-          borderRadius: 0,
-        }}
-      >
-        <Group justify="space-between" align="center">
-          <Group>
-            <IconTrophy size={32} color="var(--mantine-color-blue-6)" />
-            <div>
-              <Title order={3}>BJJ Tournament Manager</Title>
-              <Text size="sm" c="dimmed">Sistema de Gerenciamento de Campeonatos</Text>
-            </div>
-          </Group>
-          <Badge size="lg" variant="light" color="blue">Online</Badge>
-        </Group>
-      </Paper>
+    <Container size="xs" py="xl" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <Stack align="center" gap="xs" mb="xl">
+        <Title order={1} ta="center" style={{ fontSize: 'clamp(28px, 5vw, 36px)', fontWeight: 700 }}>
+          BJJ TOURNAMENT MANAGER
+        </Title>
+        <Text ta="center" size="lg" c="#1565C0" fw={500}>
+          Gerencie seu campeonato
+        </Text>
+      </Stack>
 
-      <Container size="lg" py="xl">
-        <Title order={2} mb="xs">Menu Principal</Title>
-        <Text c="dimmed" mb="lg">Selecione uma opção para começar</Text>
-
-        <SimpleGrid cols={{ base: 1, xs: 2, sm: 3, md: 4, lg: 5 }} spacing="md">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Card
-                key={item.label}
-                withBorder
-                shadow="sm"
-                padding="lg"
-                radius="md"
-                style={{
-                  cursor: 'pointer',
-                  transition: 'transform 0.15s, box-shadow 0.15s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = '';
-                  e.currentTarget.style.boxShadow = '';
-                }}
-              >
+      <Stack gap="md">
+        {menuOptions.map((option) => {
+          const Icon = option.icon;
+          return (
+            <Card
+              key={option.key}
+              withBorder
+              shadow="sm"
+              padding="lg"
+              radius="md"
+              role="button"
+              tabIndex={0}
+              aria-label={option.ariaLabel}
+              style={{
+                cursor: 'pointer',
+                transition: 'transform 0.2s, box-shadow 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = '';
+                e.currentTarget.style.boxShadow = '';
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = 'scale(0.98)';
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = '';
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate(option.route);
+                }
+              }}
+              onClick={() => navigate(option.route)}
+            >
+              <Group>
                 <Center>
-                  <Icon size={40} color={`var(--mantine-color-${item.color}-6)`} />
+                  <Icon size={36} color="#1565C0" />
                 </Center>
-                <Text ta="center" fw={600} mt="md" size="md">
-                  {item.label}
-                </Text>
-                <Text ta="center" size="xs" c="dimmed" mt={4}>
-                  {item.description}
-                </Text>
-              </Card>
-            );
-          })}
-        </SimpleGrid>
-      </Container>
-    </>
+                <div>
+                  <Text fw={600} size="lg">
+                    {option.label}
+                  </Text>
+                  <Text size="sm" c="#666">
+                    {option.description}
+                  </Text>
+                </div>
+              </Group>
+            </Card>
+          );
+        })}
+      </Stack>
+
+      <Text ta="center" size="sm" c="dimmed" mt="xl">
+        Pressione 1, 2 ou 3 para selecionar
+      </Text>
+    </Container>
   );
 }

@@ -14,6 +14,8 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 O sistema deverá permitir:
 
+* Criação, importação, listagem e exportação de torneios.
+* Inicialização de torneio (definir torneio ativo para gerenciamento).
 * Cadastro de atletas.
 * Cadastro de equipes.
 * Cadastro de campeonatos.
@@ -75,6 +77,12 @@ Não haverá dependência de banco de dados externo.
 
 Toda a operação deverá funcionar offline.
 
+### 5.1. Geração dos Arquivos JSON
+
+Cada entidade do sistema é persistida em um ou mais arquivos JSON. Os torneios são armazenados em arquivos individuais dentro do diretório `{userData}/data/torneios/`. O arquivo JSON de cada torneio é gerado **no momento da criação** (ao preencher Nome + Data e confirmar) ou no momento da **importação** (ao selecionar um JSON válido). Antes dessas ações o arquivo não existe em disco.
+
+O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que armazena o `id` do torneio em uso.
+
 ---
 
 ## 6. Identidade Visual
@@ -108,14 +116,21 @@ A identidade visual do sistema será inspirada em aplicações administrativas m
 
 ## 7. Tela Inicial — Menu de Seleção
 
-### 7.1 Descrição
+### 7.1 User Story
 
-A primeira tela do sistema exibe um menu com duas opções principais que dão acesso aos dois módulos fundamentais do sistema:
+O usuário principal, após fechar as inscrições em seu sistema externo, abre o BJJ Tournament Manager para organizar o torneio que acontecerá no futuro. Ele então escolhe entre **criar um novo torneio** ou **importar um torneio** previamente exportado. Também pode **listar os torneios** já cadastrados para iniciar ou exportar um deles.
 
-1. **Dashboard Administrativo** — Acesso ao painel de gerenciamento do torneio.
-2. **Placar** — Exibição do placar ao vivo para a arena/público.
+### 7.2 Descrição
 
-### 7.2 Layout
+A primeira tela do sistema exibe um menu com três opções principais:
+
+1. **Criar Torneio** — Abertura do formulário de cadastro de um novo torneio.
+2. **Importar Torneio** — Importação de um torneio a partir de um arquivo JSON.
+3. **Listar Torneios** — Visualização de todos os torneios cadastrados, com ações de iniciar (definir como ativo) ou exportar (salvar JSON em outro local).
+
+> **Fluxo:** Criar e importar geram o arquivo JSON do torneio no disco. Para acessar o Dashboard Administrativo é necessário primeiro **iniciar um torneio** pela lista.
+
+### 7.3 Layout
 
 ```
 +--------------------------------------------------+
@@ -126,23 +141,29 @@ A primeira tela do sistema exibe um menu com duas opções principais que dão a
 |   └──────────────────────────────────────────┘    |
 |                                                    |
 |   ┌──────────────────────────────────────────┐    |
-|   │   [Ícone de engrenagem]                  │    |
-|   │   Dashboard Administrativo               │    |
-|   │   Gerencie atletas, chaves e resultados  │    |
+|   │   [Ícone de troféu / plus]               │    |
+|   │   Criar Torneio                          │    |
+|   │   Cadastre um novo torneio               │    |
 |   └──────────────────────────────────────────┘    |
 |                                                    |
 |   ┌──────────────────────────────────────────┐    |
-|   │   [Ícone de tela/exibição]              │    |
-|   │   Placar                                 │    |
-|   │   Exibição ao vivo para a arena          │    |
+|   │   [Ícone de pasta / upload]              │    |
+|   │   Importar Torneio                       │    |
+|   │   Importe torneio de arquivo JSON        │    |
 |   └──────────────────────────────────────────┘    |
 |                                                    |
-|   Pressione 1 ou 2 para selecionar                |
+|   ┌──────────────────────────────────────────┐    |
+|   │   [Ícone de lista]                       │    |
+|   │   Listar Torneios                        │    |
+|   │   Veja todos os torneios cadastrados     │    |
+|   └──────────────────────────────────────────┘    |
+|                                                    |
+|   Pressione 1, 2 ou 3 para selecionar             |
 |                                                    |
 +--------------------------------------------------+
 ```
 
-### 7.3 Componentes da Tela
+### 7.4 Componentes da Tela
 
 1. **Logotipo / Título:** Centralizado no topo. Pode conter um ícone ou símbolo (kimono/faixa) antes do texto.
 2. **Cartões de opção:** Cada opção é um cartão (Card do Mantine) com:
@@ -151,18 +172,18 @@ A primeira tela do sistema exibe um menu com duas opções principais que dão a
    - Descrição curta em cinza (`#666`).
    - Sombra suave (box-shadow) para elevação.
    - Borda arredondada (`border-radius: 8px–12px`).
-3. **Instrução de navegação:** Texto centralizado na parte inferior indicando as teclas `1` ou `2`.
+3. **Instrução de navegação:** Texto centralizado na parte inferior indicando as teclas `1`, `2` ou `3`.
 
-### 7.4 Comportamento
+### 7.5 Comportamento
 
 #### Abertura do sistema
 - Ao iniciar o Electron, esta tela é carregada imediatamente como rota padrão (`/`).
-- Caso não haja nenhum campeonato criado, o menu ainda deve ser exibido normalmente — o Dashboard levará à criação de um novo torneio.
+- O menu é exibido sempre com as mesmas três opções, independentemente de haver torneios cadastrados ou não.
 
 #### Seleção de opção
 O usuário pode selecionar uma opção de três formas:
 - **Clique/Touch:** Clica ou toca no cartão desejado.
-- **Teclado numérico:** Pressiona `1` para Dashboard, `2` para Placar.
+- **Teclado numérico:** Pressiona `1` para Criar, `2` para Importar, `3` para Listar.
 - **Tab + Enter:** Navega entre os cartões com Tab e confirma com Enter.
 
 #### Feedback visual
@@ -175,21 +196,21 @@ O usuário pode selecionar uma opção de três formas:
 
 | Opção | Ação |
 |---|---|
-| **Dashboard Administrativo** | Redireciona para `/admin/chave-seguranca` (tela de inserção da chave de segurança). |
-| **Placar** | Redireciona para `/placar` (tela de placar ao vivo). |
+| **Criar Torneio** | Redireciona para `/admin/criar-torneio`. |
+| **Importar Torneio** | Redireciona para `/admin/importar-torneio`. |
+| **Listar Torneios** | Redireciona para `/admin/listar-torneios`. |
 
-### 7.5 Estados da Tela
+### 7.6 Estados da Tela
 
 | Estado | Descrição |
 |---|---|
-| **Normal** | Tela exibida com as duas opções prontas para seleção. |
-| **Carregamento** | Se houver verificação de dados na inicialização, exibir um `Loader` (spinner) do Mantine centralizado. |
+| **Normal** | Tela exibida com as três opções prontas para seleção. |
 | **Fallback / Erro** | Se ocorrer um erro grave ao carregar configurações, exibir mensagem amigável com botão "Tentar novamente". |
 
-### 7.6 Acessibilidade
+### 7.7 Acessibilidade
 
 - Cartões devem ser elementos `<button>` ou `<a>` semânticos, ou utilizar `Card` do Mantine com `role="button"`, `tabIndex={0}` e `onKeyDown`.
-- Atributos `aria-label` nos cartões: "Dashboard Administrativo" e "Placar".
+- Atributos `aria-label` nos cartões: "Criar Torneio", "Importar Torneio" e "Listar Torneios".
 - Suporte a `prefers-reduced-motion`: desabilitar animações se o usuário optar por redução de movimento.
 - Contraste de cores deve atender WCAG AA (taxa de contraste mínima de 4.5:1 para texto normal).
 

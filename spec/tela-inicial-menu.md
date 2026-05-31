@@ -2,10 +2,13 @@
 
 ## Descrição
 
-A primeira tela do sistema exibe um menu com duas opções principais que dão acesso aos dois módulos fundamentais do BJJ Tournament Manager:
+A primeira tela do sistema exibe um menu com três opções principais que dão acesso aos módulos de gerenciamento do BJJ Tournament Manager:
 
-1. **Dashboard Administrativo** — Acesso ao painel de gerenciamento do torneio (cadastro de atletas, chaves, categorias, confrontos, árbitros, áreas de luta, resultados, relatórios, etc.).
-2. **Placar** — Exibição do placar ao vivo para a arena/público.
+1. **Criar Torneio** — Criação de um novo torneio a partir do formulário de cadastro.
+2. **Importar Torneio** — Importação de um torneio previamente exportado (arquivo JSON).
+3. **Listar Torneios** — Exibição da lista de todos os torneios cadastrados, com opções de iniciar ou exportar cada um.
+
+> **Pré-requisito:** Para acessar o Dashboard Administrativo (atletas, chaves, categorias, etc.) é necessário primeiro **iniciar um torneio** pela lista. O torneio ativo é o que está sendo gerenciado no momento.
 
 ## Stack Tecnológico
 
@@ -22,9 +25,10 @@ A tela deve seguir a identidade visual definida no documento de requisitos:
 |---|---|---|
 | **Fundo** | Branco (`#FFFFFF`) | Fundo principal da tela |
 | **Título principal** | Preto | "BJJ TOURNAMENT MANAGER" |
-| **Subtítulo/Slogan** | Azul Royal (`#1565C0` ou similar) | Texto secundário |
-| **Botão Dashboard** | Azul Royal (`#1565C0`) | Fundo do botão primário |
-| **Botão Placar** | Azul com opacidade reduzida ou outline | Botão secundário |
+| **Subtítulo/Slogan** | Azul Royal (`#1565C0`) | Texto secundário |
+| **Botão Criar Torneio** | Azul Royal (`#1565C0`) | Fundo do botão primário |
+| **Botão Importar Torneio** | Azul com opacidade reduzida ou outline | Botão secundário |
+| **Botão Listar Torneios** | Azul com opacidade reduzida ou outline | Botão terciário |
 | **Texto dos botões** | Branco | Rótulo das opções |
 | **Hover/Focus** | Azul escuro (`#0D47A1`) | Feedback visual nos botões |
 | **Divisores/Bordas** | Cinza claro (`#E0E0E0`) | Separar elementos |
@@ -47,18 +51,24 @@ A tela deve seguir a identidade visual definida no documento de requisitos:
 |   └──────────────────────────────────────────┘    |
 |                                                    |
 |   ┌──────────────────────────────────────────┐    |
-|   │   [Ícone de engrenagem]                  │    |
-|   │   Dashboard Administrativo               │    |
-|   │   Gerencie atletas, chaves e resultados  │    |
+|   │   [Ícone de troféu / plus]               │    |
+|   │   Criar Torneio                          │    |
+|   │   Cadastre um novo torneio               │    |
 |   └──────────────────────────────────────────┘    |
 |                                                    |
 |   ┌──────────────────────────────────────────┐    |
-|   │   [Ícone de tela/exibição]              │    |
-|   │   Placar                                 │    |
-|   │   Exibição ao vivo para a arena          │    |
+|   │   [Ícone de pasta / upload]              │    |
+|   │   Importar Torneio                       │    |
+|   │   Importe torneio de arquivo JSON        │    |
 |   └──────────────────────────────────────────┘    |
 |                                                    |
-|   Pressione 1 ou 2 para selecionar                |
+|   ┌──────────────────────────────────────────┐    |
+|   │   [Ícone de lista]                       │    |
+|   │   Listar Torneios                        │    |
+|   │   Veja todos os torneios cadastrados     │    |
+|   └──────────────────────────────────────────┘    |
+|                                                    |
+|   Pressione 1, 2 ou 3 para selecionar             |
 |                                                    |
 +--------------------------------------------------+
 ```
@@ -72,22 +82,22 @@ A tela deve seguir a identidade visual definida no documento de requisitos:
    - Descrição curta do que a opção oferece, em cinza (#666).
    - Sombra suave (box-shadow) para elevação.
    - Borda arredondada (`border-radius: 8px–12px`).
-3. **Instrução de navegação:** Texto centralizado na parte inferior indicando que o usuário pode pressionar as teclas `1` ou `2`.
+3. **Instrução de navegação:** Texto centralizado na parte inferior indicando que o usuário pode pressionar as teclas `1`, `2` ou `3`.
 
 ## Comportamento
 
 ### Abertura do sistema
 - Ao iniciar o Electron, esta tela é carregada imediatamente como rota padrão (`/`).
-- O sistema deve verificar se há arquivos de dados (JSON) existentes; caso não haja nenhum campeonato criado, o menu ainda deve ser exibido normalmente — o Dashboard Administrativo levará à criação de um novo torneio.
+- O sistema carrega a lista de torneios do disco via IPC (`list-tournaments`) para exibir contagem ou indicador, mas a tela permanece a mesma independentemente de haver torneios ou não.
 
 ### Seleção de opção
 O usuário pode selecionar uma opção de três formas:
 - **Clique/Touch:** Clica ou toca no cartão desejado.
-- **Teclado numérico:** Pressiona `1` para Dashboard, `2` para Placar.
+- **Teclado numérico:** Pressiona `1` para Criar Torneio, `2` para Importar Torneio, `3` para Listar Torneios.
 - **Tab + Enter:** Navega entre os cartões com Tab e confirma com Enter.
 
 ### Feedback visual
-- **Hover:** Cartão eleva-se ligeiramente (sombra mais pronunciada), borda sutíl com Azul Royal.
+- **Hover:** Cartão eleva-se ligeiramente (sombra mais pronunciada), borda sutil com Azul Royal.
 - **Focus (teclado):** Anel de foco visível (outline Azul Royal) ao redor do cartão.
 - **Active/Pressionado:** Efeito de clique (escala 0.98, sombra reduzida).
 - **Transição:** Animações suaves de 200ms–300ms para hover, focus e active.
@@ -96,8 +106,9 @@ O usuário pode selecionar uma opção de três formas:
 
 | Opção | Ação |
 |---|---|
-| **Dashboard Administrativo** | Redireciona para `/admin/login` (tela de autenticação) ou `/admin/dashboard` (se autenticação for opcional — a definir). |
-| **Placar** | Redireciona para `/placar` (tela de placar ao vivo). |
+| **Criar Torneio** | Redireciona para `/admin/criar-torneio` (formulário de criação). |
+| **Importar Torneio** | Redireciona para `/admin/importar-torneio` (tela de importação). |
+| **Listar Torneios** | Redireciona para `/admin/listar-torneios` (lista com ações Iniciar / Exportar). |
 
 ## Responsividade
 
@@ -113,7 +124,7 @@ A tela deve se adaptar aos seguintes dispositivos (conforme requisitos):
 ## Acessibilidade
 
 - Todos os cartões devem ser elementos `<button>` ou `<a>` semânticos, ou utilizar o componente `Card` do Mantine com `role="button"`, `tabIndex={0}` e `onKeyDown`.
-- Atributos `aria-label` nos cartões: "Dashboard Administrativo" e "Placar".
+- Atributos `aria-label` nos cartões: "Criar Torneio", "Importar Torneio" e "Listar Torneios".
 - Suporte a `prefers-reduced-motion`: desabilitar animações de transição se o usuário optar por redução de movimento.
 - Contraste de cores deve atender WCAG AA (taxa de contraste mínima de 4.5:1 para texto normal).
 
@@ -131,8 +142,7 @@ A tela deve se adaptar aos seguintes dispositivos (conforme requisitos):
 
 | Estado | Descrição |
 |---|---|
-| **Normal** | Tela exibida com as duas opções prontas para seleção. |
-| **Carregamento** | (Raro) Se houver verificação de dados na inicialização, exibir um `Loader` (spinner) do Mantine centralizado antes de renderizar o menu. |
+| **Normal** | Tela exibida com as três opções prontas para seleção. |
 | **Fallback / Erro** | Se ocorrer um erro grave ao carregar configurações, exibir uma mensagem amigável com botão "Tentar novamente". |
 
 ## Observações

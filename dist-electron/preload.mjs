@@ -1,22 +1,12 @@
 "use strict";
 const electron = require("electron");
-electron.contextBridge.exposeInMainWorld("ipcRenderer", {
-  on(...args) {
-    const [channel, listener] = args;
-    return electron.ipcRenderer.on(channel, (event, ...args2) => listener(event, ...args2));
-  },
-  off(...args) {
-    const [channel, ...omit] = args;
-    return electron.ipcRenderer.off(channel, ...omit);
-  },
-  send(...args) {
-    const [channel, ...omit] = args;
-    return electron.ipcRenderer.send(channel, ...omit);
-  },
-  invoke(...args) {
-    const [channel, ...omit] = args;
-    return electron.ipcRenderer.invoke(channel, ...omit);
-  }
-  // You can expose other APTs you need here.
-  // ...
+electron.contextBridge.exposeInMainWorld("electronAPI", {
+  createTournament: (data) => electron.ipcRenderer.invoke("create-tournament", data),
+  listTournaments: () => electron.ipcRenderer.invoke("list-tournaments"),
+  startTournament: (id) => electron.ipcRenderer.invoke("start-tournament", id),
+  exportTournament: (id) => electron.ipcRenderer.invoke("export-tournament", id),
+  importTournament: (data) => electron.ipcRenderer.invoke("import-tournament", data),
+  importTournamentOverwrite: (data) => electron.ipcRenderer.invoke("import-tournament-overwrite", data),
+  getActiveTournament: () => electron.ipcRenderer.invoke("get-active-tournament"),
+  readFile: (path) => electron.ipcRenderer.invoke("read-file", path)
 });
