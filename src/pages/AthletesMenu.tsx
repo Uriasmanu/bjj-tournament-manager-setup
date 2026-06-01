@@ -1,11 +1,56 @@
 import { Card, Stack, Text, Center, Group } from '@mantine/core';
 import { IconPlus, IconList, IconFileUpload } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
+import { useState } from 'react';
+import type { Atleta } from '../types/athlete';
 import { PageLayout } from '../components/PageLayout';
+import { AthleteForm } from '../components/AthleteForm';
 
 export function AthletesMenu() {
   const navigate = useNavigate();
+  const [athletes, setAthletes] = useState<Atleta[]>([]);
+  const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
+
+  const loadAthletes = async () => {
+    try {
+      const list = await window.electronAPI.loadAthletes();
+      setAthletes(list);
+    } catch {
+      /* silent */
+    }
+  };
+
+  const handleNew = () => {
+    openForm();
+  };
+
+  const handleSave = async (athlete: Atleta): Promise<boolean> => {
+    const duplicate = athletes.some(
+      (a) =>
+        a.id !== athlete.id &&
+        a.nome.trim().toLowerCase() === athlete.nome.trim().toLowerCase() &&
+        a.anoNascimento === athlete.anoNascimento
+    );
+    if (duplicate) {
+      notifications.show({
+        title: 'Erro',
+        message: 'Já existe um atleta cadastrado com este nome e ano de nascimento.',
+        color: 'red',
+      });
+      return false;
+    }
+    try {
+      await window.electronAPI.saveAthlete(athlete);
+      notifications.show({ title: 'Sucesso', message: 'Atleta cadastrado com sucesso!', color: 'green' });
+      await loadAthletes();
+      return true;
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao salvar o atleta.', color: 'red' });
+      return false;
+    }
+  };
 
   const handleImport = async () => {
     try {
@@ -13,6 +58,7 @@ export function AthletesMenu() {
       if (result.imported === 0 && result.skipped === 0) return;
       const msg = `${result.imported} atleta(s) importado(s)${result.skipped > 0 ? `, ${result.skipped} ignorado(s) (já existentes)` : ''}.`;
       notifications.show({ title: 'Sucesso', message: msg, color: 'green' });
+      await loadAthletes();
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao importar atletas.', color: 'red' });
     }
@@ -23,7 +69,7 @@ export function AthletesMenu() {
       label: 'Cadastrar Atleta',
       description: 'Cadastrar um novo atleta no sistema',
       icon: IconPlus,
-      onClick: () => navigate('/admin/atletas/lista'),
+      onClick: handleNew,
     },
     {
       label: 'Listar Atletas',
@@ -78,6 +124,13 @@ export function AthletesMenu() {
           );
         })}
       </Stack>
+
+      <AthleteForm
+        opened={formOpened}
+        onClose={closeForm}
+        onSave={handleSave}
+        athlete={null}
+      />
     </PageLayout>
   );
 }
