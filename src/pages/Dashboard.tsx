@@ -16,16 +16,13 @@ interface DashboardCard {
 
 const dashboardCards: DashboardCard[] = [
   { label: 'Atletas', description: 'Cadastro e gerenciamento de atletas', icon: IconUsers, route: '/admin/atletas', status: 'implemented' },
-  { label: 'Equipes', description: 'Cadastro de equipes / academias', icon: IconBuildingSkyscraper, status: 'planned' },
+  { label: 'Equipes', description: 'Resumo de equipes / academias', icon: IconBuildingSkyscraper, route: '/admin/equipes', status: 'implemented' },
   { label: 'Categorias', description: 'Configuração de categorias e divisões', icon: IconCategory, status: 'planned' },
-  { label: 'Inscrições', description: 'Vincular atletas a categorias', icon: IconClipboardText, status: 'planned' },
-  { label: 'Controle de Pesagem', description: 'Registro de peso dos atletas', icon: IconScale, status: 'planned' },
   { label: 'Geração de Chaves', description: 'Criação de chaves por categoria', icon: IconBrackets, status: 'planned' },
   { label: 'Áreas de Luta', description: 'Gerenciamento de áreas de competição', icon: IconMapPin, status: 'planned' },
   { label: 'Árbitros', description: 'Cadastro e escala de árbitros', icon: IconUserShield, status: 'planned' },
   { label: 'Placar / Chamadas', description: 'Acompanhamento de lutas ao vivo', icon: IconScoreboard, status: 'planned' },
   { label: 'Resultados', description: 'Classificação e medalhistas', icon: IconTrophy, status: 'planned' },
-  { label: 'Relatórios', description: 'Exportação de relatórios do torneio', icon: IconFileReport, status: 'planned' },
 ];
 
 export function Dashboard() {
@@ -76,7 +73,6 @@ export function Dashboard() {
       <Stack gap="lg">
         <Group>
           <div style={{ flex: 1 }}>
-            <Title order={2}>Dashboard</Title>
             {torneio && (
               <Text size="sm" c="dimmed">
                 {torneio.nome || `Torneio ${formatDate(torneio.data)}`} — {formatDate(torneio.data)}
