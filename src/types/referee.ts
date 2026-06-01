@@ -1,0 +1,10 @@
+import type { Faixa } from './athlete';
+
+export interface Arbitro {
+  id: string;
+  nome: string;
+  faixa: Faixa;
+  chaveIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}

@@ -1,4 +1,5 @@
 import type { Atleta } from './athlete';
+import type { Arbitro } from './referee';
 
 export interface Torneio {
   id: string;
@@ -8,6 +9,7 @@ export interface Torneio {
   updatedAt: string;
   startedAt?: string;
   atletas?: Atleta[];
+  arbitros?: Arbitro[];
 }
 
 export interface CreateTorneioInput {

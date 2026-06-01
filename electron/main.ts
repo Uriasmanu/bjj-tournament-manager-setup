@@ -3,8 +3,10 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
 import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
+import { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
 import { checkActivation, validatePassword, activateLicense } from './activation'
 import type { Atleta } from '../src/types/athlete'
+import type { Arbitro } from '../src/types/referee'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -109,6 +111,46 @@ function registerAthleteHandlers(): void {
   })
 }
 
+function registerRefereeHandlers(): void {
+  ipcMain.handle('save-arbitro', (_event, data: Omit<Arbitro, 'id' | 'createdAt' | 'updatedAt'>): Arbitro => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return saveArbitro(torneioId, data)
+  })
+
+  ipcMain.handle('update-arbitro', (_event, data: Arbitro): Arbitro => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return updateArbitro(torneioId, data)
+  })
+
+  ipcMain.handle('delete-arbitro', (_event, arbitroId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return deleteArbitro(torneioId, arbitroId)
+  })
+
+  ipcMain.handle('load-arbitros', (): Arbitro[] => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadArbitros(torneioId)
+  })
+
+  ipcMain.handle('import-arbitros', async (): Promise<{ imported: number; skipped: number }> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    const filePath = await openArbitroFileDialog()
+    if (!filePath) return { imported: 0, skipped: 0 }
+    return importArbitrosFromFile(torneioId, filePath)
+  })
+
+  ipcMain.handle('export-arbitros', async (): Promise<void> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return exportArbitros(torneioId)
+  })
+}
+
 function registerActivationHandlers(): void {
   ipcMain.handle('check-activation', (): boolean => {
     return checkActivation()
@@ -126,6 +168,7 @@ function registerActivationHandlers(): void {
 app.whenReady().then(() => {
   registerTournamentHandlers()
   registerAthleteHandlers()
+  registerRefereeHandlers()
   registerActivationHandlers()
   createWindow()
 })

@@ -1,5 +1,6 @@
 import type { Torneio, CreateTorneioInput } from './tournament';
 import type { Atleta } from './athlete';
+import type { Arbitro } from './referee';
 
 declare global {
   interface Window {
@@ -25,6 +26,12 @@ interface ElectronAPI {
   deleteAthlete: (id: string) => Promise<Atleta[]>;
   importAthletes: () => Promise<{ imported: number; skipped: number }>;
   exportAthletes: () => Promise<void>;
+  saveArbitro: (data: Omit<Arbitro, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Arbitro>;
+  updateArbitro: (data: Arbitro) => Promise<Arbitro>;
+  deleteArbitro: (arbitroId: string) => Promise<void>;
+  loadArbitros: () => Promise<Arbitro[]>;
+  importArbitros: () => Promise<{ imported: number; skipped: number }>;
+  exportArbitros: () => Promise<void>;
 }
 
 interface ActivationAPI {

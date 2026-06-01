@@ -34,6 +34,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('import-athletes'),
   exportAthletes: () =>
     ipcRenderer.invoke('export-athletes'),
+  saveArbitro: (data: { nome: string; faixa: string; chaveIds: string[] }) =>
+    ipcRenderer.invoke('save-arbitro', data),
+  updateArbitro: (data: { id: string; nome: string; faixa: string; chaveIds: string[]; createdAt: string; updatedAt: string }) =>
+    ipcRenderer.invoke('update-arbitro', data),
+  deleteArbitro: (arbitroId: string) =>
+    ipcRenderer.invoke('delete-arbitro', arbitroId),
+  loadArbitros: () =>
+    ipcRenderer.invoke('load-arbitros'),
+  importArbitros: () =>
+    ipcRenderer.invoke('import-arbitros'),
+  exportArbitros: () =>
+    ipcRenderer.invoke('export-arbitros'),
 })
 
 contextBridge.exposeInMainWorld('activation', {

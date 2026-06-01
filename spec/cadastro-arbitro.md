@@ -8,7 +8,7 @@ O módulo de **Árbitros** é responsável pelo cadastro e gerenciamento dos ár
 
 O funcionamento é análogo ao módulo de Atletas, porém com campos simplificados:
 - **Nome** — obrigatório
-- **Faixa** — obrigatório (mesmo enum `Faixa` dos atletas)
+- **Faixa** — obrigatório (apenas faixas a partir de **roxa**: `roxa`, `marrom`, `preta`)
 - **Chaves** — array de IDs das chaves atribuídas, iniciando vazio (`[]`)
 
 O módulo conta com **importação e exportação** de árbitros em formato JSON, seguindo o mesmo padrão da importação/exportação de atletas.
@@ -41,7 +41,7 @@ O módulo conta com **importação e exportação** de árbitros em formato JSON
 | Campo | Tipo | Obrigatório | Regras |
 |---|---|---|---|
 | `nome` | string | Sim | Mínimo 2 caracteres. Armazenado em lowercase (trim). |
-| `faixa` | Faixa | Sim | Mesmo enum do atleta: `branca`, `cinza`, `amarela`, `laranja`, `verde`, `azul`, `roxa`, `marrom`, `preta` |
+| `faixa` | Faixa | Sim | Apenas faixas a partir de roxa: `roxa`, `marrom`, `preta` |
 | `chaveIds` | string[] | Não | Inicia como `[]`. Preenchido ao atribuir chaves ao árbitro. |
 
 ### 3.3. Duplicata
@@ -307,7 +307,7 @@ interface ElectronAPI {
 - Modal de cadastro/edição similar ao `AthleteForm`, porém simplificado
 - Campos:
   - **Nome** (`TextInput`, obrigatório, min 2 caracteres)
-  - **Faixa** (`Select`, obrigatório, mesmas opções do atleta)
+  - **Faixa** (`Select`, obrigatório, apenas opções a partir de roxa: `Roxa`, `Marrom`, `Preta`)
 - Botões "Salvar" e "Cancelar"
 - Validação em tempo real (modo controlled com `@mantine/form`)
 - Verificação de duplicata por nome antes de salvar
@@ -325,9 +325,9 @@ interface ElectronAPI {
 ### 9.4. Importação de Árbitros
 
 - **Gatilhos:** Botão "Importar" em `AdminArbitros` e cartão "Importar Árbitros" em `ArbitrosMenu`
-- **Formato:** Arquivo `.json` com array de objetos `{ nome, faixa }`
+- **Formato:** Arquivo `.json` com array de objetos `{ "nome": "...", "faixa": "..." }` — apenas `nome` e `faixa` são exigidos
 - **Diálogo nativo:** `dialog.showOpenDialog` do Electron com filtro `*.json`
-- **Validação:** Cada objeto deve ter `nome` (string, min 2 chars) e `faixa` (string, válida no enum `Faixa`). Array vazio é válido.
+- **Validação:** Cada objeto deve ter `nome` (string, min 2 chars) e `faixa` (string: `roxa`, `marrom` ou `preta`). Array vazio é válido.
 - **Deduplicação:** Ignorado se mesmo `nome` (case-insensitive, trimmed) já existe na lista.
 - **Notificações:** Sucesso verde com contagem, erro vermelho se JSON inválido.
 
@@ -335,7 +335,7 @@ interface ElectronAPI {
 
 - **Gatilhos:** Botão "Exportar" em `AdminArbitros`
 - **Diálogo nativo:** `dialog.showSaveDialog` com nome sugerido `"{torneio}_arbitros.json"`
-- **Conteúdo:** Array completo de árbitros no mesmo formato de importação (campos `nome`, `faixa`, `id`, `chaveIds`, `createdAt`, `updatedAt`)
+- **Conteúdo:** Array completo de árbitros (campos `nome`, `faixa`, `id`, `chaveIds`, `createdAt`, `updatedAt`)
 
 ---
 
@@ -443,6 +443,7 @@ bjj-tournament-manager-setup/
 |---|---|
 | Nome obrigatório (mín. 2 caracteres) | "Nome deve ter ao menos 2 caracteres" |
 | Faixa obrigatória | "Selecione uma faixa" |
+| Faixa inválida (menor que roxa) | "Árbitro deve ter faixa mínima Roxa" |
 | Nome duplicado (case-insensitive) | "Já existe um árbitro com este nome" |
 | Exclusão com chaves atribuídas | "Este árbitro está vinculado a {N} chave(s). As chaves ficarão sem árbitro." |
 | Máximo 1 árbitro por chave | "Esta chave já possui um árbitro attribuído." |

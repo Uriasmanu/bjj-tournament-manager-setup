@@ -13,6 +13,8 @@ import { ImportarTorneio } from './pages/ImportarTorneio';
 import { ListarTorneios } from './pages/ListarTorneios';
 import { AdminAthletes } from './pages/AdminAthletes';
 import { AthletesMenu } from './pages/AthletesMenu';
+import { ArbitrosMenu } from './pages/ArbitrosMenu';
+import { AdminArbitros } from './pages/AdminArbitros';
 import { Equipes } from './pages/Equipes';
 import { ActivationScreen } from './components/ActivationScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -29,6 +31,8 @@ function MainApp() {
           <Route path="/admin/listar-torneios" element={<ListarTorneios />} />
           <Route path="/admin/atletas" element={<AthletesMenu />} />
           <Route path="/admin/atletas/lista" element={<AdminAthletes />} />
+          <Route path="/admin/arbitros" element={<ArbitrosMenu />} />
+          <Route path="/admin/arbitros/lista" element={<AdminArbitros />} />
           <Route path="/admin/equipes" element={<Equipes />} />
         </Routes>
       </ErrorBoundary>
