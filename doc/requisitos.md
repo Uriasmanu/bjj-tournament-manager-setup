@@ -193,6 +193,41 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Exibe tela de fallback com: título "Erro inesperado", descrição, mensagem do erro (primeiras 4 linhas do stack) e botão "Tentar novamente".
 - O botão "Tentar novamente" reseta o estado de erro (`setState({ hasError: false })`) e re-renderiza os children.
 
+### 3.13. Layout Responsivo — Ocupação de Tela
+
+Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da altura** da janela do Electron, independentemente do conteúdo interno.
+
+#### Regras
+
+- **`PageLayout.tsx` é o layout padrão** e define a estrutura base de todas as páginas administrativas. Nenhuma página deve criar seu próprio Container com tamanho fixo.
+- **Container `fluid`:** deve usar `<Container fluid px="xl" py="xl">` para que ocupe 100% da largura disponível, sem `max-width` restritivo.
+- **`width: 100%` explícito:** Container e Paper devem ter `width: 100%` declarado para garantir que elementos block-flex aninhados (como `Group`) não encolham ao tamanho do texto interno.
+- **Altura mínima:** o Container externo deve ter `min-height: 100vh` e o Paper interno `min-height: calc(100vh - 4rem)` para ocupar ao menos 90% da viewport (subtraindo o `py="xl"` de 2rem × 2).
+- **Proibido `size` fixo:** nenhuma página pode usar `<Container size="sm"`, `size="md"` ou `size="clamp(...)"` para o layout principal. Os únicos Containers com tamanho fixo permitidos são os de estados temporários (loading/error) que também devem usar `fluid`.
+- **Loading/Error states:** devem replicar o mesmo padrão (`fluid` + `min-height`) para evitar "salto visual" quando a tela carrega.
+- **Grupos internos:** `Group` que necessite ocupar toda a largura deve receber `w="100%"` para garantir que `justify="space-between"` funcione corretamente.
+
+#### Implementação
+
+| Componente | Propriedade | Valor |
+|---|---|---|
+| `Container` | `fluid` | Remove `max-width` fixo |
+| `Container` | `px` | `"xl"` (respiro lateral proporcional) |
+| `Container` | `style.minHeight` | `"100vh"` |
+| `Paper` | `style.minHeight` | `"calc(100vh - 4rem)"` |
+| `Paper` | `style.width` | `"100%"` |
+| `Group` (outer) | `w` | `"100%"` |
+
+#### Arquivos Afetados
+
+| Arquivo | O que foi alterado |
+|---|---|
+| `src/components/PageLayout.tsx` | Container `fluid`, `width: 100%` explícito, `min-height` no Container e Paper, `w="100%"` no Group, removido `display: flex` do Paper |
+| `src/pages/ListarTorneios.tsx` | Loading/Error states: `fluid` + `min-height` |
+| `src/pages/AdminAthletes.tsx` | Loading/Error states: `fluid` + `min-height` |
+| `src/pages/Equipes.tsx` | Loading/Error states: `fluid` + `min-height` |
+| `src/pages/Dashboard.tsx` | Loading state: `fluid` + `min-height` |
+
 ---
 
 ## 4. Plataforma
