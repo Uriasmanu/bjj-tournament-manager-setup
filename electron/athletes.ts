@@ -1,6 +1,7 @@
 import { app, dialog } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs'
+import crypto from 'node:crypto'
 import type { Atleta } from '../src/types/athlete'
 import type { Torneio } from '../src/types/tournament'
 import { CATEGORIAS_IBJJF } from '../src/types/category'
@@ -96,6 +97,7 @@ function importAthletesFromFile(torneioId: string, filePath: string): { imported
       a.equipe = equipeLower
       current.push({
         ...a,
+        id: a.id || crypto.randomUUID(),
         createdAt: a.createdAt || new Date().toISOString(),
         updatedAt: a.updatedAt || new Date().toISOString(),
       })

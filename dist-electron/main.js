@@ -285,6 +285,7 @@ function importAthletesFromFile(torneioId, filePath) {
       a.equipe = equipeLower;
       current.push({
         ...a,
+        id: a.id || crypto.randomUUID(),
         createdAt: a.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
         updatedAt: a.updatedAt || (/* @__PURE__ */ new Date()).toISOString()
       });

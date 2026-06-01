@@ -83,7 +83,7 @@ export function GerenciarChaves() {
   }, [refreshKey]);
 
   const getAtletaNome = (id: string | null): string => {
-    if (!id) return 'Aguardando...';
+    if (!id) return 'Bye';
     const atleta = athletes.find(a => a.id === id);
     if (!atleta) return 'Atleta removido';
     const nome = atleta.nome.charAt(0).toUpperCase() + atleta.nome.slice(1);

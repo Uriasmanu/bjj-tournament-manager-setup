@@ -1,6 +1,6 @@
-import { Modal, Stack, Group, Button, Text, Card, ActionIcon, Select } from '@mantine/core';
+import { Modal, Stack, Group, Button, Text, Card, ActionIcon, Select, Divider, Badge } from '@mantine/core';
 import { IconArrowUp, IconArrowDown, IconArrowsShuffle } from '@tabler/icons-react';
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { Chave } from '../types/bracket';
 import type { Arbitro } from '../types/referee';
 
@@ -19,6 +19,43 @@ interface EditarChaveModalProps {
   onTrocarArbitro: (chaveId: string, arbitroId: string | null) => void;
 }
 
+interface FirstRoundFight {
+  posA: number | null;
+  posB: number | null;
+  atletaAId: string | null;
+  atletaBId: string | null;
+}
+
+function getFirstRoundFights(posicoes: string[]): { fights: FirstRoundFight[]; byes: number[] } {
+  const n = posicoes.length;
+  const byes: number[] = [];
+
+  let fights: FirstRoundFight[];
+  switch (n) {
+    case 2:
+      fights = [{ posA: 1, posB: 2, atletaAId: posicoes[0], atletaBId: posicoes[1] }];
+      break;
+    case 3:
+      fights = [{ posA: 2, posB: 3, atletaAId: posicoes[1], atletaBId: posicoes[2] }];
+      byes.push(1);
+      break;
+    case 4:
+      fights = [
+        { posA: 1, posB: 4, atletaAId: posicoes[0], atletaBId: posicoes[3] },
+        { posA: 2, posB: 3, atletaAId: posicoes[1], atletaBId: posicoes[2] },
+      ];
+      break;
+    case 5:
+      fights = [{ posA: 4, posB: 5, atletaAId: posicoes[3], atletaBId: posicoes[4] }];
+      byes.push(1, 2, 3);
+      break;
+    default:
+      fights = [];
+  }
+
+  return { fights, byes };
+}
+
 export function EditarChaveModal({
   opened,
   onClose,
@@ -30,11 +67,13 @@ export function EditarChaveModal({
 }: EditarChaveModalProps) {
   const [posicoes, setPosicoes] = useState<string[]>([]);
 
-  useMemo(() => {
+  useEffect(() => {
     if (chave) {
       setPosicoes([...chave.posicoesAtletas]);
     }
   }, [chave]);
+
+  const { fights, byes } = useMemo(() => getFirstRoundFights(posicoes), [posicoes]);
 
   const handleMoveUp = (index: number) => {
     if (index === 0) return;
@@ -130,6 +169,34 @@ export function EditarChaveModal({
         <Text size="sm" c="dimmed">
           Reordene os atletas com as setas ou clique em "Embaralhar" para aleatorizar.
         </Text>
+
+        <Divider label="Lutas da 1ª Rodada" labelPosition="center" />
+
+        {fights.length > 0 && (
+          <Stack gap="xs">
+            {fights.map((fight, i) => (
+              <Card key={i} withBorder shadow="xs" padding="sm" radius="md">
+                <Group justify="space-between" wrap="nowrap">
+                  <Text size="sm" fw={500} style={{ flex: 1, textAlign: 'right' }}>
+                    {getAtletaNome(fight.atletaAId)}
+                  </Text>
+                  <Badge size="sm" color="gray" variant="light">vs</Badge>
+                  <Text size="sm" fw={500} style={{ flex: 1, textAlign: 'left' }}>
+                    {getAtletaNome(fight.atletaBId)}
+                  </Text>
+                </Group>
+              </Card>
+            ))}
+          </Stack>
+        )}
+
+        {byes.length > 0 && (
+          <Text size="sm" c="dimmed">
+            Bye: {byes.map(b => getAtletaNome(posicoes[b - 1])).join(', ')}
+          </Text>
+        )}
+
+        <Divider label="Ordem dos Atletas" labelPosition="center" />
 
         <Group>
           <Button

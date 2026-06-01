@@ -39,11 +39,11 @@ export function BracketCard({ luta, atletaANome, atletaBNome, vencedorNome, onCl
         <Badge color={config.color} size="sm" variant="light">{config.label}</Badge>
       </Group>
       <Text size="sm" fw={500} td={luta.status === 'wo' && luta.vencedorId === luta.atletaAId ? 'line-through' : undefined}>
-        {atletaANome || 'Aguardando...'}
+        {atletaANome || 'Bye'}
       </Text>
       <Text size="xs" c="dimmed" ta="center">vs</Text>
       <Text size="sm" fw={500} td={luta.status === 'wo' && luta.vencedorId === luta.atletaBId ? 'line-through' : undefined}>
-        {atletaBNome || 'Aguardando...'}
+        {atletaBNome || 'Bye'}
       </Text>
       {vencedorNome && (
         <Text size="xs" c="green" fw={600} mt={4}>
