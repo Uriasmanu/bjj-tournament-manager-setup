@@ -231,39 +231,6 @@ async function exportAthletes(torneioId) {
     fs.writeFileSync(result.filePath, JSON.stringify(list, null, 2), "utf-8");
   }
 }
-function migrateGlobalAthletes(getActiveTournamentId2) {
-  const globalPath = path.join(DATA_DIR, "atletas.json");
-  if (!fs.existsSync(globalPath)) return;
-  const torneioId = getActiveTournamentId2();
-  if (!torneioId) return;
-  try {
-    const globalAthletes = JSON.parse(fs.readFileSync(globalPath, "utf-8"));
-    if (!Array.isArray(globalAthletes) || globalAthletes.length === 0) {
-      fs.unlinkSync(globalPath);
-      return;
-    }
-    const torneio = JSON.parse(fs.readFileSync(getTorneioPath(torneioId), "utf-8"));
-    const existing = torneio.atletas ?? [];
-    const merged = [...existing];
-    let migrated = 0;
-    for (const a of globalAthletes) {
-      const alreadyExists = existing.some(
-        (ex) => a.id && ex.id === a.id || ex.nome === a.nome && ex.anoNascimento === a.anoNascimento
-      );
-      if (!alreadyExists) {
-        merged.push(a);
-        migrated++;
-      }
-    }
-    if (migrated > 0) {
-      torneio.atletas = merged;
-      torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
-      fs.writeFileSync(getTorneioPath(torneioId), JSON.stringify(torneio, null, 2), "utf-8");
-    }
-    fs.renameSync(globalPath, globalPath.replace(".json", ".migrated.json"));
-  } catch {
-  }
-}
 const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "57a8d2d84be94e9bdae407ad8352065346269c6997b0be31ff32101fc51e7c3e";
 const ACTIVATION_FILE = "activation.json";
 function getActivationPath() {
@@ -386,7 +353,6 @@ function registerActivationHandlers() {
   });
 }
 app.whenReady().then(() => {
-  migrateGlobalAthletes(getActiveTournamentId);
   registerTournamentHandlers();
   registerAthleteHandlers();
   registerActivationHandlers();

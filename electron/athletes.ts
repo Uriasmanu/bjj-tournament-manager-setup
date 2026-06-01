@@ -125,46 +125,4 @@ async function exportAthletes(torneioId: string): Promise<void> {
   }
 }
 
-function migrateGlobalAthletes(getActiveTournamentId: () => string | null): void {
-  const globalPath = path.join(DATA_DIR, 'atletas.json')
-  if (!fs.existsSync(globalPath)) return
-
-  const torneioId = getActiveTournamentId()
-  if (!torneioId) return
-
-  try {
-    const globalAthletes: Atleta[] = JSON.parse(fs.readFileSync(globalPath, 'utf-8'))
-    if (!Array.isArray(globalAthletes) || globalAthletes.length === 0) {
-      fs.unlinkSync(globalPath)
-      return
-    }
-
-    const torneio: Torneio = JSON.parse(fs.readFileSync(getTorneioPath(torneioId), 'utf-8'))
-    const existing = torneio.atletas ?? []
-    const merged = [...existing]
-    let migrated = 0
-
-    for (const a of globalAthletes) {
-      const alreadyExists = existing.some(
-        ex => (a.id && ex.id === a.id) ||
-              (ex.nome === a.nome && ex.anoNascimento === a.anoNascimento)
-      )
-      if (!alreadyExists) {
-        merged.push(a)
-        migrated++
-      }
-    }
-
-    if (migrated > 0) {
-      torneio.atletas = merged
-      torneio.updatedAt = new Date().toISOString()
-      fs.writeFileSync(getTorneioPath(torneioId), JSON.stringify(torneio, null, 2), 'utf-8')
-    }
-
-    fs.renameSync(globalPath, globalPath.replace('.json', '.migrated.json'))
-  } catch {
-    // falha silenciosa — não bloqueia o app
-  }
-}
-
-export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes, migrateGlobalAthletes }
+export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes }

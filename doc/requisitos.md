@@ -22,7 +22,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Listar Torneios | ✅ Completo | Tabela com Iniciar/Exportar/Excluir; registro de startedAt no Play |
 | Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (`electron/tournament.ts`) |
 | Tema Mantine UI | ✅ Completo | Tema azul royal (#1565C0), fonte Inter, componentes responsivos com `clamp()` |
-| Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC |
+| Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC. Atletas armazenados por torneio (dentro do JSON do torneio). |
 | Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente |
 | Dashboard Administrativo | ✅ Completo | Tela com cards em grid (1-4 colunas responsivas), funcionalidades implementadas × planejadas |
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
@@ -130,8 +130,9 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Duplicata:** Um atleta é considerado duplicata quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**. A verificação ocorre:
   - No renderer (`AdminAthletes.tsx:handleSave`) antes do IPC, tanto para cadastro quanto para edição (ignorando o próprio `id`).
   - No main process (`athletes.ts:importAthletesFromFile`) durante importação em massa.
-- Atletas são armazenados em arquivo global `{userData}/data/atletas.json` (compartilhado entre torneios).
-
+- **Armazenamento por torneio:** Atletas são armazenados dentro do JSON do torneio (campo `atletas: Atleta[]`), não mais em arquivo global. Cada torneio possui sua própria lista exclusiva.
+- **Torneio ativo obrigatório:** Para cadastrar, editar, excluir ou importar atletas, é necessário que haja um torneio ativo. Caso contrário, o handler IPC lança erro `"Nenhum torneio ativo"` exibido como notificação vermelha.
+- **Sincronia imediata:** Qualquer operação CRUD sobre atletas lê e escreve diretamente no arquivo JSON do torneio ativo (`torneios/{id}.json`), atualizando o timestamp `updatedAt` do torneio.
 ### 3.9. Importação em Massa de Atletas
 
 - **Gatilhos:** A importação pode ser disparada de dois lugares:
@@ -150,7 +151,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Deduplicação:** Um atleta é ignorado se:
   1. Seu `id` (se fornecido no arquivo) já existe na lista atual.
   2. Seu `nome` (case-insensitive, trimmed) **e** `anoNascimento` já existem combinados em algum atleta da lista.
-- **Persistência:** A lista mesclada é reescrita em `{userData}/data/atletas.json` com indentação de 2 espaços.
+- **Persistência:** A lista mesclada é reescrita no JSON do torneio ativo (`torneios/{id}.json` → campo `atletas`) com indentação de 2 espaços.
 - **Retorno:** `{ imported: number; skipped: number }` — contagem de novos vs. ignorados.
 - **Notificações no renderer:**
   - Cancelamento ou `imported=0, skipped=0`: silêncio (sem notificação).
@@ -239,9 +240,9 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 {userData}/
   data/
     torneios/
-      {id}.json           # Arquivo individual de cada torneio
+      {id}.json           # JSON do torneio com campo "atletas"
     torneio-ativo.json    # { "id": "uuid-do-torneio-ativo" }
-    atletas.json          # Lista global de atletas (compartilhada entre torneios)
+    atletas.json          # Exportação da lista de atletas (via export-athletes)
     activation.json       # { "token": "hmac-token", "activatedAt": "ISO" }
 ```
 
@@ -254,12 +255,23 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
   "data": "2026-12-25",
   "createdAt": "2026-05-31T10:00:00.000Z",
   "updatedAt": "2026-05-31T10:00:00.000Z",
-  "startedAt": "2026-06-01T08:00:00.000Z"
+  "startedAt": "2026-06-01T08:00:00.000Z",
+  "atletas": [
+    {
+      "id": "uuid-v4",
+      "nome": "joão silva",
+      "equipe": "gracie barra",
+      "pesoKg": 76.5,
+      "faixa": "azul",
+      "anoNascimento": 1998,
+      "createdAt": "2026-05-31T10:00:00.000Z",
+      "updatedAt": "2026-05-31T10:00:00.000Z"
+    }
+  ]
 }
 ```
 
-### 6.4. Estrutura do JSON de Atletas (`{userData}/data/atletas.json`)
-
+### 6.4. Estrutura do JSON de Atleta (formato do array dentro do campo `atletas` do torneio)
 ```json
 [
   {
@@ -291,11 +303,11 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `read-file` | Renderer → Main → Renderer | Lê conteúdo de arquivo do disco |
 | `update-tournament` | Renderer → Main | Atualiza dados do torneio |
 | `delete-tournament` | Renderer → Main | Remove arquivo JSON do torneio (+ `torneio-ativo.json` se for o ativo) |
-| `load-athletes` | Renderer → Main → Renderer | Carrega atletas do JSON |
-| `save-athlete` | Renderer → Main | Adiciona novo atleta ao JSON |
-| `update-athlete` | Renderer → Main | Atualiza atleta existente (match por `id`) |
-| `delete-athlete` | Renderer → Main | Remove atleta do JSON pelo `id` |
-| `import-athletes` | Renderer → Main → Renderer | Abre diálogo nativo, lê JSON, mescla com lista, retorna `{imported, skipped}` |
+| `load-athletes` | Renderer → Main → Renderer | Carrega atletas do torneio ativo (`torneios/{id}.json` → campo `atletas`) |
+| `save-athlete` | Renderer → Main | Adiciona novo atleta ao torneio ativo (lança erro se não houver torneio ativo) |
+| `update-athlete` | Renderer → Main | Atualiza atleta existente no torneio ativo (match por `id`) |
+| `delete-athlete` | Renderer → Main | Remove atleta do torneio ativo pelo `id` |
+| `import-athletes` | Renderer → Main → Renderer | Abre diálogo nativo, lê JSON, mescla com lista do torneio ativo, retorna `{imported, skipped}` |
 | `check-activation` | Renderer → Main → Renderer | Verifica se o software está ativado |
 | `validate-password` | Renderer → Main → Renderer | Valida senha de ativação (hash SHA-256) |
 | `activate-license` | Renderer → Main → Renderer | Gera e salva token HMAC de ativação |
@@ -541,6 +553,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `doc/requisitos.md` | Este documento — regras de negócio e especificação geral |
 | `spec/cadastro-atletas.md` | Especificação detalhada do CRUD de atletas |
 | `spec/spec-import-atleta.md` | Especificação detalhada da importação em massa de atletas |
+| `spec/spec-torneio-atletas.md` | Especificação da migração de atletas para armazenamento por torneio |
 | `spec/validacao-credential.md` | Especificação da ativação do software |
 | `spec.md` | Diagnóstico histórico do formulário de atletas (modo uncontrolled) |
 | `spec-correção.md` | Análise da correção do formulário (modo controlled + dependência form removida) |

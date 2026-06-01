@@ -138,7 +138,6 @@ O handler `import-tournament` persiste o JSON recebido (incluindo `atletas` se p
 4. **Exportação inclusiva:** O JSON exportado contém todos os atletas do torneio.
 5. **Importação de torneio:** O JSON importado pode conter ou não o campo `atletas`. Se ausente, o torneio começa com lista vazia.
 6. **Compatibilidade:** A interface `Torneio` trata `atletas` como opcional (`atletas?: Atleta[]`) para compatibilidade com torneios antigos.
-7. **Migração:** O arquivo global `atletas.json` existente deve ser migrado para o torneio ativo no momento da primeira execução pós-atualização (ou simplesmente ignorado e mantido apenas para fallback).
 
 ---
 
@@ -349,73 +348,17 @@ async function exportAthletes(torneioId: string): Promise<void> {
 export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes }
 ```
 
-### 6.2b. Migração do arquivo global `atletas.json`
-
-Na primeira execução pós-atualização, se existir o arquivo global `{userData}/data/atletas.json` e houver um torneio ativo, os atletas globais devem ser migrados para o torneio ativo. A migração ocorre **uma única vez** e pode ser implementada como uma função executada durante a inicialização do app em `main.ts`:
-
-```typescript
-function migrateGlobalAthletes(): void {
-  const globalPath = path.join(app.getPath('userData'), 'data', 'atletas.json');
-  if (!fs.existsSync(globalPath)) return;
-
-  const torneioId = getActiveTournamentId();
-  if (!torneioId) return;  // sem torneio ativo, mantém arquivo global para migração futura
-
-  try {
-    const globalAthletes: Atleta[] = JSON.parse(fs.readFileSync(globalPath, 'utf-8'));
-    if (!Array.isArray(globalAthletes) || globalAthletes.length === 0) {
-      fs.unlinkSync(globalPath);  // arquivo vazio ou inválido — remove
-      return;
-    }
-
-    const torneio: Torneio = JSON.parse(
-      fs.readFileSync(getTorneioPath(torneioId), 'utf-8')
-    );
-    const existing = torneio.atletas ?? [];
-    const merged = [...existing];
-    let migrated = 0;
-
-    for (const a of globalAthletes) {
-      const alreadyExists = existing.some(
-        ex => (a.id && ex.id === a.id) ||
-              (ex.nome === a.nome && ex.anoNascimento === a.anoNascimento)
-      );
-      if (!alreadyExists) {
-        merged.push(a);
-        migrated++;
-      }
-    }
-
-    if (migrated > 0) {
-      torneio.atletas = merged;
-      torneio.updatedAt = new Date().toISOString();
-      fs.writeFileSync(getTorneioPath(torneioId), JSON.stringify(torneio, null, 2), 'utf-8');
-    }
-
-    // Remove ou renomeia o arquivo global após migração
-    fs.renameSync(globalPath, globalPath.replace('.json', '.migrated.json'));
-  } catch {
-    // Falha na migração — não bloqueia o app
-  }
-}
-```
-
-> **Nota:** A migração é um utilitário descartável. Após algumas versões, o código de migração pode ser removido junto com a documentação de suporte ao arquivo global.
-
 ### 6.3. `electron/main.ts`
 
 Os handlers de atleta precisam:
 1. Obter o ID do torneio ativo (importando `getActiveTournamentId` de `electron/tournament.ts`)
 2. Passar esse ID para as funções em `athletes.ts`
 3. Lançar erro se não houver torneio ativo
-4. Executar migração do arquivo global na inicialização
 
 ```typescript
-import { getActiveTournamentId } from './tournament'   // ← importa do tournament.ts
-import { migrateGlobalAthletes } from './athletes'      // ← opcional: ou executa inline
+import { getActiveTournamentId } from './tournament'
 
 app.whenReady().then(() => {
-  migrateGlobalAthletes()                                // ← migração única na inicialização
   registerTournamentHandlers()
   registerAthleteHandlers()
   registerActivationHandlers()
@@ -536,7 +479,6 @@ EXPORTAÇÃO DA LISTA DE ATLETAS (apenas atletas):
     torneios/
       {id}.json           # JSON do torneio com campo "atletas"
     torneio-ativo.json    # { "id": "uuid-do-torneio-ativo" }
-    atletas.json          # (mantido para compatibilidade/migração)
     activation.json       # { "token": "hmac-token", "activatedAt": "ISO" }
 ```
 
@@ -552,6 +494,4 @@ EXPORTAÇÃO DA LISTA DE ATLETAS (apenas atletas):
 | **Exportar torneio sem atletas** | JSON exportado contém `"atletas": []` |
 | **Importar torneio antigo (sem `atletas`)** | `atletas` fica `undefined` → tratado como `[]` |
 | **Múltiplos torneios** | Cada um tem sua própria lista de atletas |
-| **Migração automática de dados globais** | Na inicialização, se `atletas.json` existir e houver torneio ativo, os atletas são migrados para o torneio ativo e o arquivo global é renomeado para `.migrated.json` |
-| **Falha na migração** | A migração falha silenciosamente — não bloqueia a inicialização do app. O arquivo global permanece intacto para tentativa futura |
 | **Excluir torneio** | Remove o arquivo JSON — atletas são perdidos junto (esperado) |

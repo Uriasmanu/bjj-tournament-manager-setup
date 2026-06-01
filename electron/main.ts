@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
-import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes, migrateGlobalAthletes } from './athletes'
+import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
 import { checkActivation, validatePassword, activateLicense } from './activation'
 import type { Atleta } from '../src/types/athlete'
 
@@ -124,7 +124,6 @@ function registerActivationHandlers(): void {
 }
 
 app.whenReady().then(() => {
-  migrateGlobalAthletes(getActiveTournamentId)
   registerTournamentHandlers()
   registerAthleteHandlers()
   registerActivationHandlers()
