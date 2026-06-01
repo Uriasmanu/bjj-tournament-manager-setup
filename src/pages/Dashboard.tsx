@@ -21,7 +21,6 @@ const dashboardCards: DashboardCard[] = [
   { label: 'Geração de Chaves', description: 'Criação de chaves por categoria', icon: IconBrackets, status: 'planned' },
   { label: 'Áreas de Luta', description: 'Gerenciamento de áreas de competição', icon: IconMapPin, status: 'planned' },
   { label: 'Árbitros', description: 'Cadastro e escala de árbitros', icon: IconUserShield, status: 'planned' },
-  { label: 'Placar / Chamadas', description: 'Acompanhamento de lutas ao vivo', icon: IconScoreboard, status: 'planned' },
   { label: 'Resultados', description: 'Classificação e medalhistas', icon: IconTrophy, status: 'planned' },
 ];
 
