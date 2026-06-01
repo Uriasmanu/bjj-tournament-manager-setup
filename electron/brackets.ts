@@ -300,15 +300,17 @@ function importChavesFromFile(torneioId: string, filePath: string): { imported: 
     throw new Error('Arquivo inválido: o conteúdo deve ser um array de chaves.');
   }
 
-  for (const item of incoming) {
-    const c = item as Record<string, unknown>;
-    if (!c.id || !c.categoriaId || !Array.isArray(c.lutas)) {
+  const torneio = loadTorneio(torneioId);
+  const chaves: Chave[] = (incoming as Record<string, unknown>[]).map((c) => {
+    if (!c.categoriaId || !Array.isArray(c.lutas)) {
       throw new Error('Estrutura de chave inválida no arquivo.');
     }
-  }
-
-  const torneio = loadTorneio(torneioId);
-  torneio.chaves = incoming as Chave[];
+    return {
+      ...c,
+      id: (c.id as string) || crypto.randomUUID(),
+    } as Chave;
+  });
+  torneio.chaves = chaves;
   torneio.updatedAt = new Date().toISOString();
   saveTorneio(torneio);
 

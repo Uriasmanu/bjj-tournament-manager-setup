@@ -121,15 +121,15 @@ function importArbitrosFromFile(torneioId: string, filePath: string): { imported
     const nomeLower = (a.nome as string).trim().toLowerCase()
     const exists = current.some(ex => ex.nome.trim().toLowerCase() === nomeLower)
     if (!exists) {
-      const now = new Date().toISOString()
       current.push({
-        id: crypto.randomUUID(),
+        ...a,
+        id: (a.id as string) || crypto.randomUUID(),
         nome: nomeLower,
         equipe: (a.equipe && typeof a.equipe === 'string' ? (a.equipe as string).trim().toLowerCase() : ''),
         faixa: a.faixa as Arbitro['faixa'],
-        chaveIds: [],
-        createdAt: now,
-        updatedAt: now,
+        chaveIds: (a.chaveIds as string[]) ?? [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })
       imported++
     } else {

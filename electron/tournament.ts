@@ -95,21 +95,35 @@ export function registerTournamentHandlers(): void {
 
   ipcMain.handle('import-tournament', (_event, data: Torneio): { success: boolean; exists?: boolean } => {
     ensureDirs();
-    if (!data.id || !data.data) {
+    if (!data.data) {
       throw new Error('Estrutura inválida');
     }
-    const dest = getTorneioPath(data.id);
+    const torneio: Torneio = {
+      ...data,
+      id: data.id || crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const dest = getTorneioPath(torneio.id);
     if (fs.existsSync(dest)) {
       return { success: false, exists: true };
     }
-    fs.writeFileSync(dest, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), 'utf-8');
     return { success: true };
   });
 
   ipcMain.handle('import-tournament-overwrite', (_event, data: Torneio): void => {
     ensureDirs();
-    const dest = getTorneioPath(data.id);
-    fs.writeFileSync(dest, JSON.stringify(data, null, 2), 'utf-8');
+    if (!data.id || !data.data) {
+      throw new Error('Estrutura inválida');
+    }
+    const torneio: Torneio = {
+      ...data,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const dest = getTorneioPath(torneio.id);
+    fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), 'utf-8');
   });
 
   ipcMain.handle('update-tournament', (_event, data: Torneio): Torneio => {

@@ -83,20 +83,34 @@ function registerTournamentHandlers() {
   });
   ipcMain.handle("import-tournament", (_event, data) => {
     ensureDirs();
-    if (!data.id || !data.data) {
+    if (!data.data) {
       throw new Error("Estrutura inválida");
     }
-    const dest = getTorneioPath$3(data.id);
+    const torneio = {
+      ...data,
+      id: data.id || crypto.randomUUID(),
+      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const dest = getTorneioPath$3(torneio.id);
     if (fs.existsSync(dest)) {
       return { success: false, exists: true };
     }
-    fs.writeFileSync(dest, JSON.stringify(data, null, 2), "utf-8");
+    fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), "utf-8");
     return { success: true };
   });
   ipcMain.handle("import-tournament-overwrite", (_event, data) => {
     ensureDirs();
-    const dest = getTorneioPath$3(data.id);
-    fs.writeFileSync(dest, JSON.stringify(data, null, 2), "utf-8");
+    if (!data.id || !data.data) {
+      throw new Error("Estrutura inválida");
+    }
+    const torneio = {
+      ...data,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const dest = getTorneioPath$3(torneio.id);
+    fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), "utf-8");
   });
   ipcMain.handle("update-tournament", (_event, data) => {
     ensureDirs();
@@ -231,6 +245,14 @@ function loadAthletes(torneioId) {
       a.id = crypto.randomUUID();
       modified = true;
     }
+    if (!a.createdAt) {
+      a.createdAt = (/* @__PURE__ */ new Date()).toISOString();
+      modified = true;
+    }
+    if (!a.updatedAt) {
+      a.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      modified = true;
+    }
   }
   if (modified) {
     torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -304,8 +326,8 @@ function importAthletesFromFile(torneioId, filePath) {
       current.push({
         ...a,
         id: a.id || crypto.randomUUID(),
-        createdAt: a.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
-        updatedAt: a.updatedAt || (/* @__PURE__ */ new Date()).toISOString()
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       });
       imported++;
     } else {
@@ -437,15 +459,15 @@ function importArbitrosFromFile(torneioId, filePath) {
     const nomeLower = a.nome.trim().toLowerCase();
     const exists = current.some((ex) => ex.nome.trim().toLowerCase() === nomeLower);
     if (!exists) {
-      const now = (/* @__PURE__ */ new Date()).toISOString();
       current.push({
-        id: crypto.randomUUID(),
+        ...a,
+        id: a.id || crypto.randomUUID(),
         nome: nomeLower,
         equipe: a.equipe && typeof a.equipe === "string" ? a.equipe.trim().toLowerCase() : "",
         faixa: a.faixa,
-        chaveIds: [],
-        createdAt: now,
-        updatedAt: now
+        chaveIds: a.chaveIds ?? [],
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
       });
       imported++;
     } else {
@@ -713,14 +735,17 @@ function importChavesFromFile(torneioId, filePath) {
   if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de chaves.");
   }
-  for (const item of incoming) {
-    const c = item;
-    if (!c.id || !c.categoriaId || !Array.isArray(c.lutas)) {
+  const torneio = loadTorneio(torneioId);
+  const chaves = incoming.map((c) => {
+    if (!c.categoriaId || !Array.isArray(c.lutas)) {
       throw new Error("Estrutura de chave inválida no arquivo.");
     }
-  }
-  const torneio = loadTorneio(torneioId);
-  torneio.chaves = incoming;
+    return {
+      ...c,
+      id: c.id || crypto.randomUUID()
+    };
+  });
+  torneio.chaves = chaves;
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   saveTorneio(torneio);
   return { imported: incoming.length };

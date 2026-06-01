@@ -32,6 +32,14 @@ function loadAthletes(torneioId: string): Atleta[] {
       a.id = crypto.randomUUID()
       modified = true
     }
+    if (!a.createdAt) {
+      a.createdAt = new Date().toISOString()
+      modified = true
+    }
+    if (!a.updatedAt) {
+      a.updatedAt = new Date().toISOString()
+      modified = true
+    }
   }
   if (modified) {
     torneio.updatedAt = new Date().toISOString()
@@ -116,8 +124,8 @@ function importAthletesFromFile(torneioId: string, filePath: string): { imported
       current.push({
         ...a,
         id: a.id || crypto.randomUUID(),
-        createdAt: a.createdAt || new Date().toISOString(),
-        updatedAt: a.updatedAt || new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })
       imported++
     } else {
