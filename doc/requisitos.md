@@ -25,6 +25,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC. Atletas armazenados por torneio (dentro do JSON do torneio). |
 | Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente |
 | Dashboard Administrativo | ✅ Completo | Tela com cards em grid (1-4 colunas responsivas), funcionalidades implementadas × planejadas |
+| Resumo de Equipes | ✅ Completo | Tela que consulta a lista de atletas e exibe nome das equipes com contagem de atletas por equipe |
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
 | Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
 | PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
@@ -133,7 +134,19 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Armazenamento por torneio:** Atletas são armazenados dentro do JSON do torneio (campo `atletas: Atleta[]`), não mais em arquivo global. Cada torneio possui sua própria lista exclusiva.
 - **Torneio ativo obrigatório:** Para cadastrar, editar, excluir ou importar atletas, é necessário que haja um torneio ativo. Caso contrário, o handler IPC lança erro `"Nenhum torneio ativo"` exibido como notificação vermelha.
 - **Sincronia imediata:** Qualquer operação CRUD sobre atletas lê e escreve diretamente no arquivo JSON do torneio ativo (`torneios/{id}.json`), atualizando o timestamp `updatedAt` do torneio.
-### 3.9. Importação em Massa de Atletas
+### 3.9. Equipes — Resumo no Dashboard
+
+- **Funcionalidade somente leitura:** A tela de Equipes não permite cadastro, edição ou exclusão de equipes. Ela exibe um resumo agregado a partir dos dados existentes dos atletas.
+- **Fonte dos dados:** os dados são obtidos exclusivamente do campo `equipe` de cada atleta no JSON do torneio ativo (`torneio.atletas[].equipe`).
+- **Agrupamento:** o sistema percorre a lista de atletas e agrupa por `equipe`, contando quantos atletas pertencem a cada equipe.
+- **Ordenação:** as equipes são exibidas em ordem decrescente de quantidade de atletas (da equipe com mais atletas para a com menos).
+- **Normalização:** O campo `equipe` é armazenado em lowercase (ex.: `"gracie barra"`). Na exibição, o nome da equipe é apresentado com capitalização (`text-transform: capitalize`).
+- **Cards de resumo:** exibe dois badges no topo: total de atletas e total de equipes distintas.
+- **Empty state:** se não houver atletas cadastrados, exibe ícone, mensagem "Nenhum atleta cadastrado" e botão para navegar ao cadastro de atletas.
+- **Acesso:** o card "Equipes" no Dashboard está ativo (opacidade 1, clicável) e navega para a rota `/admin/equipes`.
+- **Dependência:** depende exclusivamente do módulo de Atletas — se não houver atletas, o resumo de equipes fica vazio.
+
+### 3.10. Importação em Massa de Atletas
 
 - **Gatilhos:** A importação pode ser disparada de dois lugares:
   - Menu de Atletas (`/admin/atletas`): cartão "Importar Atletas" no `AthletesMenu.tsx`.
@@ -163,7 +176,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - Ano de nascimento `0`: rejeitado por truthy check (`!a.anoNascimento` com `0` é falsy).
   - Nomes com espaços extras internos não são normalizados (ex.: `"joão  silva"` vs `"joão silva"` não são considerados duplicatas).
 
-### 3.10. Ativação do Software (Implementado)
+### 3.11. Ativação do Software (Implementado)
 
 - Na primeira execução, exige senha de ativação fornecida pelo desenvolvedor.
 - Senha validada por hash SHA-256 (nunca armazenada em texto puro).
@@ -173,7 +186,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Fallback para `crypto.randomUUID()` se o comando `wmic` falhar (Linux/macOS ou restrição de segurança).
 - O `App.tsx` faz 3 estados: `null` (carregando), `false` (tela de ativação), `true` (app principal). O `.catch(() => setActivated(false))` trata falhas de IPC.
 
-### 3.11. Error Boundary
+### 3.12. Error Boundary
 
 - Um componente `ErrorBoundary` (classe React) envolve as `<Routes>` no `HashRouter`.
 - Captura erros de renderização em qualquer página filha.
@@ -325,6 +338,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `/admin/dashboard` | `Dashboard` | Dashboard Administrativo do torneio ativo |
 | `/admin/atletas` | `AthletesMenu` | Menu de atletas com 3 cartões (Cadastrar, Listar, Importar) |
 | `/admin/atletas/lista` | `AdminAthletes` | Gerenciamento de atletas (tabela CRUD + botões) |
+| `/admin/equipes` | `Equipes` | Resumo de equipes com contagem de atletas |
 
 > O roteamento utiliza `HashRouter` (não `BrowserRouter`) para compatibilidade com o protocolo `file://` no Electron em produção.
 
@@ -352,7 +366,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
     │                 ├── Cadastrar Atleta → modal AthleteForm inline + IPC save
     │                 ├── Listar Atletas   → /admin/atletas/lista (AdminAthletes, tabela CRUD)
     │                 └── Importar Atletas → diálogo nativo de arquivo JSON via IPC
-    ├── Equipes     → (Em breve)
+    ├── Equipes     → /admin/equipes (Equipes, resumo com contagem de atletas por equipe)
     ├── Categorias  → (Em breve)
     ├── Inscrições  → (Em breve)
     ├── Pesagem     → (Em breve)
@@ -551,6 +565,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | Arquivo | Conteúdo |
 |---|---|
 | `doc/requisitos.md` | Este documento — regras de negócio e especificação geral |
+| `doc/equipes-dashboard.md` | Especificação do resumo de equipes no Dashboard |
 | `spec/cadastro-atletas.md` | Especificação detalhada do CRUD de atletas |
 | `spec/spec-import-atleta.md` | Especificação detalhada da importação em massa de atletas |
 | `spec/spec-torneio-atletas.md` | Especificação da migração de atletas para armazenamento por torneio |
@@ -581,7 +596,8 @@ bjj-tournament-manager-setup/
 │   │   ├── ListarTorneios.tsx   ← Lista com ações Iniciar / Exportar / Excluir
 │   │   ├── Dashboard.tsx        ← Dashboard Administrativo do torneio ativo
 │   │   ├── AthletesMenu.tsx     ← Menu intermediário de atletas (3 cartões)
-│   │   └── AdminAthletes.tsx    ← Gerenciamento de atletas (tabela CRUD)
+│   │   ├── AdminAthletes.tsx    ← Gerenciamento de atletas (tabela CRUD)
+│   │   └── Equipes.tsx          ← Resumo de equipes com contagem de atletas
 │   ├── components/
 │   │   ├── AthleteForm.tsx      ← Modal de cadastro/edição de atleta (modo controlled)
 │   │   ├── AthleteTable.tsx     ← Tabela de listagem de atletas

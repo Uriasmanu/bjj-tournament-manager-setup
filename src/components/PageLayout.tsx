@@ -12,8 +12,14 @@ export function PageLayout({ title, children, backRoute }: PageLayoutProps) {
   const navigate = useNavigate();
 
   return (
-    <Container size="md" py="xl">
-      <Paper withBorder shadow="sm" p="clamp(12px, 2vw, 24px)" radius="md">
+    <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
+      <Paper
+        withBorder
+        shadow="sm"
+        p="clamp(12px, 2vw, 24px)"
+        radius="md"
+        style={{ minHeight: 'calc(100vh - 4rem)', display: 'flex', flexDirection: 'column' }}
+      >
         <Group mb="md" justify="space-between">
           <Group>
             {backRoute && (
@@ -24,7 +30,7 @@ export function PageLayout({ title, children, backRoute }: PageLayoutProps) {
             <Title order={2}>{title}</Title>
           </Group>
         </Group>
-        {children}
+        <div style={{ flex: 1 }}>{children}</div>
       </Paper>
     </Container>
   );
