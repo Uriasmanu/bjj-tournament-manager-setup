@@ -30,6 +30,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('update-athlete', athlete),
   deleteAthlete: (id: string) =>
     ipcRenderer.invoke('delete-athlete', id),
+  deleteAthletes: (ids: string[]) =>
+    ipcRenderer.invoke('delete-athletes', ids),
   importAthletes: () =>
     ipcRenderer.invoke('import-athletes'),
   exportAthletes: () =>
@@ -40,6 +42,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('update-arbitro', data),
   deleteArbitro: (arbitroId: string) =>
     ipcRenderer.invoke('delete-arbitro', arbitroId),
+  deleteArbitros: (arbitroIds: string[]) =>
+    ipcRenderer.invoke('delete-arbitros', arbitroIds),
   loadArbitros: () =>
     ipcRenderer.invoke('load-arbitros'),
   importArbitros: () =>

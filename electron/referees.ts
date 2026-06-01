@@ -80,6 +80,23 @@ function deleteArbitro(torneioId: string, arbitroId: string): void {
   saveTorneio(torneio)
 }
 
+function deleteArbitros(torneioId: string, arbitroIds: string[]): void {
+  const torneio = loadTorneio(torneioId)
+  const idSet = new Set(arbitroIds)
+  torneio.arbitros = (torneio.arbitros ?? []).filter(a => !idSet.has(a.id))
+  const t = torneio as unknown as Record<string, unknown>
+  const chaves = t.chaves as { arbitroId?: string | null }[] | undefined
+  if (chaves) {
+    for (const chave of chaves) {
+      if (chave.arbitroId && idSet.has(chave.arbitroId)) {
+        chave.arbitroId = null
+      }
+    }
+  }
+  torneio.updatedAt = new Date().toISOString()
+  saveTorneio(torneio)
+}
+
 async function openArbitroFileDialog(): Promise<string | null> {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
@@ -155,4 +172,4 @@ async function exportArbitros(torneioId: string): Promise<void> {
   }
 }
 
-export { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, importArbitrosFromFile, openArbitroFileDialog, exportArbitros }
+export { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros }

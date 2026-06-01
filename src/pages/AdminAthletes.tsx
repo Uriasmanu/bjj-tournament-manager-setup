@@ -1,6 +1,6 @@
 import { Container, Paper, Title, Text, Button, Stack, Group, Loader, Center, Modal, Badge } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconFileUpload, IconDownload } from '@tabler/icons-react';
+import { IconPlus, IconFileUpload, IconDownload, IconTrash } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState, useMemo } from 'react';
 import type { Atleta, Faixa } from '../types/athlete';
@@ -29,6 +29,8 @@ export function AdminAthletes() {
   const [error, setError] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState<Atleta | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Atleta | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
 
@@ -38,6 +40,7 @@ export function AdminAthletes() {
     try {
       const list = await window.electronAPI.loadAthletes();
       setAthletes(list.sort((a, b) => a.nome.localeCompare(b.nome)));
+      setSelectedIds([]);
     } catch {
       setError(true);
     } finally {
@@ -105,6 +108,19 @@ export function AdminAthletes() {
       await loadAthletes();
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao excluir o atleta.', color: 'red' });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      await window.electronAPI.deleteAthletes(selectedIds);
+      setBulkDeleteOpen(false);
+      setSelectedIds([]);
+      notifications.show({ title: 'Sucesso', message: `${selectedIds.length} atleta(s) excluído(s) com sucesso!`, color: 'green' });
+      await loadAthletes();
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao excluir atletas.', color: 'red' });
     }
   };
 
@@ -186,6 +202,11 @@ export function AdminAthletes() {
             Cadastrar
           </Button>
         </Group>
+        {selectedIds.length > 0 && (
+          <Button color="red" leftSection={<IconTrash size={16} />} onClick={() => setBulkDeleteOpen(true)}>
+            Excluir Selecionados ({selectedIds.length})
+          </Button>
+        )}
       </Group>
 
       {athletes.length > 0 && (
@@ -229,6 +250,8 @@ export function AdminAthletes() {
           athletes={athletes}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
         />
       )}
 
@@ -256,6 +279,22 @@ export function AdminAthletes() {
         <Group justify="flex-end">
           <Button variant="outline" onClick={closeDelete}>Cancelar</Button>
           <Button color="red" onClick={handleDeleteConfirm}>Excluir</Button>
+        </Group>
+      </Modal>
+
+      <Modal
+        opened={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title="Excluir Atletas"
+        centered
+        size="sm"
+      >
+        <Text size="sm" mb="md">
+          Deseja realmente excluir os {selectedIds.length} atleta(s) selecionados? Esta ação não pode ser desfeita.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>Cancelar</Button>
+          <Button color="red" onClick={handleBulkDelete}>Excluir {selectedIds.length}</Button>
         </Group>
       </Modal>
     </PageLayout>

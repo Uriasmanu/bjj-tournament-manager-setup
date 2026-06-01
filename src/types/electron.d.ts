@@ -25,11 +25,13 @@ interface ElectronAPI {
   saveAthlete: (athlete: Atleta) => Promise<Atleta[]>;
   updateAthlete: (athlete: Atleta) => Promise<Atleta[]>;
   deleteAthlete: (id: string) => Promise<Atleta[]>;
+  deleteAthletes: (ids: string[]) => Promise<Atleta[]>;
   importAthletes: () => Promise<{ imported: number; skipped: number }>;
   exportAthletes: () => Promise<void>;
   saveArbitro: (data: Omit<Arbitro, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Arbitro>;
   updateArbitro: (data: Arbitro) => Promise<Arbitro>;
   deleteArbitro: (arbitroId: string) => Promise<void>;
+  deleteArbitros: (arbitroIds: string[]) => Promise<void>;
   loadArbitros: () => Promise<Arbitro[]>;
   importArbitros: () => Promise<{ imported: number; skipped: number }>;
   exportArbitros: () => Promise<void>;

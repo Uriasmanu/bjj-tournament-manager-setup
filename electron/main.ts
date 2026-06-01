@@ -2,8 +2,8 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
-import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
-import { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
+import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
+import { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
 import { registerBracketHandlers } from './brackets'
 import { checkActivation, validatePassword, activateLicense } from './activation'
 import type { Atleta } from '../src/types/athlete'
@@ -97,6 +97,12 @@ function registerAthleteHandlers(): void {
     return deleteAthlete(torneioId, id)
   })
 
+  ipcMain.handle('delete-athletes', (_event, ids: string[]): ReturnType<typeof deleteAthletes> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return deleteAthletes(torneioId, ids)
+  })
+
   ipcMain.handle('import-athletes', async (): Promise<{ imported: number; skipped: number }> => {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
@@ -129,6 +135,12 @@ function registerRefereeHandlers(): void {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return deleteArbitro(torneioId, arbitroId)
+  })
+
+  ipcMain.handle('delete-arbitros', (_event, arbitroIds: string[]): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return deleteArbitros(torneioId, arbitroIds)
   })
 
   ipcMain.handle('load-arbitros', (): Arbitro[] => {

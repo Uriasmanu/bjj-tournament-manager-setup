@@ -86,9 +86,28 @@ function registerTournamentHandlers() {
     if (!data.data) {
       throw new Error("Estrutura inválida");
     }
+    const atletas = data.atletas ?? [];
+    const atletasDedup = [];
+    for (const a of atletas) {
+      const nomeLower = a.nome.trim().toLowerCase();
+      const exists = atletasDedup.some(
+        (ex) => a.id && ex.id === a.id || ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento
+      );
+      if (!exists) {
+        atletasDedup.push({
+          ...a,
+          id: a.id || crypto.randomUUID(),
+          createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          nome: nomeLower,
+          equipe: (a.equipe || "").trim().toLowerCase()
+        });
+      }
+    }
     const torneio = {
       ...data,
       id: data.id || crypto.randomUUID(),
+      atletas: atletasDedup,
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
@@ -104,8 +123,27 @@ function registerTournamentHandlers() {
     if (!data.id || !data.data) {
       throw new Error("Estrutura inválida");
     }
+    const atletas = data.atletas ?? [];
+    const atletasDedup = [];
+    for (const a of atletas) {
+      const nomeLower = a.nome.trim().toLowerCase();
+      const exists = atletasDedup.some(
+        (ex) => a.id && ex.id === a.id || ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento
+      );
+      if (!exists) {
+        atletasDedup.push({
+          ...a,
+          id: a.id || crypto.randomUUID(),
+          createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          nome: nomeLower,
+          equipe: (a.equipe || "").trim().toLowerCase()
+        });
+      }
+    }
     const torneio = {
       ...data,
+      atletas: atletasDedup,
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
@@ -295,6 +333,16 @@ function deleteAthlete(torneioId, id) {
   saveTorneio$2(torneio);
   return list;
 }
+function deleteAthletes(torneioId, ids) {
+  const torneio = loadTorneio$2(torneioId);
+  const idSet = new Set(ids);
+  let list = torneio.atletas ?? [];
+  list = list.filter((a) => !idSet.has(a.id));
+  torneio.atletas = list;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$2(torneio);
+  return list;
+}
 function importAthletesFromFile(torneioId, filePath) {
   const raw = fs.readFileSync(filePath, "utf-8");
   const incoming = JSON.parse(raw);
@@ -417,6 +465,22 @@ function deleteArbitro(torneioId, arbitroId) {
   if (chaves) {
     for (const chave of chaves) {
       if (chave.arbitroId === arbitroId) {
+        chave.arbitroId = null;
+      }
+    }
+  }
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$1(torneio);
+}
+function deleteArbitros(torneioId, arbitroIds) {
+  const torneio = loadTorneio$1(torneioId);
+  const idSet = new Set(arbitroIds);
+  torneio.arbitros = (torneio.arbitros ?? []).filter((a) => !idSet.has(a.id));
+  const t = torneio;
+  const chaves = t.chaves;
+  if (chaves) {
+    for (const chave of chaves) {
+      if (chave.arbitroId && idSet.has(chave.arbitroId)) {
         chave.arbitroId = null;
       }
     }
@@ -917,6 +981,11 @@ function registerAthleteHandlers() {
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     return deleteAthlete(torneioId, id);
   });
+  ipcMain.handle("delete-athletes", (_event, ids) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteAthletes(torneioId, ids);
+  });
   ipcMain.handle("import-athletes", async () => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
@@ -945,6 +1014,11 @@ function registerRefereeHandlers() {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     return deleteArbitro(torneioId, arbitroId);
+  });
+  ipcMain.handle("delete-arbitros", (_event, arbitroIds) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteArbitros(torneioId, arbitroIds);
   });
   ipcMain.handle("load-arbitros", () => {
     const torneioId = getActiveTournamentId();

@@ -3,6 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import type { Torneio } from '../src/types/tournament';
+import type { Atleta } from '../src/types/athlete';
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios');
@@ -98,9 +99,30 @@ export function registerTournamentHandlers(): void {
     if (!data.data) {
       throw new Error('Estrutura inválida');
     }
+    const atletas = data.atletas ?? [];
+    const atletasDedup: Atleta[] = [];
+    for (const a of atletas) {
+      const nomeLower = a.nome.trim().toLowerCase();
+      const exists = atletasDedup.some(
+        ex =>
+          (a.id && ex.id === a.id) ||
+          (ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento)
+      );
+      if (!exists) {
+        atletasDedup.push({
+          ...a,
+          id: a.id || crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          nome: nomeLower,
+          equipe: (a.equipe || '').trim().toLowerCase(),
+        });
+      }
+    }
     const torneio: Torneio = {
       ...data,
       id: data.id || crypto.randomUUID(),
+      atletas: atletasDedup,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -117,8 +139,29 @@ export function registerTournamentHandlers(): void {
     if (!data.id || !data.data) {
       throw new Error('Estrutura inválida');
     }
+    const atletas = data.atletas ?? [];
+    const atletasDedup: Atleta[] = [];
+    for (const a of atletas) {
+      const nomeLower = a.nome.trim().toLowerCase();
+      const exists = atletasDedup.some(
+        ex =>
+          (a.id && ex.id === a.id) ||
+          (ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento)
+      );
+      if (!exists) {
+        atletasDedup.push({
+          ...a,
+          id: a.id || crypto.randomUUID(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          nome: nomeLower,
+          equipe: (a.equipe || '').trim().toLowerCase(),
+        });
+      }
+    }
     const torneio: Torneio = {
       ...data,
+      atletas: atletasDedup,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

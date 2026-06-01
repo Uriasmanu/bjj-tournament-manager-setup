@@ -1,4 +1,4 @@
-import { Container, Paper, Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal } from '@mantine/core';
+import { Container, Paper, Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal, Checkbox } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconPlayerPlay, IconDownload, IconTrash } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -14,6 +14,8 @@ export function ListarTorneios() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Torneio | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [opened, { open, close }] = useDisclosure(false);
 
   const loadTorneios = async () => {
@@ -22,6 +24,7 @@ export function ListarTorneios() {
     try {
       const list = await window.electronAPI.listTournaments();
       setTorneios(list.sort((a, b) => (a.nome || '').localeCompare(b.nome || '')));
+      setSelectedIds([]);
     } catch {
       setError(true);
     } finally {
@@ -73,6 +76,29 @@ export function ListarTorneios() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      for (const id of selectedIds) {
+        await window.electronAPI.deleteTournament(id);
+      }
+      setBulkDeleteOpen(false);
+      setSelectedIds([]);
+      notifications.show({
+        title: 'Sucesso',
+        message: `${selectedIds.length} torneio(s) excluído(s) com sucesso!`,
+        color: 'green',
+      });
+      loadTorneios();
+    } catch {
+      notifications.show({
+        title: 'Erro',
+        message: 'Erro ao excluir torneios.',
+        color: 'red',
+      });
+    }
+  };
+
   const handleExport = async (id: string) => {
     try {
       await window.electronAPI.exportTournament(id);
@@ -92,6 +118,22 @@ export function ListarTorneios() {
 
   const formatDate = (isoDate: string) => {
     return dayjs(isoDate).format('DD/MM/YYYY');
+  };
+
+  const allSelected = torneios.length > 0 && selectedIds.length === torneios.length;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(torneios.map(t => t.id));
+    }
   };
 
   if (loading) {
@@ -119,6 +161,14 @@ export function ListarTorneios() {
 
   return (
     <PageLayout title="Torneios Cadastrados" backRoute="/">
+      {selectedIds.length > 0 && (
+        <Group mb="md">
+          <Button color="red" leftSection={<IconTrash size={16} />} onClick={() => setBulkDeleteOpen(true)}>
+            Excluir Selecionados ({selectedIds.length})
+          </Button>
+        </Group>
+      )}
+
       {torneios.length === 0 ? (
         <Stack align="center" gap="md" py="xl">
           <Text c="dimmed">Nenhum torneio cadastrado</Text>
@@ -131,6 +181,14 @@ export function ListarTorneios() {
           <Table horizontalSpacing="clamp(4px, 1.5vw, 12px)">
             <Table.Thead>
               <Table.Tr>
+                <Table.Th w={40}>
+                  <Checkbox
+                    checked={allSelected}
+                    indeterminate={selectedIds.length > 0 && !allSelected}
+                    onChange={toggleAll}
+                    aria-label="Selecionar todos"
+                  />
+                </Table.Th>
                 <Table.Th>Torneio</Table.Th>
                 <Table.Th>Data</Table.Th>
                 <Table.Th style={{ width: 'clamp(130px, 20vw, 190px)' }}>Ações</Table.Th>
@@ -139,6 +197,13 @@ export function ListarTorneios() {
             <Table.Tbody>
               {torneios.map((t) => (
                 <Table.Tr key={t.id}>
+                  <Table.Td>
+                    <Checkbox
+                      checked={selectedIds.includes(t.id)}
+                      onChange={() => toggleSelect(t.id)}
+                      aria-label={`Selecionar ${t.nome || formatDate(t.data)}`}
+                    />
+                  </Table.Td>
                   <Table.Td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 'clamp(120px, 30vw, 300px)' }}>{t.nome || `Torneio ${formatDate(t.data)}`}</Table.Td>
                   <Table.Td style={{ whiteSpace: 'nowrap' }}>{formatDate(t.data)}</Table.Td>
                   <Table.Td>
@@ -191,11 +256,27 @@ export function ListarTorneios() {
           <Text component="span" fw={600}>
             {deleteTarget?.nome || (deleteTarget ? `Torneio ${formatDate(deleteTarget.data)}` : '')}
           </Text>
-          ? Esta ação não pode ser desfeita.
+          ? Esta ação não pode ser feita.
         </Text>
         <Group justify="flex-end">
           <Button variant="outline" onClick={close}>Cancelar</Button>
           <Button color="red" onClick={handleDeleteConfirm}>Excluir</Button>
+        </Group>
+      </Modal>
+
+      <Modal
+        opened={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title="Excluir Torneios"
+        centered
+        size="sm"
+      >
+        <Text size="sm" mb="md">
+          Deseja realmente excluir os {selectedIds.length} torneio(s) selecionados? Esta ação não pode ser desfeita.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>Cancelar</Button>
+          <Button color="red" onClick={handleBulkDelete}>Excluir {selectedIds.length}</Button>
         </Group>
       </Modal>
     </PageLayout>

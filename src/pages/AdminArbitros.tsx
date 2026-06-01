@@ -1,4 +1,4 @@
-import { Container, Paper, Text, Button, Stack, Group, Loader, Center, Modal, Badge, Table, ActionIcon } from '@mantine/core';
+import { Container, Paper, Text, Button, Stack, Group, Loader, Center, Modal, Badge, Table, ActionIcon, Checkbox } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconPlus, IconFileUpload, IconDownload, IconPencil, IconTrash } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -26,6 +26,8 @@ export function AdminArbitros() {
   const [error, setError] = useState(false);
   const [selectedArbitro, setSelectedArbitro] = useState<Arbitro | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Arbitro | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
 
@@ -35,6 +37,7 @@ export function AdminArbitros() {
     try {
       const list = await window.electronAPI.loadArbitros();
       setArbitros(list.sort((a, b) => a.nome.localeCompare(b.nome)));
+      setSelectedIds([]);
     } catch {
       setError(true);
     } finally {
@@ -109,6 +112,19 @@ export function AdminArbitros() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      await window.electronAPI.deleteArbitros(selectedIds);
+      setBulkDeleteOpen(false);
+      setSelectedIds([]);
+      notifications.show({ title: 'Sucesso', message: `${selectedIds.length} árbitro(s) excluído(s) com sucesso!`, color: 'green' });
+      await loadArbitros();
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao excluir árbitros.', color: 'red' });
+    }
+  };
+
   const handleExport = async () => {
     try {
       await window.electronAPI.exportArbitros();
@@ -128,6 +144,22 @@ export function AdminArbitros() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao importar árbitros.';
       notifications.show({ title: 'Erro ao importar', message: msg, color: 'red', autoClose: false });
+    }
+  };
+
+  const allSelected = arbitros.length > 0 && selectedIds.length === arbitros.length;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(arbitros.map(a => a.id));
     }
   };
 
@@ -168,6 +200,11 @@ export function AdminArbitros() {
             Cadastrar
           </Button>
         </Group>
+        {selectedIds.length > 0 && (
+          <Button color="red" leftSection={<IconTrash size={16} />} onClick={() => setBulkDeleteOpen(true)}>
+            Excluir Selecionados ({selectedIds.length})
+          </Button>
+        )}
       </Group>
 
       {arbitros.length === 0 ? (
@@ -185,6 +222,14 @@ export function AdminArbitros() {
           <Table horizontalSpacing="clamp(4px, 1.5vw, 12px)">
             <Table.Thead>
               <Table.Tr>
+                <Table.Th w={40}>
+                  <Checkbox
+                    checked={allSelected}
+                    indeterminate={selectedIds.length > 0 && !allSelected}
+                    onChange={toggleAll}
+                    aria-label="Selecionar todos"
+                  />
+                </Table.Th>
                 <Table.Th>Nome</Table.Th>
                 <Table.Th>Equipe</Table.Th>
                 <Table.Th>Faixa</Table.Th>
@@ -195,6 +240,13 @@ export function AdminArbitros() {
             <Table.Tbody>
               {arbitros.map((a) => (
                 <Table.Tr key={a.id}>
+                  <Table.Td>
+                    <Checkbox
+                      checked={selectedIds.includes(a.id)}
+                      onChange={() => toggleSelect(a.id)}
+                      aria-label={`Selecionar ${a.nome}`}
+                    />
+                  </Table.Td>
                   <Table.Td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{a.nome}</Table.Td>
                   <Table.Td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 150 }}>{a.equipe || '-'}</Table.Td>
                   <Table.Td>
@@ -265,6 +317,22 @@ export function AdminArbitros() {
         <Group justify="flex-end">
           <Button variant="outline" onClick={closeDelete}>Cancelar</Button>
           <Button color="red" onClick={handleDeleteConfirm}>Excluir</Button>
+        </Group>
+      </Modal>
+
+      <Modal
+        opened={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title="Excluir Árbitros"
+        centered
+        size="sm"
+      >
+        <Text size="sm" mb="md">
+          Deseja realmente excluir os {selectedIds.length} árbitro(s) selecionados? Esta ação não pode ser desfeita.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>Cancelar</Button>
+          <Button color="red" onClick={handleBulkDelete}>Excluir {selectedIds.length}</Button>
         </Group>
       </Modal>
     </PageLayout>

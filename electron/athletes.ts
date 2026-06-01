@@ -86,6 +86,17 @@ function deleteAthlete(torneioId: string, id: string): Atleta[] {
   return list
 }
 
+function deleteAthletes(torneioId: string, ids: string[]): Atleta[] {
+  const torneio = loadTorneio(torneioId)
+  const idSet = new Set(ids)
+  let list = torneio.atletas ?? []
+  list = list.filter(a => !idSet.has(a.id))
+  torneio.atletas = list
+  torneio.updatedAt = new Date().toISOString()
+  saveTorneio(torneio)
+  return list
+}
+
 function importAthletesFromFile(torneioId: string, filePath: string): { imported: number; skipped: number } {
   const raw = fs.readFileSync(filePath, 'utf-8')
   const incoming: Atleta[] = JSON.parse(raw)
@@ -159,4 +170,4 @@ async function exportAthletes(torneioId: string): Promise<void> {
   }
 }
 
-export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes }
+export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes }
