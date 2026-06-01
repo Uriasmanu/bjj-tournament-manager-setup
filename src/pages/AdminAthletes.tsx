@@ -4,6 +4,7 @@ import { IconPlus, IconFileUpload, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState, useMemo } from 'react';
 import type { Atleta, Faixa } from '../types/athlete';
+import { categoriaLabels } from '../types/category';
 import { AthleteForm } from '../components/AthleteForm';
 import { AthleteTable } from '../components/AthleteTable';
 import { PageLayout } from '../components/PageLayout';
@@ -136,6 +137,17 @@ export function AdminAthletes() {
     return counts;
   }, [athletes]);
 
+  const categoriaCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const a of athletes) {
+      if (a.categoria) {
+        counts[a.categoria] = (counts[a.categoria] || 0) + 1;
+      }
+    }
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return sorted.slice(0, 10);
+  }, [athletes]);
+
   if (loading) {
     return (
       <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
@@ -177,15 +189,27 @@ export function AdminAthletes() {
 
       {athletes.length > 0 && (
         <Paper withBorder p="sm" mb="md" radius="md">
-          <Group gap="xs">
-            <Text size="sm" fw={600}>Total: {athletes.length}</Text>
-            <Text size="sm" c="dimmed">|</Text>
-            {faixaOrder.map((faixa) => (
-              <Badge key={faixa} variant="light" color="gray" size="sm">
-                {faixaLabels[faixa]}: {faixaCounts[faixa] || 0}
-              </Badge>
-            ))}
-          </Group>
+          <Stack gap="xs">
+            <Group gap="xs">
+              <Text size="sm" fw={600}>Total: {athletes.length}</Text>
+              <Text size="sm" c="dimmed">|</Text>
+              {faixaOrder.map((faixa) => (
+                <Badge key={faixa} variant="light" color="gray" size="sm">
+                  {faixaLabels[faixa]}: {faixaCounts[faixa] || 0}
+                </Badge>
+              ))}
+            </Group>
+            {categoriaCounts.length > 0 && (
+              <Group gap="xs">
+                <Text size="sm" fw={600}>Categorias:</Text>
+                {categoriaCounts.map(([catId, count]) => (
+                  <Badge key={catId} variant="light" color="blue" size="sm">
+                    {categoriaLabels[catId] || catId}: {count}
+                  </Badge>
+                ))}
+              </Group>
+            )}
+          </Stack>
         </Paper>
       )}
 

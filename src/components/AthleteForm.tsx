@@ -1,7 +1,8 @@
 import { Modal, TextInput, NumberInput, Select, Button, Group, Stack } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import type { Atleta, Faixa } from '../types/athlete';
+import { CATEGORIAS_IBJJF } from '../types/category';
 
 const faixas: { group: string; items: { value: string; label: string }[] }[] = [
   {
@@ -28,6 +29,63 @@ const faixas: { group: string; items: { value: string; label: string }[] }[] = [
 
 const anoAtual = new Date().getFullYear();
 
+function calcularIdade(anoNascimento: number): number {
+  return anoAtual - anoNascimento;
+}
+
+function categoriasFiltradas(genero: string, faixa: string, anoNascimento: string | number) {
+  const idade = anoNascimento ? calcularIdade(Number(anoNascimento)) : 0;
+
+  let faixaEtariaMatch: string | null = null;
+  if (idade >= 16 && idade <= 17) faixaEtariaMatch = 'juvenil';
+  else if (idade >= 18 && idade <= 29) faixaEtariaMatch = 'adulto';
+  else if (idade >= 30 && idade <= 35) faixaEtariaMatch = 'master1';
+  else if (idade >= 36 && idade <= 40) faixaEtariaMatch = 'master2';
+  else if (idade >= 41 && idade <= 45) faixaEtariaMatch = 'master3';
+  else if (idade >= 46 && idade <= 50) faixaEtariaMatch = 'master4';
+  else if (idade >= 51 && idade <= 55) faixaEtariaMatch = 'master5';
+  else if (idade >= 56 && idade <= 60) faixaEtariaMatch = 'master6';
+  else if (idade >= 61) faixaEtariaMatch = 'master7';
+
+  const faixaNormalizada = faixa === 'branca-adulto' ? 'branca' : faixa;
+
+  return CATEGORIAS_IBJJF
+    .filter((c) => {
+      if (genero && c.genero !== genero) return false;
+      if (faixaEtariaMatch && c.faixaEtaria !== faixaEtariaMatch) return false;
+      if (faixaNormalizada && c.faixaMinima) {
+        const faixaOrder = ['branca', 'cinza', 'amarela', 'laranja', 'verde', 'azul', 'roxa', 'marrom', 'preta'];
+        const faixaIdx = faixaOrder.indexOf(faixaNormalizada);
+        const minIdx = faixaOrder.indexOf(c.faixaMinima);
+        if (faixaIdx !== -1 && minIdx !== -1 && faixaIdx < minIdx) return false;
+      }
+      return true;
+    })
+    .map((c) => {
+      const limite = c.pesoMaximoKg !== null
+        ? `até ${c.pesoMaximoKg.toFixed(1).replace('.', ',')} kg`
+        : 'sem limite';
+      return {
+        value: c.id,
+        label: `${c.nome} (${limite})`,
+      };
+    });
+}
+
+function agruparCategorias(data: { value: string; label: string }[]) {
+  const grupos: Record<string, { value: string; label: string }[]> = {};
+  for (const item of data) {
+    const prefix = item.label.split(' ')[0];
+    const chave = prefix || 'Outros';
+    if (!grupos[chave]) grupos[chave] = [];
+    grupos[chave].push(item);
+  }
+  return Object.entries(grupos).map(([group, items]) => ({
+    group,
+    items,
+  }));
+}
+
 interface AthleteFormProps {
   opened: boolean;
   onClose: () => void;
@@ -40,6 +98,8 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
     initialValues: {
       nome: '',
       equipe: '',
+      genero: '' as string,
+      categoria: '' as string,
       pesoKg: '' as string | number,
       faixa: '' as string,
       anoNascimento: '' as string | number,
@@ -47,6 +107,8 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
     validate: {
       nome: (v) => (v.length < 2 ? 'Nome deve ter ao menos 2 caracteres' : null),
       equipe: (v) => (v.length < 2 ? 'Equipe deve ter ao menos 2 caracteres' : null),
+      genero: (v) => (!v ? 'Selecione um gênero' : null),
+      categoria: (v) => (!v ? 'Selecione uma categoria' : null),
       pesoKg: (v) => {
         const n = Number(v);
         if (v === '' || v == null || isNaN(n) || n < 1 || n > 300) return 'Peso deve estar entre 1 e 300 kg';
@@ -71,6 +133,8 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
         form.setValues({
           nome: athlete.nome || '',
           equipe: athlete.equipe || '',
+          genero: athlete.genero || '',
+          categoria: athlete.categoria || '',
           pesoKg: athlete.pesoKg ?? 0,
           faixa: faixaValue,
           anoNascimento: athlete.anoNascimento ?? 0,
@@ -88,6 +152,8 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
       id: athlete?.id || crypto.randomUUID(),
       nome: values.nome.trim().toLowerCase(),
       equipe: values.equipe.trim().toLowerCase(),
+      genero: values.genero as 'masculino' | 'feminino',
+      categoria: values.categoria,
       pesoKg: Number(values.pesoKg),
       faixa: (values.faixa === 'branca-adulto' ? 'branca' : values.faixa) as Faixa,
       anoNascimento: Number(values.anoNascimento),
@@ -97,6 +163,13 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
     const saved = await onSave(data);
     if (saved) onClose();
   };
+
+  const catOptions = useMemo(
+    () => categoriasFiltradas(form.values.genero as string, form.values.faixa as string, form.values.anoNascimento),
+    [form.values.genero, form.values.faixa, form.values.anoNascimento]
+  );
+
+  const catGrouped = useMemo(() => agruparCategorias(catOptions), [catOptions]);
 
   return (
     <Modal
@@ -120,6 +193,16 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
             {...form.getInputProps('equipe')}
           />
 
+          <Select
+            label="Gênero *"
+            placeholder="Selecione o gênero"
+            data={[
+              { value: 'masculino', label: 'Masculino' },
+              { value: 'feminino', label: 'Feminino' },
+            ]}
+            {...form.getInputProps('genero')}
+          />
+
           <NumberInput
             label="Peso (kg) *"
             placeholder="Ex.: 72.5"
@@ -137,6 +220,15 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
               items: g.items.map((i) => ({ value: i.value, label: i.label })),
             }))}
             {...form.getInputProps('faixa')}
+          />
+
+          <Select
+            label="Categoria *"
+            placeholder="Selecione a categoria IBJJF"
+            data={catGrouped}
+            disabled={catOptions.length === 0}
+            searchable
+            {...form.getInputProps('categoria')}
           />
 
           <NumberInput

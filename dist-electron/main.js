@@ -128,6 +128,56 @@ function registerTournamentHandlers() {
     return fs.readFileSync(filePath, "utf-8");
   });
 }
+const CATEGORIAS_PESO = [
+  { peso: "galo", nome: "Galo", masculino: 57.5, feminino: 48.5 },
+  { peso: "pluma", nome: "Pluma", masculino: 64, feminino: 53.5 },
+  { peso: "pena", nome: "Pena", masculino: 70, feminino: 58.5 },
+  { peso: "leve", nome: "Leve", masculino: 76, feminino: 64 },
+  { peso: "medio", nome: "Médio", masculino: 82.3, feminino: 69 },
+  { peso: "meio-pesado", nome: "Meio-Pesado", masculino: 88.3, feminino: 74 },
+  { peso: "pesado", nome: "Pesado", masculino: 94.3, feminino: 79.3 },
+  { peso: "super-pesado", nome: "Super Pesado", masculino: 97.5, feminino: null },
+  { peso: "pesadissimo", nome: "Pesadíssimo", masculino: null, feminino: null }
+];
+function gerarCategorias() {
+  const faixasEtarias = [
+    "juvenil",
+    "adulto",
+    "master1",
+    "master2",
+    "master3",
+    "master4",
+    "master5",
+    "master6",
+    "master7"
+  ];
+  const generos = ["masculino", "feminino"];
+  const result = [];
+  for (const fe of faixasEtarias) {
+    const feLabel = fe.charAt(0).toUpperCase() + fe.slice(1);
+    for (const gen of generos) {
+      const genLabel = gen === "masculino" ? "Masculino" : "Feminino";
+      for (const cat of CATEGORIAS_PESO) {
+        const pesoLimite = gen === "masculino" ? cat.masculino : cat.feminino;
+        if (cat.peso === "pesadissimo" && gen === "feminino") continue;
+        result.push({
+          id: `${fe}-${gen}-${cat.peso}`,
+          nome: `${feLabel} ${genLabel} ${cat.nome}`,
+          faixaEtaria: fe,
+          genero: gen,
+          peso: cat.peso,
+          pesoMaximoKg: pesoLimite
+        });
+      }
+    }
+  }
+  return result;
+}
+const CATEGORIAS_IBJJF = gerarCategorias();
+const categoriaLabels = {};
+for (const c of CATEGORIAS_IBJJF) {
+  categoriaLabels[c.id] = c.nome;
+}
 const DATA_DIR = path.join(app.getPath("userData"), "data");
 const TORNEIOS_DIR = path.join(DATA_DIR, "torneios");
 function getTorneioPath(torneioId) {
@@ -180,9 +230,13 @@ function importAthletesFromFile(torneioId, filePath) {
   if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de atletas.");
   }
+  const categoriasValidas = new Set(CATEGORIAS_IBJJF.map((c) => c.id));
   for (const a of incoming) {
-    if (!a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg) {
-      throw new Error(`Atleta inválido no arquivo: "${a.nome || "sem nome"}" — campos obrigatórios ausentes.`);
+    if (!a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg || !a.genero || !a.categoria) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome || "sem nome"}" — campos obrigatórios ausentes (categoria, genero).`);
+    }
+    if (!categoriasValidas.has(a.categoria)) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome}" — categoria "${a.categoria}" não reconhecida.`);
     }
   }
   const torneio = loadTorneio(torneioId);

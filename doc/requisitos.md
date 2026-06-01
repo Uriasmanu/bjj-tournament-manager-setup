@@ -22,8 +22,8 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Listar Torneios | ✅ Completo | Tabela com Iniciar/Exportar/Excluir; registro de startedAt no Play |
 | Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (`electron/tournament.ts`) |
 | Tema Mantine UI | ✅ Completo | Tema azul royal (#1565C0), fonte Inter, componentes responsivos com `clamp()` |
-| Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC. Atletas armazenados por torneio (dentro do JSON do torneio). |
-| Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente |
+| Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC. Atletas armazenados por torneio (dentro do JSON do torneio). Campos `genero` e `categoria` IBJJF obrigatórios no formulário e importação. |
+| Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente. Validação de `genero` e `categoria` como obrigatórios, com verificação contra lista de categorias IBJJF. |
 | Dashboard Administrativo | ✅ Completo | Tela com cards em grid (1-4 colunas responsivas), funcionalidades implementadas × planejadas |
 | Resumo de Equipes | ✅ Completo | Tela que consulta a lista de atletas e exibe nome das equipes com contagem de atletas por equipe |
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
@@ -35,7 +35,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Módulo | Status |
 |---|---|
 | Cadastro de Equipes | ❌ Pendente |
-| Cadastro de Categorias | ❌ Pendente |
+| Cadastro de Categorias | ⏳ Parcial | Categorias IBJJF implementadas como tipo (`src/types/category.ts`) e campo obrigatório no formulário de atleta. Gerenciamento dedicado de categorias (CRUD) ainda pendente. |
 | Controle de Inscrições | ❌ Pendente |
 | Controle de Pesagem | ❌ Pendente |
 | Geração de Chaves | ❌ Pendente |
@@ -118,12 +118,15 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - **Importar Atletas** — Dispara o diálogo nativo de seleção de arquivo JSON via IPC `import-athletes`.
 - **Tela de listagem (`/admin/atletas/lista`):** Exibe `AdminAthletes` com:
   - Botões "Importar" e "Cadastrar" no topo.
-  - Tabela com colunas: Nome, Equipe, Faixa, Idade, Ações (editar/excluir).
+  - Tabela com colunas: Nome, Equipe, Gênero, Faixa, Categoria, Idade, Ações (editar/excluir).
+  - Badges de resumo de faixas e categorias no topo da tabela (top 10 categorias por quantidade).
   - Empty state com "Nenhum atleta cadastrado" + botão "Cadastrar primeiro atleta".
   - Ações por linha: lápis (editar) e lixeira (excluir).
   - Botão "Voltar" retorna para `/admin/atletas` (menu), não para o Dashboard.
 - **Modal de formulário:** `AthleteForm.tsx` usa `@mantine/form` com **modo controlado** (`mode: 'controlled'`). Cada campo recebe os props diretamente de `form.getInputProps(path)`. O `useEffect` de inicialização do formulário depende apenas de `opened` e `athlete` (não de `form`) para evitar loop de re-renderização.
 - Nome e equipe são obrigatórios (mínimo 2 caracteres) e armazenados em minúsculo (`.trim().toLowerCase()` no submit).
+- Gênero é obrigatório: `Select` com opções `Masculino` / `Feminino`.
+- Categoria IBJJF é obrigatória: `Select` populado com `CATEGORIAS_IBJJF`, filtrado dinamicamente por faixa etária (calculada da idade), gênero e faixa do atleta. O label de cada opção exibe o limite de peso, ex.: `"Adulto Masculino Leve (até 76,0 kg)"`.
 - Peso deve estar entre 1 e 300 kg.
 - Faixa segue enum: infantil (branca, cinza, amarela, laranja, verde) e adulto (branca-adulto, azul, roxa, marrom, preta). O valor `branca-adulto` é mapeado para `branca` na persistência.
 - Ano de nascimento entre 1920 e ano atual.
@@ -156,7 +159,8 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Validação de estrutura:**
   - O JSON raiz deve ser um **array**. Objeto, string ou número são rejeitados com erro.
   - Array vazio (`[]`) é válido — importa 0 e ignora 0.
-- **Campos obrigatórios por atleta:** `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`. Todos verificados por truthy.
+- **Campos obrigatórios por atleta:** `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`, `genero`, `categoria`. Todos verificados por truthy.
+- **Validação de categoria:** A `categoria` informada é validada contra a lista `CATEGORIAS_IBJJF`. Se não for reconhecida, o lote inteiro é rejeitado com mensagem `"Categoria '{categoria}' não reconhecida."`.
 - **Campos opcionais:** `id`, `createdAt`, `updatedAt` — gerados automaticamente se ausentes.
 - **Campos extras** no JSON são preservados (via `...a` spread), mas ignorados no processo.
 - **Validação é fail-fast:** ao primeiro atleta com campos obrigatórios ausentes, todo o lote é rejeitado. Nenhum atleta é importado parcialmente.
@@ -192,6 +196,89 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Captura erros de renderização em qualquer página filha.
 - Exibe tela de fallback com: título "Erro inesperado", descrição, mensagem do erro (primeiras 4 linhas do stack) e botão "Tentar novamente".
 - O botão "Tentar novamente" reseta o estado de erro (`setState({ hasError: false })`) e re-renderiza os children.
+
+### 3.14. Categorias IBJJF
+
+As categorias de inscrição seguem o padrão oficial da IBJJF (International Brazilian Jiu-Jitsu Federation) para competições com kimono (Gi).
+
+#### 3.14.1. Fatores de Classificação
+
+A categoria de um atleta é determinada pela combinação de quatro fatores:
+
+1. **Idade** (faixa etária) — calculada pelo ano calendário (ano atual - anoNascimento)
+2. **Faixa** (graduação) — nível do atleta
+3. **Gênero** — masculino ou feminino
+4. **Peso** — peso do atleta em kg
+
+#### 3.14.2. Faixas Etárias IBJJF
+
+| Faixa Etária | Idade |
+|---|---|
+| Juvenil | 16–17 anos |
+| Adulto | 18–29 anos |
+| Master 1 | 30–35 anos |
+| Master 2 | 36–40 anos |
+| Master 3 | 41–45 anos |
+| Master 4 | 46–50 anos |
+| Master 5 | 51–55 anos |
+| Master 6 | 56–60 anos |
+| Master 7 | 61+ anos |
+
+#### 3.14.3. Categorias de Peso por Gênero
+
+**Masculino:**
+
+| Categoria | Limite (kg) |
+|---|---|
+| Galo | até 57,5 |
+| Pluma | até 64,0 |
+| Pena | até 70,0 |
+| Leve | até 76,0 |
+| Médio | até 82,3 |
+| Meio-Pesado | até 88,3 |
+| Pesado | até 94,3 |
+| Super Pesado | até 97,5 |
+| Pesadíssimo | sem limite |
+
+**Feminino:**
+
+| Categoria | Limite (kg) |
+|---|---|
+| Galo | até 48,5 |
+| Pluma | até 53,5 |
+| Pena | até 58,5 |
+| Leve | até 64,0 |
+| Médio | até 69,0 |
+| Meio-Pesado | até 74,0 |
+| Pesado | até 79,3 |
+| Super Pesado | sem limite |
+
+> Pesadíssimo feminino não se aplica na IBJJF.
+
+#### 3.14.4. Classificação Automática
+
+A função `classificarCategoria(atleta)` em `src/types/category.ts` determina automaticamente a categoria de um atleta com base em:
+
+1. Cálculo da faixa etária a partir da idade (`anoAtual - anoNascimento`)
+2. Filtragem por gênero
+3. Encaixe na categoria de peso correta (menor limite que seja ≥ peso do atleta; `pesoMaximoKg = null` é tratado como "sem limite" e recebido por último)
+
+A classificação automática não substitui a seleção manual no formulário — o usuário sempre escolhe a categoria explicitamente.
+
+#### 3.14.5. ID da Categoria
+
+Cada categoria possui um identificador único no formato `{faixaEtaria}-{genero}-{peso}`, ex.:
+- `adulto-masculino-leve`
+- `master1-feminino-galo`
+- `juvenil-masculino-pena`
+
+O campo `categoria` no JSON do atleta armazena este ID.
+
+#### 3.14.6. Dados de Referência
+
+Todas as categorias são geradas programaticamente no array `CATEGORIAS_IBJJF` em `src/types/category.ts`, totalizando 151 categorias (9 faixas etárias × 2 gêneros × 9 pesos, excluindo pesadíssimo feminino). O arquivo `doc/IBJJF.md` contém as tabelas de referência originais.
+
+---
 
 ### 3.13. Layout Responsivo — Ocupação de Tela
 
@@ -309,6 +396,8 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
       "id": "uuid-v4",
       "nome": "joão silva",
       "equipe": "gracie barra",
+      "genero": "masculino",
+      "categoria": "adulto-masculino-leve",
       "pesoKg": 76.5,
       "faixa": "azul",
       "anoNascimento": 1998,
@@ -326,6 +415,8 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
     "id": "uuid-v4",
     "nome": "joão silva",
     "equipe": "gracie barra",
+    "genero": "masculino",
+    "categoria": "adulto-masculino-leve",
     "pesoKg": 76.5,
     "faixa": "azul",
     "anoNascimento": 1998,
@@ -531,6 +622,8 @@ A primeira tela exibe um menu com três opções principais:
 |---|---|---|
 | **Nome** | Mínimo 2 caracteres | "Nome deve ter ao menos 2 caracteres" |
 | **Equipe** | Mínimo 2 caracteres | "Equipe deve ter ao menos 2 caracteres" |
+| **Gênero** | Obrigatório | "Selecione um gênero" |
+| **Categoria** | Obrigatório, deve ser uma categoria IBJJF válida | "Selecione uma categoria" |
 | **Peso** | Número entre 1 e 300 | "Peso deve estar entre 1 e 300 kg" |
 | **Faixa** | Deve ser uma faixa válida do enum | "Selecione uma faixa válida" |
 | **Ano Nascimento** | Inteiro entre 1920 e ano atual | "Ano deve estar entre 1920 e {anoAtual}" |
@@ -542,7 +635,8 @@ A validação ocorre:
 ### 11.3. Importação de Atletas (main process)
 
 - O conteúdo do arquivo deve ser um array.
-- Cada atleta deve ter os campos obrigatórios: `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`.
+- Cada atleta deve ter os campos obrigatórios: `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`, `genero`, `categoria`.
+- A `categoria` informada é validada contra a lista de categorias IBJJF (`CATEGORIAS_IBJJF`). Se não for reconhecida, o lote é rejeitado.
 - `id`, `createdAt` e `updatedAt` são opcionais — gerados automaticamente se ausentes.
 - Atletas com `id` já existente na lista são ignorados (skipped) — somente se `id` foi fornecido no arquivo.
 - Atletas com mesmo `nome` (case-insensitive, trimmed) + `anoNascimento` são ignorados (skipped).
@@ -553,7 +647,7 @@ A validação ocorre:
 
 ### 12.1. Atletas
 
-Um atleta é considerado **duplicata** quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**.
+Um atleta é considerado **duplicata** quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**. A verificação de duplicidade não considera `categoria` ou `genero` — atletas com mesmo nome e ano de nascimento são considerados duplicatas mesmo que pertençam a categorias diferentes.
 
 | Operação | Local da Verificação | Comportamento |
 |---|---|---|
@@ -600,11 +694,13 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | Arquivo | Conteúdo |
 |---|---|
 | `doc/requisitos.md` | Este documento — regras de negócio e especificação geral |
+| `doc/IBJJF.md` | Tabelas de peso e regras oficiais IBJJF (fonte de dados das categorias) |
 | `doc/equipes-dashboard.md` | Especificação do resumo de equipes no Dashboard |
 | `spec/cadastro-atletas.md` | Especificação detalhada do CRUD de atletas |
 | `spec/spec-import-atleta.md` | Especificação detalhada da importação em massa de atletas |
 | `spec/spec-torneio-atletas.md` | Especificação da migração de atletas para armazenamento por torneio |
 | `spec/validacao-credential.md` | Especificação da ativação do software |
+| `spec/ANALISE-CATEGORIA-ATLETA.md` | Análise de impacto da obrigatoriedade de categoria/gênero no cadastro/import de atletas |
 | `spec.md` | Diagnóstico histórico do formulário de atletas (modo uncontrolled) |
 | `spec-correção.md` | Análise da correção do formulário (modo controlled + dependência form removida) |
 
@@ -641,17 +737,21 @@ bjj-tournament-manager-setup/
 │   │   └── ErrorBoundary.tsx    ← Captura de erros de renderização
 │   ├── types/
 │   │   ├── tournament.ts        ← Interfaces Torneio, CreateTorneioInput
-│   │   ├── athlete.ts           ← Interface Atleta e tipo Faixa (union)
+│   │   ├── athlete.ts           ← Interface Atleta (+genero, +categoria), tipo Faixa (union)
+│   │   ├── category.ts          ← Interface CategoriaIBJJF, FaixaEtaria, CATEGORIAS_IBJJF, classificarCategoria()
 │   │   └── electron.d.ts        ← Tipos globais Window.electronAPI + Window.activation
 │   └── styles/
 │       ├── theme.ts             ← Tema Mantine UI (cores, fontes, componentes)
 │       └── global.css           ← Reset CSS, body, prefers-reduced-motion
 │
+├── doc/IBJJF.md             ← Tabelas de peso e regras oficiais IBJJF
 ├── doc/requisitos.md        ← Regras de negócio (este documento)
 ├── spec/
 │   ├── cadastro-atletas.md  ← Spec detalhado do CRUD de atletas
 │   ├── spec-import-atleta.md  ← Spec detalhado da importação em massa de atletas
-│   └── validacao-credential.md ← Spec da ativação do software
+│   ├── validacao-credential.md ← Spec da ativação do software
+│   ├── ANALISE-CATEGORIA-ATLETA.md ← Análise da obrigatoriedade de categoria/gênero
+│   └── geracao-chaves.md    ← Spec da geração de chaves de luta
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)
 ```

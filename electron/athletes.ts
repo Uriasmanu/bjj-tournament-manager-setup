@@ -3,6 +3,7 @@ import path from 'node:path'
 import fs from 'node:fs'
 import type { Atleta } from '../src/types/athlete'
 import type { Torneio } from '../src/types/tournament'
+import { CATEGORIAS_IBJJF } from '../src/types/category'
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data')
 const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios')
@@ -66,9 +67,14 @@ function importAthletesFromFile(torneioId: string, filePath: string): { imported
     throw new Error('Arquivo inválido: o conteúdo deve ser um array de atletas.')
   }
 
+  const categoriasValidas = new Set(CATEGORIAS_IBJJF.map(c => c.id))
+
   for (const a of incoming) {
-    if (!a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg) {
-      throw new Error(`Atleta inválido no arquivo: "${a.nome || 'sem nome'}" — campos obrigatórios ausentes.`)
+    if (!a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg || !a.genero || !a.categoria) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome || 'sem nome'}" — campos obrigatórios ausentes (categoria, genero).`)
+    }
+    if (!categoriasValidas.has(a.categoria)) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome}" — categoria "${a.categoria}" não reconhecida.`)
     }
   }
 

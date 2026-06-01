@@ -13,6 +13,8 @@ export interface Atleta {
   id: string;
   nome: string;
   equipe: string;
+  genero: 'masculino' | 'feminino';
+  categoria: string;
   pesoKg: number;
   faixa: Faixa;
   anoNascimento: number;

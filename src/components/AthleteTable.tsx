@@ -1,6 +1,7 @@
-import { Table, ActionIcon, Group } from '@mantine/core';
-import { IconPencil, IconTrash } from '@tabler/icons-react';
+import { Table, ActionIcon, Group, Badge } from '@mantine/core';
+import { IconPencil, IconTrash, IconMars, IconVenus } from '@tabler/icons-react';
 import type { Atleta } from '../types/athlete';
+import { categoriaLabels } from '../types/category';
 
 const faixaLabels: Record<string, string> = {
   branca: 'Branca',
@@ -32,7 +33,9 @@ export function AthleteTable({ athletes, onEdit, onDelete }: AthleteTableProps) 
           <Table.Tr>
             <Table.Th>Nome</Table.Th>
             <Table.Th>Equipe</Table.Th>
+            <Table.Th>Gênero</Table.Th>
             <Table.Th>Faixa</Table.Th>
+            <Table.Th>Categoria</Table.Th>
             <Table.Th>Idade</Table.Th>
             <Table.Th style={{ width: 100 }}>Ações</Table.Th>
           </Table.Tr>
@@ -42,7 +45,19 @@ export function AthleteTable({ athletes, onEdit, onDelete }: AthleteTableProps) 
             <Table.Tr key={a.id}>
               <Table.Td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{a.nome}</Table.Td>
               <Table.Td style={{ whiteSpace: 'nowrap' }}>{a.equipe}</Table.Td>
+              <Table.Td>
+                {a.genero === 'masculino' ? (
+                  <IconMars size={18} style={{ display: 'block' }} aria-label="Masculino" />
+                ) : (
+                  <IconVenus size={18} style={{ display: 'block' }} aria-label="Feminino" />
+                )}
+              </Table.Td>
               <Table.Td>{faixaLabels[a.faixa] || a.faixa}</Table.Td>
+              <Table.Td>
+                <Badge variant="light" color="blue" size="sm" style={{ maxWidth: 180 }}>
+                  {categoriaLabels[a.categoria] || a.categoria}
+                </Badge>
+              </Table.Td>
               <Table.Td>{calcularIdade(a.anoNascimento)}</Table.Td>
               <Table.Td>
                 <Group gap="xs" wrap="nowrap">
