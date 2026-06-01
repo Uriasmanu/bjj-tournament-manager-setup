@@ -139,6 +139,8 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Duplicata:** Um atleta é considerado duplicata quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**. A verificação ocorre:
   - No renderer (`AdminAthletes.tsx:handleSave`) antes do IPC, tanto para cadastro quanto para edição (ignorando o próprio `id`).
   - No main process (`athletes.ts:importAthletesFromFile`) durante importação em massa.
+  - No main process (`tournament.ts:import-tournament` e `import-tournament-overwrite`) durante importação de torneio com atletas.
+- **Exclusão em lote:** Na tela de listagem, cada linha possui um checkbox. O cabeçalho possui um checkbox "Selecionar todos" com estado indeterminado para seleção parcial. Com um ou mais atletas selecionados, um botão "Excluir Selecionados (N)" aparece no topo. A exclusão em lote é feita via IPC `delete-athletes`, que remove todos os atletas em uma única operação de leitura/escrita do arquivo JSON.
 - **Armazenamento por torneio:** Atletas são armazenados dentro do JSON do torneio (campo `atletas: Atleta[]`), não mais em arquivo global. Cada torneio possui sua própria lista exclusiva.
 - **Torneio ativo obrigatório:** Para cadastrar, editar, excluir ou importar atletas, é necessário que haja um torneio ativo. Caso contrário, o handler IPC lança erro `"Nenhum torneio ativo"` exibido como notificação vermelha.
 - **Sincronia imediata:** Qualquer operação CRUD sobre atletas lê e escreve diretamente no arquivo JSON do torneio ativo (`torneios/{id}.json`), atualizando o timestamp `updatedAt` do torneio.
