@@ -71,8 +71,13 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 ### 3.3. Importação de Torneio
 
 - Apenas arquivos com extensão `.json` são aceitos (filtro nativo do diálogo).
-- O arquivo deve conter os campos obrigatórios: `id`, `data`, `nome` (validação no import).
+- O arquivo deve conter os campos obrigatórios: `data` (validação no import). `id` e `nome` são opcionais.
+- **Normalização automática ao importar:** O backend sempre normaliza os dados antes de salvar:
+  - `id`: preservado do arquivo se presente; gerado (`crypto.randomUUID()`) se ausente.
+  - `createdAt`: sempre substituído pelo timestamp atual (momento da importação).
+  - `updatedAt`: sempre substituído pelo timestamp atual (momento da importação).
 - Se o `id` do torneio importado já existir no diretório, o sistema pergunta se deseja sobrescrever via modal de confirmação.
+- Na sobrescrita (`import-tournament-overwrite`), o `id` do arquivo é obrigatório (usado como nome do arquivo). `createdAt` e `updatedAt` são normalizados da mesma forma.
 - Após importar com sucesso, o usuário é redirecionado para a listagem de torneios.
 - A importação é feita via upload de arquivo (não diálogo nativo), com leitura do conteúdo via `FileReader` e envio ao IPC.
 
@@ -118,7 +123,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - **Importar Atletas** — Dispara o diálogo nativo de seleção de arquivo JSON via IPC `import-athletes`.
 - **Tela de listagem (`/admin/atletas/lista`):** Exibe `AdminAthletes` com:
   - Botões "Importar" e "Cadastrar" no topo.
-  - Tabela com colunas: Nome, Equipe, Gênero, Faixa, Categoria, Idade, Ações (editar/excluir).
+  - Tabela com colunas: Nome, Equipe, Gênero, Faixa, Categoria, Idade, Ações (editar/excluir). Ordenada alfabeticamente por nome do atleta.
   - Badges de resumo de faixas e categorias no topo da tabela (top 10 categorias por quantidade).
   - Empty state com "Nenhum atleta cadastrado" + botão "Cadastrar primeiro atleta".
   - Ações por linha: lápis (editar) e lixeira (excluir).
@@ -142,7 +147,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Funcionalidade somente leitura:** A tela de Equipes não permite cadastro, edição ou exclusão de equipes. Ela exibe um resumo agregado a partir dos dados existentes dos atletas.
 - **Fonte dos dados:** os dados são obtidos exclusivamente do campo `equipe` de cada atleta no JSON do torneio ativo (`torneio.atletas[].equipe`).
 - **Agrupamento:** o sistema percorre a lista de atletas e agrupa por `equipe`, contando quantos atletas pertencem a cada equipe.
-- **Ordenação:** as equipes são exibidas em ordem decrescente de quantidade de atletas (da equipe com mais atletas para a com menos).
+- **Ordenação:** as equipes são exibidas em ordem alfabética crescente pelo nome da equipe.
 - **Normalização:** O campo `equipe` é armazenado em lowercase (ex.: `"gracie barra"`). Na exibição, o nome da equipe é apresentado com capitalização (`text-transform: capitalize`).
 - **Cards de resumo:** exibe dois badges no topo: total de atletas e total de equipes distintas.
 - **Empty state:** se não houver atletas cadastrados, exibe ícone, mensagem "Nenhum atleta cadastrado" e botão para navegar ao cadastro de atletas.
@@ -161,7 +166,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - Array vazio (`[]`) é válido — importa 0 e ignora 0.
 - **Campos obrigatórios por atleta:** `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`, `genero`, `categoria`. Todos verificados por truthy.
 - **Validação de categoria:** A `categoria` informada é validada contra a lista `CATEGORIAS_IBJJF`. Se não for reconhecida, o lote inteiro é rejeitado com mensagem `"Categoria '{categoria}' não reconhecida."`.
-- **Campos opcionais:** `id`, `createdAt`, `updatedAt` — gerados automaticamente se ausentes.
+- **Campos opcionais:** `id` — gerado automaticamente se ausente. `createdAt` e `updatedAt` são **sempre** substituídos pelo timestamp atual (momento da importação), nunca preservados do arquivo de origem.
 - **Campos extras** no JSON são preservados (via `...a` spread), mas ignorados no processo.
 - **Validação é fail-fast:** ao primeiro atleta com campos obrigatórios ausentes, todo o lote é rejeitado. Nenhum atleta é importado parcialmente.
 - **Normalização:** `nome` e `equipe` são convertidos para `trim().toLowerCase()` antes da inserção e antes da verificação de duplicidade.
@@ -191,12 +196,24 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - 4 atletas: 3 lutas (2 Semifinais + Final)
   - 5 atletas: 4 lutas (1 Quartas + 2 Semifinais + Final)
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
+- **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.
 - **Bloqueio de edição:** Após a primeira luta ser iniciada, a edição é bloqueada.
 - **Seed sorting:** Atletas posicionados por bloqueio de equipe (lados opostos), peso, idade e ordem alfabética.
 - **Regeneração:** Permitida apenas se nenhuma luta foi iniciada.
 - **Especificação detalhada:** Ver `spec/geracao-chaves.md`.
 
-### 3.12. Ativação do Software (Implementado)
+### 3.12. Importação de Chaves
+
+- **Formato:** Array JSON de objetos `Chave`. Cada chave deve conter `categoriaId` (string) e `lutas` (array) — `id` é opcional.
+- **Normalização automática:**
+  - `id`: preservado do arquivo se presente; gerado (`crypto.randomUUID()`) se ausente.
+  - Demais campos (`posicoesAtletas`, `arbitroId`, `totalAtletas`, `totalLutas`, `status`) são preservados do arquivo.
+- A lista de chaves substitui completamente a lista existente no torneio (não há mesclagem).
+- Atualiza o `updatedAt` do torneio após a importação.
+- Disparada via botão "Importar Chaves" na tela de Gerenciamento de Chaves.
+- A exportação de chaves é feita via botão "Exportar Chaves", gerando JSON completo da lista atual.
+
+### 3.13. Ativação do Software (Implementado)
 
 - Na primeira execução, exige senha de ativação fornecida pelo desenvolvedor.
 - Senha validada por hash SHA-256 (nunca armazenada em texto puro).
@@ -206,7 +223,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Fallback para `crypto.randomUUID()` se o comando `wmic` falhar (Linux/macOS ou restrição de segurança).
 - O `App.tsx` faz 3 estados: `null` (carregando), `false` (tela de ativação), `true` (app principal). O `.catch(() => setActivated(false))` trata falhas de IPC.
 
-### 3.13. Error Boundary
+### 3.14. Error Boundary
 
 - Um componente `ErrorBoundary` (classe React) envolve as `<Routes>` no `HashRouter`.
 - Captura erros de renderização em qualquer página filha.
@@ -345,7 +362,7 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
   - **Importar Árbitros** — Dispara o diálogo nativo de seleção de arquivo JSON via IPC `import-arbitros`.
 - **Tela de listagem (`/admin/arbitros/lista`):** Exibe `AdminArbitros` com:
   - Botões "Importar", "Exportar" e "Cadastrar" no topo.
-  - Tabela com colunas: Nome, Equipe, Faixa, Chaves Atribuídas, Ações (editar/excluir).
+  - Tabela com colunas: Nome, Equipe, Faixa, Chaves Atribuídas, Ações (editar/excluir). Ordenada alfabeticamente por nome do árbitro.
   - Badge com contagem de chaves atribuídas por árbitro.
   - Empty state com "Nenhum árbitro cadastrado" + botão "Cadastrar primeiro árbitro".
   - Ações por linha: lápis (editar) e lixeira (excluir).
@@ -358,7 +375,11 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Torneio ativo obrigatório:** Para cadastrar, editar, excluir ou importar árbitros, é necessário que haja um torneio ativo.
 - **Sincronia imediata:** Qualquer operação CRUD sobre árbitros lê e escreve diretamente no arquivo JSON do torneio ativo.
 - **Equipe:** Campo opcional que registra a equipe/academia do árbitro. Utilizado na atribuição de chaves para alertar se o árbitro pertence à mesma equipe que atletas da chave (apenas aviso, não bloqueia).
-- **Importação:** Formato JSON com array de objetos contendo `{ "nome": "...", "faixa": "..." }` — `equipe` é opcional. Deduplicação por nome (case-insensitive). Validação de faixa (apenas roxa, marrom, preta).
+- **Importação:** Formato JSON com array de objetos contendo `{ "nome": "...", "faixa": "..." }` — `equipe` e `id` são opcionais. Deduplicação por nome (case-insensitive). Validação de faixa (apenas roxa, marrom, preta). **Normalização automática:**
+  - `id`: preservado do arquivo se presente; gerado (`crypto.randomUUID()`) se ausente.
+  - `createdAt`: sempre substituído pelo timestamp atual (momento da importação).
+  - `updatedAt`: sempre substituído pelo timestamp atual (momento da importação).
+  - `chaveIds`: preservado do arquivo se presente; `[]` se ausente.
 - **Exportação:** Array completo de árbitros com todos os campos (`nome`, `equipe`, `faixa`, `id`, `chaveIds`, `createdAt`, `updatedAt`).
 - **Exclusão:** Ao excluir um árbitro, as chaves que ele estava arbitrando ficam sem árbitro (`arbitroId = null`). Exibe modal de confirmação antes de excluir.
 - **Atribuição de chaves:** A atribuição de chaves a um árbitro é feita na tela de Gerenciamento de Chaves. Um árbitro pode arbitrar múltiplas chaves, mas uma chave pode ter no máximo 1 árbitro.
@@ -526,7 +547,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `/` | `MenuInicial` | Menu principal com 3 opções (Criar, Importar, Listar) |
 | `/admin/criar-torneio` | `CriarTorneio` | Formulário de criação de torneio |
 | `/admin/importar-torneio` | `ImportarTorneio` | Tela de importação com upload e validação |
-| `/admin/listar-torneios` | `ListarTorneios` | Lista com ações Iniciar / Exportar / Excluir |
+| `/admin/listar-torneios` | `ListarTorneios` | Lista com ações Iniciar / Exportar / Excluir. Ordenada alfabeticamente por nome do torneio. |
 | `/admin/dashboard` | `Dashboard` | Dashboard Administrativo do torneio ativo |
 | `/admin/atletas` | `AthletesMenu` | Menu de atletas com 3 cartões (Cadastrar, Listar, Importar) |
 | `/admin/atletas/lista` | `AdminAthletes` | Gerenciamento de atletas (tabela CRUD + botões) |
@@ -734,7 +755,8 @@ A validação ocorre:
 - O conteúdo do arquivo deve ser um array.
 - Cada atleta deve ter os campos obrigatórios: `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`, `genero`, `categoria`.
 - A `categoria` informada é validada contra a lista de categorias IBJJF (`CATEGORIAS_IBJJF`). Se não for reconhecida, o lote é rejeitado.
-- `id`, `createdAt` e `updatedAt` são opcionais — gerados automaticamente se ausentes.
+- `id` é opcional — gerado automaticamente (`crypto.randomUUID()`) se ausente, preservado se presente.
+- `createdAt` e `updatedAt` são **sempre** substituídos pelo timestamp atual (momento da importação), nunca preservados do arquivo de origem.
 - Atletas com `id` já existente na lista são ignorados (skipped) — somente se `id` foi fornecido no arquivo.
 - Atletas com mesmo `nome` (case-insensitive, trimmed) + `anoNascimento` são ignorados (skipped).
 
@@ -802,6 +824,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `spec-correção.md` | Análise da correção do formulário (modo controlled + dependência form removida) |
 | `spec/geracao-chaves.md` | Especificação da geração de chaves de luta (máx. 5 atletas, chave editável) |
 | `spec/cadastro-arbitro.md` | Especificação detalhada do CRUD de árbitros |
+| `doc/import-audit.md` | Auditoria de importação: regras de geração automática de ID e timestamps |
 
 ---
 
