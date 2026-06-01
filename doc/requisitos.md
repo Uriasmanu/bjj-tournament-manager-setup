@@ -23,6 +23,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (`electron/tournament.ts`) |
 | Tema Mantine UI | ✅ Completo | Tema azul royal (#1565C0), fonte Inter, componentes responsivos com `clamp()` |
 | Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC |
+| Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente |
 | Dashboard Administrativo | ✅ Completo | Tela com cards em grid (1-4 colunas responsivas), funcionalidades implementadas × planejadas |
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
 | Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
@@ -131,7 +132,37 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - No main process (`athletes.ts:importAthletesFromFile`) durante importação em massa.
 - Atletas são armazenados em arquivo global `{userData}/data/atletas.json` (compartilhado entre torneios).
 
-### 3.9. Ativação do Software (Implementado)
+### 3.9. Importação em Massa de Atletas
+
+- **Gatilhos:** A importação pode ser disparada de dois lugares:
+  - Menu de Atletas (`/admin/atletas`): cartão "Importar Atletas" no `AthletesMenu.tsx`.
+  - Lista de Atletas (`/admin/atletas/lista`): botão "Importar" no header do `AdminAthletes.tsx`.
+- **Formato:** Apenas arquivos `.json` são aceitos (filtro nativo do diálogo de arquivo).
+- **Diálogo nativo:** Abre `dialog.showOpenDialog` do Electron com filtro `*.json`. Se o usuário cancelar, retorna `{ imported: 0, skipped: 0 }` sem notificação.
+- **Validação de estrutura:**
+  - O JSON raiz deve ser um **array**. Objeto, string ou número são rejeitados com erro.
+  - Array vazio (`[]`) é válido — importa 0 e ignora 0.
+- **Campos obrigatórios por atleta:** `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`. Todos verificados por truthy.
+- **Campos opcionais:** `id`, `createdAt`, `updatedAt` — gerados automaticamente se ausentes.
+- **Campos extras** no JSON são preservados (via `...a` spread), mas ignorados no processo.
+- **Validação é fail-fast:** ao primeiro atleta com campos obrigatórios ausentes, todo o lote é rejeitado. Nenhum atleta é importado parcialmente.
+- **Normalização:** `nome` e `equipe` são convertidos para `trim().toLowerCase()` antes da inserção e antes da verificação de duplicidade.
+- **Deduplicação:** Um atleta é ignorado se:
+  1. Seu `id` (se fornecido no arquivo) já existe na lista atual.
+  2. Seu `nome` (case-insensitive, trimmed) **e** `anoNascimento` já existem combinados em algum atleta da lista.
+- **Persistência:** A lista mesclada é reescrita em `{userData}/data/atletas.json` com indentação de 2 espaços.
+- **Retorno:** `{ imported: number; skipped: number }` — contagem de novos vs. ignorados.
+- **Notificações no renderer:**
+  - Cancelamento ou `imported=0, skipped=0`: silêncio (sem notificação).
+  - Sucesso: `"X atleta(s) importado(s)."` (verde).
+  - Sucesso parcial: `"X atleta(s) importado(s), Y ignorado(s) (já existentes)."` (verde).
+  - Erro (arquivo inválido, JSON malformado, campos ausentes, erro de I/O): `"Erro ao importar atletas."` (vermelho).
+- **Casos de borda:**
+  - Duplicata no próprio arquivo de importação: o primeiro é processado, o segundo é ignorado (já existe na lista após o primeiro ser adicionado).
+  - Ano de nascimento `0`: rejeitado por truthy check (`!a.anoNascimento` com `0` é falsy).
+  - Nomes com espaços extras internos não são normalizados (ex.: `"joão  silva"` vs `"joão silva"` não são considerados duplicatas).
+
+### 3.10. Ativação do Software (Implementado)
 
 - Na primeira execução, exige senha de ativação fornecida pelo desenvolvedor.
 - Senha validada por hash SHA-256 (nunca armazenada em texto puro).
@@ -141,7 +172,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Fallback para `crypto.randomUUID()` se o comando `wmic` falhar (Linux/macOS ou restrição de segurança).
 - O `App.tsx` faz 3 estados: `null` (carregando), `false` (tela de ativação), `true` (app principal). O `.catch(() => setActivated(false))` trata falhas de IPC.
 
-### 3.10. Error Boundary
+### 3.11. Error Boundary
 
 - Um componente `ErrorBoundary` (classe React) envolve as `<Routes>` no `HashRouter`.
 - Captura erros de renderização em qualquer página filha.
@@ -450,9 +481,10 @@ A validação ocorre:
 ### 11.3. Importação de Atletas (main process)
 
 - O conteúdo do arquivo deve ser um array.
-- Cada atleta deve ter os campos obrigatórios: `id`, `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`.
-- Atletas com `id` já existente na lista são ignorados (skipped).
-- Atletas com mesmo `nome` (case-insensitive) + `anoNascimento` são ignorados (skipped).
+- Cada atleta deve ter os campos obrigatórios: `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`.
+- `id`, `createdAt` e `updatedAt` são opcionais — gerados automaticamente se ausentes.
+- Atletas com `id` já existente na lista são ignorados (skipped) — somente se `id` foi fornecido no arquivo.
+- Atletas com mesmo `nome` (case-insensitive, trimmed) + `anoNascimento` são ignorados (skipped).
 
 ---
 
@@ -466,7 +498,7 @@ Um atleta é considerado **duplicata** quando possui o mesmo **nome** (case-inse
 |---|---|---|
 | **Cadastro individual** | Renderer (`AdminAthletes.tsx:handleSave`) | Antes de chamar o IPC, percorre a lista local. Se duplicata (excluindo próprio `id`), exibe notificação vermelha e não salva. |
 | **Edição** | Renderer (`AdminAthletes.tsx:handleSave`) | Mesma verificação, ignorando o atleta sendo editado pelo `id`. |
-| **Importação em massa** | Main process (`athletes.ts:importAthletesFromFile`) | Durante mesclagem, verifica `id` duplicado E nome + anoNascimento. Duplicatas são ignoradas e contabilizadas em `skipped`. |
+| **Importação em massa** | Main process (`athletes.ts:importAthletesFromFile`) | Durante mesclagem, verifica: (1) `id` duplicado — somente se o atleta de entrada possui `id`; (2) nome (case-insensitive, trimmed) + anoNascimento. Duplicatas são ignoradas e contabilizadas em `skipped`. |
 
 ---
 
@@ -508,6 +540,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 |---|---|
 | `doc/requisitos.md` | Este documento — regras de negócio e especificação geral |
 | `spec/cadastro-atletas.md` | Especificação detalhada do CRUD de atletas |
+| `spec/spec-import-atleta.md` | Especificação detalhada da importação em massa de atletas |
 | `spec/validacao-credential.md` | Especificação da ativação do software |
 | `spec.md` | Diagnóstico histórico do formulário de atletas (modo uncontrolled) |
 | `spec-correção.md` | Análise da correção do formulário (modo controlled + dependência form removida) |
@@ -553,6 +586,7 @@ bjj-tournament-manager-setup/
 ├── doc/requisitos.md        ← Regras de negócio (este documento)
 ├── spec/
 │   ├── cadastro-atletas.md  ← Spec detalhado do CRUD de atletas
+│   ├── spec-import-atleta.md  ← Spec detalhado da importação em massa de atletas
 │   └── validacao-credential.md ← Spec da ativação do software
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)
