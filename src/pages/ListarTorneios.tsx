@@ -21,7 +21,7 @@ export function ListarTorneios() {
     setError(false);
     try {
       const list = await window.electronAPI.listTournaments();
-      setTorneios(list);
+      setTorneios(list.sort((a, b) => (a.nome || '').localeCompare(b.nome || '')));
     } catch {
       setError(true);
     } finally {

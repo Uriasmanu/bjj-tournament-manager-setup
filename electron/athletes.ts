@@ -25,13 +25,31 @@ function saveTorneio(torneio: Torneio): void {
 
 function loadAthletes(torneioId: string): Atleta[] {
   const torneio = loadTorneio(torneioId)
-  return torneio.atletas ?? []
+  const list = torneio.atletas ?? []
+  let modified = false
+  for (const a of list) {
+    if (!a.id) {
+      a.id = crypto.randomUUID()
+      modified = true
+    }
+  }
+  if (modified) {
+    torneio.updatedAt = new Date().toISOString()
+    saveTorneio(torneio)
+  }
+  return list
 }
 
 function saveAthlete(torneioId: string, athlete: Atleta): Atleta[] {
   const torneio = loadTorneio(torneioId)
   const list = torneio.atletas ?? []
-  list.push(athlete)
+  const data: Atleta = {
+    ...athlete,
+    id: athlete.id || crypto.randomUUID(),
+    createdAt: athlete.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+  list.push(data)
   torneio.atletas = list
   torneio.updatedAt = new Date().toISOString()
   saveTorneio(torneio)

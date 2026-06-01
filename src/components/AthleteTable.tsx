@@ -26,6 +26,7 @@ interface AthleteTableProps {
 }
 
 export function AthleteTable({ athletes, onEdit, onDelete }: AthleteTableProps) {
+  const sortedAthletes = [...athletes].sort((a, b) => a.nome.localeCompare(b.nome));
   return (
     <div style={{ overflowX: 'auto' }}>
       <Table horizontalSpacing="clamp(4px, 1.5vw, 12px)">
@@ -41,7 +42,7 @@ export function AthleteTable({ athletes, onEdit, onDelete }: AthleteTableProps) 
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
-          {athletes.map((a) => (
+          {sortedAthletes.map((a) => (
             <Table.Tr key={a.id}>
               <Table.Td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{a.nome}</Table.Td>
               <Table.Td style={{ whiteSpace: 'nowrap' }}>{a.equipe}</Table.Td>

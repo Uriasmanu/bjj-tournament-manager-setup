@@ -39,7 +39,7 @@ export function Equipes() {
 
   const sortedEquipes = useMemo(() => {
     return Object.entries(equipeCounts)
-      .sort(([, countA], [, countB]) => countB - countA);
+      .sort(([a], [b]) => a.localeCompare(b));
   }, [equipeCounts]);
 
   const totalAtletas = athletes.length;

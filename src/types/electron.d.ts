@@ -1,7 +1,7 @@
 import type { Torneio, CreateTorneioInput } from './tournament';
 import type { Atleta } from './athlete';
 import type { Arbitro } from './referee';
-import type { Chave, StatusLuta } from './bracket';
+import type { Chave } from './bracket';
 
 declare global {
   interface Window {
@@ -33,13 +33,11 @@ interface ElectronAPI {
   loadArbitros: () => Promise<Arbitro[]>;
   importArbitros: () => Promise<{ imported: number; skipped: number }>;
   exportArbitros: () => Promise<void>;
-  gerarTodasChaves: () => Promise<Chave[]>;
+  gerarTodasChaves: () => Promise<{ chaves: Chave[]; metadados: unknown[] }>;
   gerarChave: (data: { categoriaId: string }) => Promise<Chave>;
   loadChaves: () => Promise<Chave[]>;
   loadChavePorCategoria: (categoriaId: string) => Promise<Chave | null>;
-  regenerarChave: (data: { categoriaId: string }) => Promise<Chave>;
-  atualizarLuta: (data: { lutaId: string; vencedorId: string; status: StatusLuta }) => Promise<Chave>;
-  editarChave: (data: { chaveId: string; posicoesAtletas: string[] }) => Promise<Chave>;
+  randomizarChave: (data: { chaveId: string }) => Promise<Chave>;
   atribuirArbitroChave: (data: { chaveId: string; arbitroId: string | null }) => Promise<Chave>;
   importChaves: () => Promise<{ imported: number }>;
   exportChaves: () => Promise<void>;

@@ -37,7 +37,7 @@ export function AdminAthletes() {
     setError(false);
     try {
       const list = await window.electronAPI.loadAthletes();
-      setAthletes(list);
+      setAthletes(list.sort((a, b) => a.nome.localeCompare(b.nome)));
     } catch {
       setError(true);
     } finally {

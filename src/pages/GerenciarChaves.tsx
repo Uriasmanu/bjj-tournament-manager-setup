@@ -1,12 +1,12 @@
-import { Container, Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid } from '@mantine/core';
+import { Container, Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
-import { useEffect, useState } from 'react';
+import { useDisclosure } from '@mantine/hooks';
+import { useEffect, useMemo, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
 import type { Chave } from '../types/bracket';
 import { categoriaLabels } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
-import { EditarChaveModal } from '../components/EditarChaveModal';
 
 const FAIXA_ORDER: Record<string, number> = {
   'branca': 0, 'cinza': 1, 'amarela': 2, 'laranja': 3,
@@ -52,17 +52,70 @@ function getChaveTitle(chave: Chave, athletes: Atleta[]): string {
   return `${beltRange} - ${peso} - ${chaveAtletas.length} atleta${chaveAtletas.length > 1 ? 's' : ''}`;
 }
 
+function getTeamConflicts(chave: Chave, athletes: Atleta[]): string[] {
+  const teams = new Map<string, number[]>();
+  chave.posicoesAtletas.forEach((id, idx) => {
+    const a = athletes.find(at => at.id === id);
+    if (a?.equipe) {
+      const list = teams.get(a.equipe) ?? [];
+      list.push(idx);
+      teams.set(a.equipe, list);
+    }
+  });
+
+  const conflicts: string[] = [];
+  for (const [equipe, positions] of teams) {
+    if (positions.length < 2) continue;
+    const ladoA = [0, 3, 4];
+    const ladoB = [1, 2];
+    const hasA = positions.some(p => ladoA.includes(p));
+    const hasB = positions.some(p => ladoB.includes(p));
+    if (hasA && hasB) {
+      const nomeEquipe = equipe.charAt(0).toUpperCase() + equipe.slice(1);
+      conflicts.push(nomeEquipe);
+    }
+  }
+  return conflicts;
+}
+
+function getFirstRoundFights(chave: Chave, athletes: Atleta[]): { atletaA: string; atletaB: string }[] {
+  return chave.lutas.map(luta => ({
+    atletaA: luta.atletaAId === 'bye' ? '(bye)' : getAtletaNomeStatic(luta.atletaAId, athletes),
+    atletaB: luta.atletaBId === 'bye' ? '(bye)' : getAtletaNomeStatic(luta.atletaBId, athletes),
+  }));
+}
+
+function getAtletaNomeStatic(id: string, athletes: Atleta[]): string {
+  if (id === 'bye') return '(bye)';
+  const atleta = athletes.find(a => a.id === id);
+  if (!atleta) return 'Atleta removido';
+  const nome = atleta.nome.charAt(0).toUpperCase() + atleta.nome.slice(1);
+  const equipe = atleta.equipe ? ` (${atleta.equipe.charAt(0).toUpperCase() + atleta.equipe.slice(1)})` : '';
+  return `${nome}${equipe}`;
+}
+
 export function GerenciarChaves() {
   const [athletes, setAthletes] = useState<Atleta[]>([]);
   const [chaves, setChaves] = useState<Chave[]>([]);
   const [arbitros, setArbitros] = useState<Arbitro[]>([]);
   const [loading, setLoading] = useState(true);
   const [chavesGeradas, setChavesGeradas] = useState(false);
-  const [editingChave, setEditingChave] = useState<Chave | null>(null);
-  const [editModalOpen, setEditModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  const [viewChave, setViewChave] = useState<Chave | null>(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
+
+  const [confirmGerarOpen, { open: openConfirmGerar, close: closeConfirmGerar }] = useDisclosure(false);
+
   const triggerRefresh = () => setRefreshKey(k => k + 1);
+
+  const sortedChaves = useMemo(() => {
+    return [...chaves].sort((a, b) => {
+      const titleA = getChaveTitle(a, athletes);
+      const titleB = getChaveTitle(b, athletes);
+      return titleA.localeCompare(titleB);
+    });
+  }, [chaves, athletes]);
 
   useEffect(() => {
     Promise.all([
@@ -73,7 +126,9 @@ export function GerenciarChaves() {
       const chavesList = c as Chave[];
       setAthletes(a as Atleta[]);
       setChaves(chavesList);
-      setArbitros(r as Arbitro[]);
+      const arbitrosList = r as Arbitro[];
+      arbitrosList.sort((a, b) => a.nome.localeCompare(b.nome));
+      setArbitros(arbitrosList);
       setChavesGeradas(chavesList.length > 0);
       setLoading(false);
     }).catch(() => {
@@ -82,8 +137,8 @@ export function GerenciarChaves() {
     });
   }, [refreshKey]);
 
-  const getAtletaNome = (id: string | null): string => {
-    if (!id) return 'Bye';
+  const getAtletaNome = (id: string): string => {
+    if (id === 'bye') return '(bye)';
     const atleta = athletes.find(a => a.id === id);
     if (!atleta) return 'Atleta removido';
     const nome = atleta.nome.charAt(0).toUpperCase() + atleta.nome.slice(1);
@@ -100,10 +155,10 @@ export function GerenciarChaves() {
 
   const handleGerarTodas = async () => {
     try {
-      const result = await window.electronAPI.gerarTodasChaves();
-      setChaves(result);
+      const result = await window.electronAPI.gerarTodasChaves() as { chaves: Chave[]; metadados: unknown[] };
+      setChaves(result.chaves);
       setChavesGeradas(true);
-      const qtd = result.length;
+      const qtd = result.chaves.length;
       notifications.show({
         color: 'green',
         title: 'Sucesso',
@@ -115,10 +170,11 @@ export function GerenciarChaves() {
   };
 
   const handleGerarNovamente = async () => {
+    closeConfirmGerar();
     try {
-      const result = await window.electronAPI.gerarTodasChaves();
-      setChaves(result);
-      const qtd = result.length;
+      const result = await window.electronAPI.gerarTodasChaves() as { chaves: Chave[]; metadados: unknown[] };
+      setChaves(result.chaves);
+      const qtd = result.chaves.length;
       notifications.show({
         color: 'green',
         title: 'Sucesso',
@@ -129,13 +185,13 @@ export function GerenciarChaves() {
     }
   };
 
-  const handleEditarSalvar = async (chaveId: string, posicoesAtletas: string[]) => {
+  const handleRandomizar = async (chaveId: string) => {
     try {
-      const updated = await window.electronAPI.editarChave({ chaveId, posicoesAtletas });
+      const updated = await window.electronAPI.randomizarChave({ chaveId });
       setChaves(prev => prev.map(c => c.id === chaveId ? updated : c));
-      notifications.show({ color: 'green', title: 'Sucesso', message: 'Posições da chave atualizadas.' });
+      notifications.show({ color: 'green', title: 'Sucesso', message: 'Chave embaralhada com separação de equipes.' });
     } catch (err: unknown) {
-      notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao salvar edição' });
+      notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao embaralhar chave' });
     }
   };
 
@@ -155,9 +211,9 @@ export function GerenciarChaves() {
     }
   };
 
-  const handleOpenEdit = (chave: Chave) => {
-    setEditingChave(chave);
-    setEditModalOpen(true);
+  const handleViewChave = (chave: Chave) => {
+    setViewChave(chave);
+    setViewModalOpen(true);
   };
 
   const handleImportarChaves = async () => {
@@ -192,9 +248,9 @@ export function GerenciarChaves() {
 
   const gruposValidos = athletes.filter(a => {
     const count = athletes.filter(a2 => a2.categoria === a.categoria).length;
-    return count >= 2 && count <= 5;
+    return count >= 1;
   });
-  const categoriasValidas = new Set(gruposValidos.map(a => a.categoria));
+  const categoriasComAtletas = new Set(gruposValidos.map(a => a.categoria));
 
   return (
     <PageLayout title="Gerenciar Chaves" backRoute="/admin/dashboard">
@@ -204,11 +260,11 @@ export function GerenciarChaves() {
             <Stack align="center" gap="lg">
               <Title order={3}>Gerar Chaves do Torneio</Title>
               <Text c="dimmed" ta="center">
-                {categoriasValidas.size > 0
-                  ? `${categoriasValidas.size} categoria(s) com atletas suficientes (2 a 5) para gerar chave.`
-                  : 'Nenhuma categoria com 2 a 5 atletas encontrada. Cadastre atletas primeiro.'}
+                {categoriasComAtletas.size > 0
+                  ? `${categoriasComAtletas.size} categoria(s) com atletas para gerar chave.`
+                  : 'Nenhuma categoria com atletas encontrada. Cadastre atletas primeiro.'}
               </Text>
-              {categoriasValidas.size > 0 && (
+              {categoriasComAtletas.size > 0 && (
                 <Button size="xl" onClick={handleGerarTodas}>
                   Gerar Chaves
                 </Button>
@@ -219,7 +275,7 @@ export function GerenciarChaves() {
           <>
             <Group justify="space-between" w="100%">
               <Group>
-                <Button onClick={handleGerarNovamente} variant="light">Gerar Novamente</Button>
+                <Button onClick={openConfirmGerar} variant="light">Gerar Novamente</Button>
               </Group>
               <Group>
                 <Button onClick={handleImportarChaves} variant="light">Importar Chaves</Button>
@@ -230,7 +286,7 @@ export function GerenciarChaves() {
             <Paper withBorder shadow="sm" p="md" radius="md">
               <Title order={4} mb="md">Chaves Geradas ({chaves.length})</Title>
               <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-                {chaves.map(chave => {
+                {sortedChaves.map(chave => {
                   const chaveAtletas = chave.posicoesAtletas
                     .map(id => athletes.find(a => a.id === id))
                     .filter((a): a is Atleta => a !== undefined);
@@ -239,11 +295,8 @@ export function GerenciarChaves() {
                       <Stack gap="xs">
                         <Text fw={700} size="sm">{getChaveTitle(chave, athletes)}</Text>
                         <Group gap={4}>
-                          <Badge size="sm" color="violet">{chave.totalRodadas} rodada(s)</Badge>
                           <Badge size="sm" color="grape">{chave.totalLutas} luta(s)</Badge>
-                          <Badge size="sm" color={chave.status === 'gerada' ? 'green' : chave.status === 'em_andamento' ? 'yellow' : 'blue'}>
-                            {chave.status === 'gerada' ? 'Gerada' : chave.status === 'em_andamento' ? 'Em andamento' : 'Finalizada'}
-                          </Badge>
+                          <Badge size="sm" color="green">Gerada</Badge>
                         </Group>
                         <Text size="xs" c="dimmed">
                           Árbitro: {getArbitroNome(chave.arbitroId)}
@@ -253,16 +306,22 @@ export function GerenciarChaves() {
                             Atletas: {chaveAtletas.map(a => a.nome.charAt(0).toUpperCase() + a.nome.slice(1)).join(', ')}
                           </Text>
                         )}
-                        {chave.status === 'gerada' && (
+                        <Group grow>
                           <Button
                             size="xs"
                             variant="light"
-                            fullWidth
-                            onClick={() => handleOpenEdit(chave)}
+                            onClick={() => handleRandomizar(chave.id)}
                           >
-                            Editar Chave
+                            Embaralhar
                           </Button>
-                        )}
+                          <Button
+                            size="xs"
+                            variant="outline"
+                            onClick={() => handleViewChave(chave)}
+                          >
+                            Visualizar
+                          </Button>
+                        </Group>
                       </Stack>
                     </Card>
                   );
@@ -273,15 +332,87 @@ export function GerenciarChaves() {
         )}
       </Stack>
 
-      <EditarChaveModal
-        opened={editModalOpen}
-        onClose={() => { setEditModalOpen(false); setEditingChave(null); }}
-        chave={editingChave}
-        getAtletaNome={getAtletaNome}
-        arbitros={arbitros}
-        onSave={handleEditarSalvar}
-        onTrocarArbitro={handleTrocarArbitro}
-      />
+      <Modal
+        opened={viewModalOpen}
+        onClose={() => { setViewModalOpen(false); setViewChave(null); }}
+        title={viewChave ? getChaveTitle(viewChave, athletes) : 'Chave'}
+        size="lg"
+      >
+        {viewChave && (
+          <Stack gap="md">
+            <Paper withBorder p="sm" radius="sm">
+              <Text size="sm" fw={600} mb="xs">Árbitro da Chave</Text>
+              <Text size="sm">{getArbitroNome(viewChave.arbitroId)}</Text>
+              {viewChave.arbitroId && (
+                <Select
+                  size="xs"
+                  mt="xs"
+                  placeholder="Trocar árbitro..."
+                  data={arbitros.map(r => ({ value: r.id, label: `${r.nome} (${FAIXA_LABEL[r.faixa]}) — ${r.equipe || 'Sem equipe'}` }))}
+                  value={viewChave.arbitroId}
+                  onChange={(val) => {
+                    if (val !== undefined) {
+                      handleTrocarArbitro(viewChave.id, val ?? null);
+                    }
+                  }}
+                  clearable
+                />
+              )}
+            </Paper>
+
+            <Group justify="space-between" w="100%">
+              <Text size="sm" fw={600}>Ações</Text>
+              <Button size="xs" variant="light" onClick={() => handleRandomizar(viewChave.id)}>
+                Embaralhar
+              </Button>
+            </Group>
+
+            <Paper withBorder p="sm" radius="sm">
+              <Text size="sm" fw={600} mb="xs">Lutas da 1ª Rodada</Text>
+              {getFirstRoundFights(viewChave, athletes).map((fight, i) => (
+                <Text key={i} size="sm">
+                  {i + 1}. {fight.atletaA} vs {fight.atletaB}
+                </Text>
+              ))}
+            </Paper>
+
+            <Paper withBorder p="sm" radius="sm">
+              <Text size="sm" fw={600} mb="xs">Ordem dos Atletas</Text>
+              {viewChave.posicoesAtletas.map((id, i) => (
+                <Text key={id} size="sm">
+                  {i + 1}. {getAtletaNome(id)}
+                </Text>
+              ))}
+            </Paper>
+
+            {getTeamConflicts(viewChave, athletes).length > 0 && (
+              <Paper withBorder p="sm" radius="sm" bg="yellow.0">
+                <Text size="sm" c="orange.8" fw={500}>
+                  Atenção: atletas da mesma equipe estão no mesmo lado da chave: {getTeamConflicts(viewChave, athletes).join(', ')}.
+                  Use "Embaralhar" para tentar uma distribuição melhor.
+                </Text>
+              </Paper>
+            )}
+          </Stack>
+        )}
+      </Modal>
+
+      <Modal
+        opened={confirmGerarOpen}
+        onClose={closeConfirmGerar}
+        title="Confirmar Regeneração"
+        size="sm"
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            Deseja realmente gerar novamente todas as chaves? As chaves atuais serão substituídas.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="light" onClick={closeConfirmGerar}>Cancelar</Button>
+            <Button color="red" onClick={handleGerarNovamente}>Gerar Novamente</Button>
+          </Group>
+        </Stack>
+      </Modal>
     </PageLayout>
   );
 }

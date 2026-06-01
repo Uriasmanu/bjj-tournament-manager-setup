@@ -34,7 +34,7 @@ export function AdminArbitros() {
     setError(false);
     try {
       const list = await window.electronAPI.loadArbitros();
-      setArbitros(list);
+      setArbitros(list.sort((a, b) => a.nome.localeCompare(b.nome)));
     } catch {
       setError(true);
     } finally {
