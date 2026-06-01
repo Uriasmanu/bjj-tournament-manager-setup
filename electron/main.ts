@@ -4,6 +4,7 @@ import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
 import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
 import { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
+import { registerBracketHandlers } from './brackets'
 import { checkActivation, validatePassword, activateLicense } from './activation'
 import type { Atleta } from '../src/types/athlete'
 import type { Arbitro } from '../src/types/referee'
@@ -169,6 +170,7 @@ app.whenReady().then(() => {
   registerTournamentHandlers()
   registerAthleteHandlers()
   registerRefereeHandlers()
+  registerBracketHandlers()
   registerActivationHandlers()
   createWindow()
 })

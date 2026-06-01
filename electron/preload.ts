@@ -46,6 +46,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('import-arbitros'),
   exportArbitros: () =>
     ipcRenderer.invoke('export-arbitros'),
+  gerarTodasChaves: () =>
+    ipcRenderer.invoke('gerar-todas-chaves'),
+  gerarChave: (data: { categoriaId: string }) =>
+    ipcRenderer.invoke('gerar-chave', data),
+  loadChaves: () =>
+    ipcRenderer.invoke('load-chaves'),
+  loadChavePorCategoria: (categoriaId: string) =>
+    ipcRenderer.invoke('load-chave-por-categoria', categoriaId),
+  regenerarChave: (data: { categoriaId: string }) =>
+    ipcRenderer.invoke('regenerar-chave', data),
+  atualizarLuta: (data: { lutaId: string; vencedorId: string; status: string }) =>
+    ipcRenderer.invoke('atualizar-luta', data),
+  editarChave: (data: { chaveId: string; posicoesAtletas: string[] }) =>
+    ipcRenderer.invoke('editar-chave', data),
+  atribuirArbitroChave: (data: { chaveId: string; arbitroId: string | null }) =>
+    ipcRenderer.invoke('atribuir-arbitro-chave', data),
+  importChaves: () =>
+    ipcRenderer.invoke('import-chaves'),
+  exportChaves: () =>
+    ipcRenderer.invoke('export-chaves'),
 })
 
 contextBridge.exposeInMainWorld('activation', {

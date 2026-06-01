@@ -8,7 +8,7 @@ O módulo de **Árbitros** é responsável pelo cadastro e gerenciamento dos ár
 
 O funcionamento é análogo ao módulo de Atletas, porém com campos simplificados:
 - **Nome** — obrigatório
-- **Equipe** — Obrigatório, utilizada para verificação de conflito de interesse (aviso se árbitro for de mesma equipe que atletas da chave)
+- **Equipe** — opcional, utilizada para verificação de conflito de interesse (aviso se árbitro for de mesma equipe que atletas da chave)
 - **Faixa** — obrigatório (apenas faixas a partir de **roxa**: `roxa`, `marrom`, `preta`)
 - **Chaves** — array de IDs das chaves atribuídas, iniciando vazio (`[]`)
 
@@ -61,6 +61,28 @@ Um árbitro é considerado duplicata quando possui o mesmo **nome** (case-insens
 - Um árbitro pode arbitrar múltiplas chaves.
 - Uma chave pode ter no máximo **1 árbitro**.
 - A lista `chaveIds` no árbitro é atualizada automaticamente quando uma chave é atribuída/desatribuída.
+
+### 3.6. Distribuição Automática de Árbitros
+
+- O sistema **distribui automaticamente** os árbitros entre as chaves geradas, seguindo a hierarquia de faixas.
+- A distribuição automática pode ser **editada manualmente** pelo administrador após a geração.
+- O objetivo é garantir que cada chave tenha um árbitro compatível com o nível dos atletas.
+
+### 3.7. Hierarquia de Faixas para Arbitragem
+
+A faixa do árbitro define quais chaves ele pode arbitrar, seguindo a ordem hierárquica:
+
+| Faixa do Árbitro | Pode Arbitrar Chaves com Atletas até a Faixa |
+|---|---|
+| `roxa` | `branca`, `cinza`, `amarela`, `laranja`, `verde`, `azul`, `roxa` |
+| `marrom` | `branca`, `cinza`, `amarela`, `laranja`, `verde`, `azul`, `roxa`, `marrom` |
+| `preta` | Todas as faixas (branca a preta) |
+
+**Regras:**
+- Um árbitro **não pode** arbitrar uma chave que contenha atletas de faixa superior à sua.
+- Para determinar a faixa máxima da chave, considera-se a **maior faixa** entre todos os atletas da chave.
+- Exemplo: se uma chave tem atletas roxa e marrom, apenas árbitros marrom ou preta podem arbitrá-la.
+- A distribuição automática respeita esta hierarquia. A edição manual também a valida, exibindo aviso se violada (mas **não bloqueia**).
 
 ---
 
@@ -450,6 +472,7 @@ bjj-tournament-manager-setup/
 | Equipe (se informada, mín. 2 caracteres) | "Equipe deve ter ao menos 2 caracteres" |
 | Faixa obrigatória | "Selecione uma faixa" |
 | Faixa inválida (menor que roxa) | "Árbitro deve ter faixa mínima Roxa" |
+| Árbitro com faixa inferior à faixa máxima da chave | "O árbitro {nome} é faixa {faixa}, mas a chave possui atletas de faixa superior." |
 | Nome duplicado (case-insensitive) | "Já existe um árbitro com este nome" |
 | Exclusão com chaves atribuídas | "Este árbitro está vinculado a {N} chave(s). As chaves ficarão sem árbitro." |
 | Máximo 1 árbitro por chave | "Esta chave já possui um árbitro attribuído." |

@@ -362,6 +362,12 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Exportação:** Array completo de árbitros com todos os campos (`nome`, `equipe`, `faixa`, `id`, `chaveIds`, `createdAt`, `updatedAt`).
 - **Exclusão:** Ao excluir um árbitro, as chaves que ele estava arbitrando ficam sem árbitro (`arbitroId = null`). Exibe modal de confirmação antes de excluir.
 - **Atribuição de chaves:** A atribuição de chaves a um árbitro é feita na tela de Gerenciamento de Chaves. Um árbitro pode arbitrar múltiplas chaves, mas uma chave pode ter no máximo 1 árbitro.
+- **Distribuição automática:** Após a geração das chaves, o sistema distribui automaticamente os árbitros entre as chaves com base na hierarquia de faixas. A distribuição pode ser ajustada manualmente.
+- **Hierarquia de faixas para arbitragem:** A faixa do árbitro define quais chaves ele pode arbitrar. A ordem hierárquica define que:
+  - **Roxa** arbitra chaves com atletas até faixa roxa (branca a roxa).
+  - **Marrom** arbitra chaves com atletas até faixa marrom (branca a marrom).
+  - **Preta** arbitra chaves com qualquer faixa.
+  - A distribuição automática respeita esta hierarquia. Na edição manual, o sistema avisa se a regra for violada, mas **não bloqueia**.
 
 ---
 

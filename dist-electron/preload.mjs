@@ -22,7 +22,17 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   deleteArbitro: (arbitroId) => electron.ipcRenderer.invoke("delete-arbitro", arbitroId),
   loadArbitros: () => electron.ipcRenderer.invoke("load-arbitros"),
   importArbitros: () => electron.ipcRenderer.invoke("import-arbitros"),
-  exportArbitros: () => electron.ipcRenderer.invoke("export-arbitros")
+  exportArbitros: () => electron.ipcRenderer.invoke("export-arbitros"),
+  gerarTodasChaves: () => electron.ipcRenderer.invoke("gerar-todas-chaves"),
+  gerarChave: (data) => electron.ipcRenderer.invoke("gerar-chave", data),
+  loadChaves: () => electron.ipcRenderer.invoke("load-chaves"),
+  loadChavePorCategoria: (categoriaId) => electron.ipcRenderer.invoke("load-chave-por-categoria", categoriaId),
+  regenerarChave: (data) => electron.ipcRenderer.invoke("regenerar-chave", data),
+  atualizarLuta: (data) => electron.ipcRenderer.invoke("atualizar-luta", data),
+  editarChave: (data) => electron.ipcRenderer.invoke("editar-chave", data),
+  atribuirArbitroChave: (data) => electron.ipcRenderer.invoke("atribuir-arbitro-chave", data),
+  importChaves: () => electron.ipcRenderer.invoke("import-chaves"),
+  exportChaves: () => electron.ipcRenderer.invoke("export-chaves")
 });
 electron.contextBridge.exposeInMainWorld("activation", {
   check: () => electron.ipcRenderer.invoke("check-activation"),

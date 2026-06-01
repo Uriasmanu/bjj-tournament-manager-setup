@@ -19,13 +19,17 @@ A geração de chaves depende do módulo de **Categorias**: uma chave só pode s
 
 | Funcionalidade | Status |
 |---|---|---|
-| Geração automática de chaves por categoria | ❌ Pendente |
-| Visualização de chave (bracket tree) | ❌ Pendente |
-| Edição manual de posições na chave | ❌ Pendente |
-| Exportação de chaves (JSON) | ❌ Pendente |
-| Importação de chaves (JSON) | ❌ Pendente |
+| Geração em lote de todas as chaves (2-5 atletas) | ✅ Completo |
+| Atribuição automática de árbitros por hierarquia de faixa | ✅ Completo |
+| Listagem de chaves em grid de cards | ✅ Completo |
+| Edição manual: reordenar / embaralhar posições | ✅ Completo |
+| Troca de árbitro por chave | ✅ Completo |
+| Exportação de chaves (JSON) | ✅ Completo |
+| Importação de chaves (JSON) | ✅ Completo |
+| Registro de resultado de luta (vencedor / WO) | ✅ Completo |
+| Avanço automático do vencedor à rodada seguinte | ✅ Completo |
+| Suporte a WO / desistência | ✅ Completo |
 | Histórico de lutas por chave | ❌ Pendente |
-| Suporte a WO / desistência | ❌ Pendente |
 
 ---
 
@@ -291,14 +295,17 @@ export interface Torneio {
 
 Rota: `/admin/categorias/chaves`
 
-A tela deve conter:
+A tela possui dois estados:
 
-1. **Seletor de Categoria** — dropdown listando todas as categorias configuradas com contagem de atletas.
-2. **Botão "Gerar Chave"** — disponível apenas se a categoria tiver entre 2 e 5 atletas e não possuir chave.
-3. **Botão "Regenerar Chave"** — disponível apenas se a chave existir e estiver com status `gerada`. Exibe confirmação antes de regenerar.
-4. **Botão "Editar Chave"** — disponível se a chave existir e estiver com status `gerada`. Abre modo de edição de posições.
-5. **Botões "Importar Chaves" e "Exportar Chaves"** — disponíveis sempre. Importar abre diálogo nativo, exportar salva JSON com todas as chaves.
-6. **Visualização da Chave** — árvore de brackets com suporte a edição manual.
+**Estado inicial (antes da geração):**
+1. Botão grande "Gerar Chaves" centralizado verticalmente.
+2. Texto indicando quantas categorias possuem atletas suficientes (2 a 5).
+3. Ao clicar, dispara IPC `gerar-todas-chaves` e transiciona para o estado pós-geração.
+
+**Estado pós-geração:**
+1. Barra de controles: "Gerar Novamente" (esquerda), "Importar Chaves" e "Exportar Chaves" (direita).
+2. Grid de cards (`SimpleGrid`), um por chave gerada, com título, badges, árbitro, lista de atletas e botão "Editar Chave".
+3. "Editar Chave" abre `EditarChaveModal` para reordenar posições, embaralhar ou trocar árbitro.
 
 ### 5.2. Algoritmo de Geração
 
@@ -340,51 +347,60 @@ function gerarChaveCincoAtletas(posicoes: Atleta[]): Chave {
 }
 ```
 
-### 5.3. Regeneração de Chave
+### 5.3. Geração em Lote
 
-- Permitida apenas se nenhuma luta da chave tiver sido iniciada (`status === 'gerada'`).
-- Se qualquer luta estiver com status diferente de `pending`, a regeneração é bloqueada.
-- Exibição de modal de confirmação antes de regenerar.
-- Ao confirmar, a chave existente é substituída por uma nova, mantendo o mesmo `id`.
+O sistema não gera chave por categoria individualmente. O botão "Gerar Chaves" (tela inicial) dispara o handler `gerar-todas-chaves`, que:
 
-### 5.4. Edição de Chave
+1. Agrupa todos os atletas por `categoria`
+2. Para cada grupo com 2 a 5 atletas, gera automaticamente uma chave com seed sorting
+3. Atribui árbitros automaticamente com base na hierarquia de faixas (ver seção 10.1.2)
+4. Salva todas as chaves no JSON do torneio
 
-- A edição permite reordenar as posições dos atletas na chave.
-- A edição só é permitida se o status da chave for `gerada`.
-- Ao salvar a edição, as lutas são recalculadas com base nas novas posições mantendo os mesmos `id`s de lutas.
-- O campo `posicoesAtletas` do JSON é atualizado com a nova ordem.
-- O histórico de edições não é preservado.
+### 5.4. Regeneração em Lote
+
+- O botão "Gerar Novamente" (exibido após a geração inicial) executa o mesmo fluxo da geração em lote, substituindo todas as chaves existentes e reatribuindo árbitros.
+- Não há regeneração individual por chave — é sempre em lote.
+- A regeneração é sempre permitida (o frontend não valida status individualmente).
+
+### 5.5. Edição de Chave
+
+- A edição é feita por chave individualmente através do modal `EditarChaveModal`.
+- Disponível apenas para chaves com status `gerada`.
+- Operações:
+  1. **Reordenar posições** — botões de seta para cima/baixo em cada atleta
+  2. **Embaralhar** — botão que randomiza todas as posições
+  3. **Trocar árbitro** — seletor de árbitro no topo do modal
+- Ao salvar, as lutas são recalculadas com base nas novas posições.
+- Alerta visual (não bloqueante) se atletas da mesma equipe ficarem no mesmo lado da chave.
+
+Ao salvar a edição, as lutas são recalculadas (IDs das lutas são recriados). O campo `posicoesAtletas` do JSON é atualizado com a nova ordem. O histórico de edições não é preservado.
 
 ---
 
 ## 6. Comunicação Main <> Renderer (IPC)
 
-Novos canais IPC necessários:
+Canais IPC:
 
 | Canal | Direção | Descrição |
 |---|---|---|
-| `gerar-chave` | Renderer → Main → Renderer | Gera chave para uma categoria |
+| `gerar-todas-chaves` | Renderer → Main → Renderer | Gera chaves para todas as categorias com 2-5 atletas + atribui árbitros |
 | `load-chaves` | Renderer → Main → Renderer | Carrega todas as chaves do torneio ativo |
-| `load-chave-por-categoria` | Renderer → Main → Renderer | Carrega chave de uma categoria específica |
-| `regenerar-chave` | Renderer → Main → Renderer | Regenera chave de uma categoria |
 | `atualizar-luta` | Renderer → Main → Renderer | Atualiza resultado de uma luta |
 | `editar-chave` | Renderer → Main → Renderer | Salva edição manual da chave (novas posições) |
 | `atribuir-arbitro-chave` | Renderer → Main → Renderer | Atribui ou remove árbitro de uma chave |
 | `import-chaves` | Renderer → Main → Renderer | Abre diálogo nativo, lê JSON, importa chaves para o torneio |
 | `export-chaves` | Renderer → Main | Abre diálogo "Salvar como" e exporta JSON das chaves |
 
-### 6.1. Handler `gerar-chave`
+### 6.1. Handler `gerar-todas-chaves`
 
 ```typescript
-ipcMain.handle('gerar-chave', (_event, data: { categoriaId: string }): Chave => {
+ipcMain.handle('gerar-todas-chaves', (): Chave[] => {
   // 1. Carrega torneio ativo
-  // 2. Encontra categoria por ID
-  // 3. Obtém atletas da categoria
-  // 4. Valida: mínimo 2, máximo 5 atletas
-  // 5. Valida: chave ainda não existe para esta categoria
-  // 6. Executa algoritmo de geração
-  // 7. Salva chave no torneio
-  // 8. Retorna chave gerada
+  // 2. Agrupa atletas por categoria
+  // 3. Para cada grupo com 2-5 atletas, gera chave (seed sorting + lutas)
+  // 4. Atribui árbitros automaticamente (hierarquia de faixa)
+  // 5. Salva JSON com todas as chaves
+  // 6. Retorna array de chaves
 });
 ```
 
@@ -410,20 +426,15 @@ ipcMain.handle('editar-chave', (_event, data: {
 ```typescript
 ipcMain.handle('atribuir-arbitro-chave', (_event, data: {
   chaveId: string;
-  arbitroId: string | null;  // ID do árbitro ou null para remover
+  arbitroId: string | null;
 }): Chave => {
   // 1. Carrega torneio ativo
   // 2. Encontra chave por ID
-  // 3. Se arbitroId não for null:
-  //    a. Verifica se o árbitro existe no torneio
-  //    b. Atualiza chave.arbitroId = arbitroId
-  //    c. Adiciona chaveId ao array chaveIds do árbitro
-  // 4. Se arbitroId for null:
-  //    a. Obtém o arbitroId antigo
-  //    b. Remove chaveId do array chaveIds do árbitro antigo
-  //    c. Atualiza chave.arbitroId = null
-  // 5. Salva JSON
-  // 6. Retorna chave atualizada
+  // 3. Remove chaveId do árbitro anterior (se houver)
+  // 4. Se arbitroId não for null, adiciona chaveId ao novo árbitro
+  // 5. Atualiza chave.arbitroId
+  // 6. Salva JSON
+  // 7. Retorna chave atualizada
 });
 ```
 
@@ -454,24 +465,19 @@ ipcMain.handle('export-chaves', (): void => {
 
 ---
 
-## 7. Preload (Novos Métodos)
+## 7. Preload (Métodos)
 
 ```typescript
-// electron/preload.ts — adicionar ao electronAPI
+// electron/preload.ts
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // ... métodos existentes ...
 
-  // NOVOS
-  gerarChave: (data: { categoriaId: string }) =>
-    ipcRenderer.invoke('gerar-chave', data),
+  gerarTodasChaves: () =>
+    ipcRenderer.invoke('gerar-todas-chaves'),
   loadChaves: () =>
     ipcRenderer.invoke('load-chaves'),
-  loadChavePorCategoria: (categoriaId: string) =>
-    ipcRenderer.invoke('load-chave-por-categoria', categoriaId),
-  regenerarChave: (data: { categoriaId: string }) =>
-    ipcRenderer.invoke('regenerar-chave', data),
-  atualizarLuta: (data: { lutaId: string; vencedorId: string; status: StatusLuta }) =>
+  atualizarLuta: (data: { lutaId: string; vencedorId: string; status: string }) =>
     ipcRenderer.invoke('atualizar-luta', data),
   editarChave: (data: { chaveId: string; posicoesAtletas: string[] }) =>
     ipcRenderer.invoke('editar-chave', data),
@@ -486,7 +492,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
 ---
 
-## 8. Tipos (Novos)
+## 8. Tipos
 
 ```typescript
 // src/types/bracket.ts
@@ -520,8 +526,8 @@ export interface Chave {
   id: string;
   categoriaId: string;
   lutas: Luta[];
-  posicoesAtletas: string[];
-  arbitroId: string | null;
+  posicoesAtletas: string[];   // IDs dos atletas na ordem das posições (editável)
+  arbitroId: string | null;     // ID do árbitro atribuído a esta chave
   totalAtletas: number;
   totalRodadas: number;
   totalLutas: number;
@@ -545,103 +551,126 @@ export interface Chave {
 
 ### 10.1. GerenciarChaves (`/admin/categorias/chaves`)
 
-- Usa `PageLayout` com título "Gerenciar Chaves"
-- **Seletor de Categoria**: `Select` populado com lista de categorias + contagem de atletas
-  - Opções desabilitadas se categoria tem < 2 ou > 5 atletas
-  - Indicador visual se chave já foi gerada para a categoria
-- Painel dividido em duas áreas:
+Usa `PageLayout` com título "Gerenciar Chaves". A tela possui dois estados:
 
-#### 10.1.1. Área de Controles (topo)
+#### 10.1.0. Estado Inicial (antes da geração)
 
-| Elemento | Condição | Ação |
+- Botão grande "Gerar Chaves" centralizado verticalmente na tela.
+- Texto indicando quantas categorias possuem atletas suficientes (2 a 5).
+- Se nenhuma categoria tiver atletas suficientes, exibe mensagem orientativa.
+- Ao clicar, dispara IPC `gerar-todas-chaves` e transiciona para o estado pós-geração.
+
+```
++--------------------------------------------------+
+|  Gerenciar Chaves                           [←]  |
+|                                                    |
+|              Gerar Chaves do Torneio               |
+|                                                    |
+|         3 categoria(s) com atletas suficientes     |
+|              (2 a 5) para gerar chave.             |
+|                                                    |
+|              ┌──────────────────────┐              |
+|              │     Gerar Chaves     │              |
+|              └──────────────────────┘              |
++--------------------------------------------------+
+```
+
+#### 10.1.1. Estado Pós-Geração
+
+**Barra de controles (topo):**
+
+| Elemento | Posição | Ação |
 |---|---|---|
-| "Gerar Chave" | Categoria selecionada, 2-5 atletas, sem chave | Gera chave via IPC |
-| "Regenerar Chave" | Chave existe, status `gerada` | Modal confirmação → regenera |
-| "Editar Chave" | Chave existe, status `gerada` | Abre modo de edição de posições |
-| "Salvar Edição" | Modo de edição ativo | Salva posições via IPC `editar-chave` |
-| "Atribuir Árbitro" | Chave existe | Abre seletor de árbitro para a chave |
-| "Importar Chaves" | Sempre disponível | Abre diálogo nativo para importar JSON de chaves |
-| "Exportar Chaves" | Sempre disponível | Abre diálogo "Salvar como" para exportar JSON das chaves |
-| Badge "X atletas" | Sempre visível | Contagem de atletas na categoria |
-| Badge "Árbitro: {nome}" | Árbitro atribuído | Exibe nome do árbitro da chave |
-| Badge "Chave Gerada" | Chave existe | Indicador verde |
-| Badge "Em Andamento" | Chave com lutas `in_progress` | Indicador amarelo |
-| Badge "Finalizada" | Todas as lutas `completed` | Indicador azul |
+| "Gerar Novamente" | Canto superior esquerdo | Regenera todas as chaves + reatribui árbitros |
+| "Importar Chaves" | Canto superior direito | Abre diálogo nativo para importar JSON |
+| "Exportar Chaves" | Canto superior direito | Abre diálogo "Salvar como" para exportar JSON |
 
-#### 10.1.2. Área de Visualização da Chave
+**Grid de cards:**
 
-A chave é renderizada como uma **árvore de brackets** no formato visual de torneio:
+Abaixo da barra, um `SimpleGrid` (1-3 colunas responsivas) com um `Card` por chave gerada. Cada card exibe:
+
+- **Título**: `"{FaixaMin} a {FaixaMax} - {Peso} - {N} atleta(s)"`
+  - Ex: `"Azul a Marrom - Leve - 4 atletas"`
+  - `FaixaMin`/`FaixaMax`: faixa mais baixa e mais alta entre os atletas da chave. Se todos iguais, exibe apenas uma faixa.
+  - `Peso`: nome da categoria de peso extraído do `categoriaId` (ex: "Leve", "Médio", "Galo")
+  - `N`: quantidade de atletas na chave
+- **Badges**: rodadas (roxa), lutas (uva), status (verde/amarelo/azul)
+- **Árbitro**: nome e faixa do árbitro atribuído
+- **Atletas**: lista dos nomes dos atletas na chave
+- **Botão "Editar Chave"**: visível apenas se status = `gerada`. Abre `EditarChaveModal`.
 
 ```
-Rodada 1 (Quartas)    Rodada 2 (Semifinais)    Rodada 3 (Final)
-
-┌──────────────┐
-│ Luta 1       │
-│ A4 vs A5     │
-│ [Resultado]  │
-└──────┬───────┘
-       │
-┌──────┴───────┐
-│ Luta 2       │
-│ A1 vs V1     │
-│ [Resultado]  │
-└──────┬───────┘
-       │
-┌──────┴───────┐
-│ Luta 4       │  ← Final
-│ V2 vs V3     │
-│ [Resultado]  │
-└──────────────┘
-
-
-┌──────────────┐
-│ Luta 3       │
-│ A2 vs A3     │
-│ [Resultado]  │
-└──────┬───────┘
-       │
-┌──────┴───────┐
-│ (alimenta)   │
-└──────────────┘
++--------------------------------------------------+
+|  Gerenciar Chaves                           [←]  |
+|                                                    |
+| [Gerar Novamente]  [Importar Chaves] [Exportar]   |
+|                                                    |
+|  ┌─────────────────────┐ ┌─────────────────────┐  |
+|  │ Azul a Marrom       │ │ Branca a Azul       │  |
+|  │ Leve - 4 atletas    │ │ Galo - 3 atletas    │  |
+|  │ [2 rod] [3 lut] [✓] │ │ [2 rod] [2 lut] [✓] │  |
+|  │ Árbitro: Carlos(R)  │ │ Árbitro: Ana(P)     │  |
+|  │ João, Pedro, ...    │ │ Marcos, Paulo, ...  │  |
+|  │ [Editar Chave]      │ │ [Editar Chave]      │  |
+|  └─────────────────────┘ └─────────────────────┘  |
+|  ┌─────────────────────┐ ┌─────────────────────┐  |
+|  │ ...                 │ │ ...                 │  |
+|  └─────────────────────┘ └─────────────────────┘  |
++--------------------------------------------------+
 ```
 
-#### 10.1.3. Atribuição de Árbitro
+#### 10.1.2. Atribuição Automática de Árbitros
 
-- No topo da visualização da chave, exibe um seletor "Árbitro da Chave".
-- O seletor é um `Select` populado com a lista de árbitros cadastrados (formato: "Nome (Faixa)").
-- Inclui opção "Sem árbitro" para remover a atribuição.
-- Ao selecionar um árbitro, dispara IPC `atribuir-arbitro-chave`.
-- A lista `chaveIds` do árbitro é atualizada automaticamente no backend.
+- **Distribuição automática:** executada no backend pelo handler `gerar-todas-chaves`.
+- Algoritmo:
+  1. Para cada chave, calcula a faixa máxima entre seus atletas (maior valor na hierarquia).
+  2. Ordena chaves por faixa máxima decrescente (mais restritiva primeiro).
+  3. Para cada chave, seleciona o árbitro compatível (faixa ≥ faixa máxima da chave) com menor número de atribuições atuais.
+  4. Atribui o árbitro e atualiza `chaveIds` no registro do árbitro.
+- A distribuição pode ser ajustada manualmente pelo modal de edição de cada chave.
 
-Implementação:
-- Cada luta é um `Card` ou `Paper` com borda.
-- Cards conectados por linhas (CSS borders ou elementos `div`).
-- Atleta A (topo), Atleta B (base).
-- Vencedor destacado (fundo verde) quando luta `completed`.
-- Lutas `pending`: placeholder "Aguardando..." nos slots não preenchidos.
-- Lutas `wo`: estilo riscado no atleta ausente.
-- Clique em luta `pending`: abre modal para registrar resultado.
-- Badge do árbitro no topo da chave (nome e faixa), com botão "Trocar" para reatribuir.
+#### 10.1.3. Modal de Edição (EditarChaveModal)
 
-#### 10.1.4. Modo de Edição
+Aberto ao clicar "Editar Chave" em um card. Contém:
 
-Ao clicar "Editar Chave":
-- Os atletas são exibidos em uma lista ordenável (drag & drop) representando as posições 1 a N.
-- Após reordenar, o administrador clica "Salvar Edição".
-- O sistema recalcula as lutas com base na nova ordem de posições.
-- Um alerta visual é exibido se atletas da mesma equipe ficarem no mesmo lado da chave (não bloqueante).
+1. **Seletor de Árbitro** (`Select`) — topo do modal. Permite trocar o árbitro da chave. Populado com "Sem árbitro" + lista de árbitros no formato "Nome (Faixa) — Equipe". Dispara IPC `atribuir-arbitro-chave` ao selecionar.
+
+2. **Lista ordenável de atletas** — cada atleta em um `Card` com:
+   - Número da posição (1 a N)
+   - Nome do atleta
+   - Botão seta para cima / seta para baixo para reordenar
+
+3. **Botão "Embaralhar"** — randomiza a ordem dos atletas (Fisher-Yates shuffle).
+
+4. **Alerta de conflito de equipe** — exibido se a edição resultar em atletas da mesma equipe no mesmo lado da chave. Apenas informativo, não bloqueia.
+
+5. **Botões**: "Cancelar" e "Salvar Edição". Ao salvar, recalcula lutas via IPC `editar-chave`.
+
+#### 10.1.4. Hierarquia de Faixas para Arbitragem
+
+A faixa do árbitro define quais chaves ele pode arbitrar:
+
+| Faixa do Árbitro | Pode Arbitrar Chaves com Atletas até a Faixa |
+|---|---|
+| `roxa` | `branca`, `cinza`, `amarela`, `laranja`, `verde`, `azul`, `roxa` |
+| `marrom` | `branca`, `cinza`, `amarela`, `laranja`, `verde`, `azul`, `roxa`, `marrom` |
+| `preta` | Todas as faixas (branca a preta) |
+
+A distribuição automática respeita esta hierarquia. A edição manual não valida a hierarquia.
 
 ---
 
-## 11. Componentes (Novos)
+## 11. Componentes
 
-| Componente | Descrição | Local |
-|---|---|---|
-| `GerenciarChaves.tsx` | Tela principal de geração, edição e visualização | `src/pages/` |
-| `BracketTree.tsx` | Renderização visual da árvore de brackets | `src/components/` |
-| `BracketCard.tsx` | Card de luta individual na árvore | `src/components/` |
-| `RegistrarResultadoModal.tsx` | Modal de registro de resultado de luta | `src/components/` |
-| `EditarChaveModal.tsx` | Modal de edição manual de posições dos atletas | `src/components/` |
+| Componente | Descrição | Local | Status |
+|---|---|---|---|
+| `GerenciarChaves.tsx` | Tela principal (botão gerar → grid de cards) | `src/pages/` | ✅ Em uso |
+| `EditarChaveModal.tsx` | Modal de edição manual (reordenar, embaralhar, trocar árbitro) | `src/components/` | ✅ Em uso |
+| `BracketTree.tsx` | Renderização visual da árvore de brackets | `src/components/` | 🔶 Criado, não integrado |
+| `BracketCard.tsx` | Card de luta individual na árvore | `src/components/` | 🔶 Criado, não integrado |
+| `RegistrarResultadoModal.tsx` | Modal de registro de resultado de luta | `src/components/` | 🔶 Criado, não integrado |
+
+> **Nota:** `BracketTree`, `BracketCard` e `RegistrarResultadoModal` foram criados seguindo a especificação original, mas a UI atual usa listagem de cards (sem árvore visual). Eles podem ser integrados posteriormente se a visualização em árvore for necessária.
 
 ---
 
@@ -694,47 +723,53 @@ bjj-tournament-manager-setup/
 
 ---
 
-## 13. Arquivos Afetados (Modificações em Arquivos Existentes)
+## 13. Arquivos Afetados
 
-### Modificações Diretas
+### Modificações em Arquivos Existentes
 
 | Arquivo | Tipo de Alteração |
 |---|---|
-| `src/types/tournament.ts` | + campo `chaves: Chave[]` |
-| `src/types/electron.d.ts` | + métodos `gerarChave`, `loadChaves`, `loadChavePorCategoria`, `regenerarChave`, `atualizarLuta`, `editarChave`, `atribuirArbitroChave`, `importChaves`, `exportChaves` |
-| `src/pages/VisualizarCategorias.tsx` | + indicador de chave por categoria |
-| `src/pages/CategoriasMenu.tsx` | + card "Gerenciar Chaves" |
-| `src/App.tsx` | + rota `/admin/categorias/chaves` |
+| `src/types/tournament.ts` | + campo `chaves?: Chave[]` |
+| `src/types/electron.d.ts` | + métodos `gerarTodasChaves`, `loadChaves`, `atualizarLuta`, `editarChave`, `atribuirArbitroChave`, `importChaves`, `exportChaves` |
+| `src/pages/Dashboard.tsx` | + card "Geração de Chaves" com rota `/admin/categorias/chaves` |
+| `src/App.tsx` | + rota `/admin/categorias/chaves` → `GerenciarChaves` |
 | `electron/main.ts` | + import e registro de `registerBracketHandlers()` |
-| `electron/preload.ts` | + exposição dos novos métodos IPC |
-| `electron/categories.ts` | (inalterado, mas seus dados alimentam chaves) |
-| `src/types/bracket.ts` | + campo `arbitroId: string | null` em `Chave` |
-| `src/pages/GerenciarChaves.tsx` | + seletor de árbitro por chave |
+| `electron/preload.ts` | + exposição dos métodos IPC de chaves |
 
-### Arquivos que Permanecerão Inalterados
+### Arquivos que Permaneceram Inalterados
 
 | Arquivo | Motivo |
 |---|---|
-| `src/types/athlete.ts` | Atleta não precisa de novos campos para chaves |
+| `src/pages/VisualizarCategorias.tsx` | Sem indicador de chave por categoria (não implementado) |
+| `src/pages/CategoriasMenu.tsx` | Rota adicionada via Dashboard, não pelo menu de categorias |
+| `electron/categories.ts` | Handlers de categorias inalterados |
+| `src/types/athlete.ts` | Atleta não precisa de novos campos |
 | `src/types/category.ts` | Categoria já possui `atletasIds` suficiente |
 | `src/pages/ConfigurarCategorias.tsx` | Escopo separado |
-| `electron/athletes.ts` | CRUD de atletas permanece igual |
-| `electron/tournament.ts` | CRUD de torneios permanece igual |
+| `electron/athletes.ts` | CRUD de atletas inalterado |
+| `electron/tournament.ts` | CRUD de torneios inalterado |
 | `src/types/referee.ts` | Interface separada em arquivo próprio |
 
 ---
 
 ## 14. Arquivos Novos
 
+### Módulo de Chaves (este escopo)
+
 | Arquivo | Descrição |
 |---|---|
-| `electron/brackets.ts` | Handlers IPC: `gerar-chave`, `load-chaves`, `load-chave-por-categoria`, `regenerar-chave`, `atualizar-luta`, `editar-chave`, `atribuir-arbitro-chave`, `import-chaves`, `export-chaves` |
-| `src/types/bracket.ts` | Interfaces `Chave` (+ `arbitroId`), `Luta`, `StatusLuta`, `RodadaNome` |
-| `src/pages/GerenciarChaves.tsx` | Tela principal de geração, edição e visualização (+ seletor de árbitro) |
-| `src/components/BracketTree.tsx` | Renderização visual da árvore de brackets |
-| `src/components/BracketCard.tsx` | Card de luta individual |
-| `src/components/RegistrarResultadoModal.tsx` | Modal de registro de resultado |
+| `electron/brackets.ts` | Handlers IPC: `gerar-todas-chaves`, `load-chaves`, `atualizar-luta`, `editar-chave`, `atribuir-arbitro-chave`, `import-chaves`, `export-chaves` |
+| `src/types/bracket.ts` | Interfaces `Chave`, `Luta`, `StatusLuta`, `RodadaNome` |
+| `src/pages/GerenciarChaves.tsx` | Tela principal (botão gerar → grid de cards + modais) |
+| `src/components/BracketTree.tsx` | Renderização visual da árvore de brackets (não integrada) |
+| `src/components/BracketCard.tsx` | Card de luta individual (não integrado) |
+| `src/components/RegistrarResultadoModal.tsx` | Modal de registro de resultado (não integrado) |
 | `src/components/EditarChaveModal.tsx` | Modal de edição manual de posições |
+
+### Módulo de Árbitros (escopo separado, criado anteriormente)
+
+| Arquivo | Descrição |
+|---|---|
 | `src/types/referee.ts` | Interface `Arbitro` |
 | `electron/referees.ts` | Handlers IPC de árbitros |
 | `src/pages/ArbitrosMenu.tsx` | Menu intermediário de árbitros |
@@ -743,27 +778,27 @@ bjj-tournament-manager-setup/
 
 ---
 
-## 15. Plano de Implementação (Ordem Sugerida)
+## 15. Implementação Executada (Ordem Real)
 
-| Fase | Tarefa | Dependências |
+| Fase | Tarefa | Status |
 |---|---|---|
-| **1** | Criar `src/types/bracket.ts` | Nenhuma |
-| **2** | Estender `src/types/tournament.ts` (+ campo `chaves`) | Fase 1 |
-| **3** | Criar `electron/brackets.ts` (algoritmo de geração + handlers IPC) | Fases 1–2, módulo Categorias implementado |
-| **4** | Estender `electron/main.ts` (registrar handlers) | Fase 3 |
-| **5** | Estender `electron/preload.ts` (expor métodos) | Fase 3 |
-| **6** | Estender `src/types/electron.d.ts` (tipos) | Fase 1 |
-| **7** | Criar `src/pages/GerenciarChaves.tsx` | Fase 3 |
-| **8** | Criar `src/components/BracketTree.tsx` | Fase 1 |
-| **9** | Criar `src/components/BracketCard.tsx` | Fase 1 |
-| **10** | Criar `src/components/RegistrarResultadoModal.tsx` | Fase 1 |
-| **11** | Criar `src/components/EditarChaveModal.tsx` | Fase 1 |
-| **12** | Atualizar `src/pages/CategoriasMenu.tsx` (+ card Gerenciar Chaves) | Fase 7 |
-| **13** | Atualizar `src/pages/VisualizarCategorias.tsx` (+ indicadores de chave) | Fase 7 |
-| **14** | Atualizar `src/App.tsx` (+ rota) | Fase 12 |
-| **15** | Adicionar campo `arbitroId` em `Chave` | Módulo Árbitros implementado |
-| **16** | Criar handler `atribuir-arbitro-chave` em `brackets.ts` | Fase 15 |
-| **17** | Adicionar seletor de árbitro em `GerenciarChaves.tsx` | Fase 16 |
+| **1** | Criar `src/types/bracket.ts` | ✅ |
+| **2** | Estender `src/types/tournament.ts` (+ campo `chaves`) | ✅ |
+| **3** | Criar `electron/brackets.ts` (seed sorting + geração + handlers IPC + auto-atribuir árbitros) | ✅ |
+| **4** | Estender `electron/main.ts` (registrar `registerBracketHandlers`) | ✅ |
+| **5** | Estender `electron/preload.ts` (expor métodos) | ✅ |
+| **6** | Estender `src/types/electron.d.ts` (tipos IPC) | ✅ |
+| **7** | Criar `src/pages/GerenciarChaves.tsx` (dois estados: botão gerar → grid de cards) | ✅ |
+| **8** | Criar `src/components/BracketTree.tsx` | ✅ (não integrado) |
+| **9** | Criar `src/components/BracketCard.tsx` | ✅ (não integrado) |
+| **10** | Criar `src/components/RegistrarResultadoModal.tsx` | ✅ (não integrado) |
+| **11** | Criar `src/components/EditarChaveModal.tsx` (reordenar, embaralhar, trocar árbitro) | ✅ |
+| **12** | Atualizar `src/pages/Dashboard.tsx` (+ card Geração de Chaves) | ✅ |
+| **13** | Atualizar `src/App.tsx` (+ rota `/admin/categorias/chaves`) | ✅ |
+| **14** | Adicionar campo `arbitroId` em `Chave` | ✅ |
+| **15** | Criar handler `atribuir-arbitro-chave` em `brackets.ts` | ✅ |
+| **16** | Adicionar seletor de árbitro em `EditarChaveModal.tsx` | ✅ |
+| **17** | Atualizar este spec (`geracao-chaves.md`) para refletir a implementação real | ✅ |
 
 > **Nota:** A implementação de chaves depende do módulo de Categorias estar concluído. Sem categorias configuradas e atletas classificados, não há base para gerar chaves.
 
@@ -776,12 +811,11 @@ bjj-tournament-manager-setup/
 | Categoria deve ter entre 2 e 5 atletas para gerar chave | "A categoria precisa ter entre 2 e 5 atletas para gerar uma chave." |
 | Categoria com 1 atleta: campeão declarado automaticamente | "Atleta {nome} declarado campeão — categoria com apenas 1 atleta." |
 | Categoria com mais de 5 atletas: não gera chave | "A categoria possui mais de 5 atletas. Reduza para no máximo 5 atletas por chave." |
-| Chave já existe e está em andamento: bloqueia regeneração | "Não é possível regenerar a chave pois já existem lutas em andamento ou concluídas." |
-| Edição bloqueada: lutas já iniciadas | "Não é possível editar a chave após o início das lutas." |
+| Edição bloqueada: lutas já iniciadas | "Não é possível editar a chave após o início das lutas." (verificado pelo status `gerada`) |
 | Luta já possui resultado: bloqueia re-registro | "Esta luta já possui resultado registrado." |
 | Atleta não pertence à categoria: bloqueia atribuição como vencedor | "O atleta selecionado não pertence a esta categoria." |
 | Árbitro não encontrado: bloqueia atribuição | "Árbitro não encontrado no torneio." |
-| Máximo 1 árbitro por chave | "Esta chave já possui um árbitro atribuído." (verificado no frontend) |
+| Conflito de equipe na atribuição | "Atenção: o árbitro é da equipe {equipe}, que possui atletas nesta chave." (apenas aviso, não bloqueia) |
 
 ---
 
@@ -789,21 +823,20 @@ bjj-tournament-manager-setup/
 
 | Evento | Tipo | Mensagem |
 |---|---|---|
-| Chave gerada com sucesso | Sucesso (verde) | "Chave gerada com sucesso para {nome da categoria}." |
-| Chave regenerada | Sucesso (verde) | "Chave regenerada com sucesso para {nome da categoria}." |
-| Chave editada | Sucesso (verde) | "Posições da chave atualizadas com sucesso para {nome da categoria}." |
+| Chaves geradas com sucesso | Sucesso (verde) | "{N} chave(s) gerada(s) com sucesso para {M} categoria(s)." |
+| Chaves regeneradas | Sucesso (verde) | "{N} chave(s) regenerada(s) com sucesso." |
+| Chave editada | Sucesso (verde) | "Chave editada com sucesso." |
 | Resultado registrado | Sucesso (verde) | "Resultado registrado: {nome do atleta} venceu." |
-| Luta iniciada | Informação (azul) | "Luta {id} iniciada: {atletaA} vs {atletaB}." |
 | WO registrado | Alerta (amarelo) | "WO — {nome do atleta} avançou sem lutar." |
-| Categoria sem atletas suficientes | Alerta (amarelo) | "{nome da categoria} tem apenas 1 atleta. Campeão declarado automaticamente." |
-| Categoria com excesso de atletas | Alerta (amarelo) | "{nome da categoria} tem mais de 5 atletas. Não é possível gerar chave." |
+| Categoria sem atletas suficientes | Alerta (amarelo) | "{N} categoria(s) com apenas 1 atleta. Campeão(ões) declarado(s) automaticamente." |
+| Categoria com excesso de atletas | Alerta (amarelo) | "{N} categoria(s) com mais de 5 atletas. Não é possível gerar chave(s)." |
 | Alerta de equipe no mesmo lado | Alerta (amarelo) | "Atletas da equipe {equipe} estão no mesmo lado da chave." |
-| Erro ao gerar chave | Erro (vermelho) | "Erro ao gerar chave para {nome da categoria}." |
+| Erro ao gerar chaves | Erro (vermelho) | "Erro ao gerar chaves. Verifique os dados das categorias." |
 | Erro ao editar chave | Erro (vermelho) | "Erro ao salvar edição da chave." |
 | Erro ao registrar resultado | Erro (vermelho) | "Erro ao registrar resultado da luta." |
-| Chave finalizada | Sucesso (verde) | "Chave {nome da categoria} finalizada! Campeão: {nome do atleta}." |
-| Árbitro atribuído | Sucesso (verde) | "{nome do árbitro} atribuído à chave {nome da categoria}." |
-| Árbitro removido | Informação (azul) | "Árbitro removido da chave {nome da categoria}." |
+| Conflito de equipe na atribuição de árbitro | Alerta (amarelo) | "Atenção: o árbitro é da equipe {equipe}, que possui atletas nesta chave." |
+| Árbitro atribuído | Sucesso (verde) | "{nome do árbitro} atribuído à chave." |
+| Árbitro removido | Informação (azul) | "Árbitro removido da chave." |
 
 ---
 
