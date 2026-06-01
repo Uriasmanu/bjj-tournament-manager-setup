@@ -17,7 +17,6 @@ interface DashboardCard {
 const dashboardCards: DashboardCard[] = [
   { label: 'Atletas', description: 'Cadastro e gerenciamento de atletas', icon: IconUsers, route: '/admin/atletas', status: 'implemented' },
   { label: 'Equipes', description: 'Resumo de equipes / academias', icon: IconBuildingSkyscraper, route: '/admin/equipes', status: 'implemented' },
-  { label: 'Categorias', description: 'Configuração de categorias e divisões', icon: IconCategory, status: 'planned' },
   { label: 'Geração de Chaves', description: 'Criação de chaves por categoria', icon: IconBrackets, status: 'planned' },
   { label: 'Áreas de Luta', description: 'Gerenciamento de áreas de competição', icon: IconMapPin, status: 'planned' },
   { label: 'Árbitros', description: 'Cadastro e escala de árbitros', icon: IconUserShield, status: 'planned' },
