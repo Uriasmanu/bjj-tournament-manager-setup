@@ -43,6 +43,7 @@ export function ArbitrosMenu() {
     try {
       await window.electronAPI.saveArbitro({
         nome: arbitro.nome,
+        equipe: arbitro.equipe,
         faixa: arbitro.faixa,
         chaveIds: arbitro.chaveIds,
       });

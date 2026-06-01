@@ -26,6 +26,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente. Validação de `genero` e `categoria` como obrigatórios, com verificação contra lista de categorias IBJJF. |
 | Dashboard Administrativo | ✅ Completo | Tela com cards em grid (1-4 colunas responsivas), funcionalidades implementadas × planejadas |
 | Resumo de Equipes | ✅ Completo | Tela que consulta a lista de atletas e exibe nome das equipes com contagem de atletas por equipe |
+| Cadastro de Árbitros | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação, duplicata por nome. Faixas permitidas: roxa, marrom, preta. Importação/exportação JSON. |
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
 | Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
 | PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
@@ -40,7 +41,6 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Controle de Pesagem | ❌ Pendente |
 | Geração de Chaves | ❌ Pendente | Máximo de 5 atletas por chave, chave editável manualmente |
 | Áreas de Luta | ❌ Pendente |
-| Árbitros | ❌ Pendente |
 | Chamadas / Placar / Resultados | ❌ Pendente |
 | Ranking / Medalhistas | ❌ Pendente |
 | Relatórios | ❌ Pendente |
@@ -337,6 +337,32 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 | `src/pages/Equipes.tsx` | Loading/Error states: `fluid` + `min-height` |
 | `src/pages/Dashboard.tsx` | Loading state: `fluid` + `min-height` |
 
+### 3.16. Árbitros (Implementado)
+
+- **Menu intermediário:** Ao clicar no card "Árbitros" no Dashboard, navega para `/admin/arbitros` que renderiza `ArbitrosMenu` — um menu com 3 cartões:
+  - **Cadastrar Árbitro** — Abre o modal `ArbitroForm` diretamente na mesma página para criar um novo árbitro.
+  - **Listar Árbitros** — Navega para `/admin/arbitros/lista` (tela `AdminArbitros` com tabela CRUD).
+  - **Importar Árbitros** — Dispara o diálogo nativo de seleção de arquivo JSON via IPC `import-arbitros`.
+- **Tela de listagem (`/admin/arbitros/lista`):** Exibe `AdminArbitros` com:
+  - Botões "Importar", "Exportar" e "Cadastrar" no topo.
+  - Tabela com colunas: Nome, Equipe, Faixa, Chaves Atribuídas, Ações (editar/excluir).
+  - Badge com contagem de chaves atribuídas por árbitro.
+  - Empty state com "Nenhum árbitro cadastrado" + botão "Cadastrar primeiro árbitro".
+  - Ações por linha: lápis (editar) e lixeira (excluir).
+  - Botão "Voltar" retorna para `/admin/arbitros` (menu).
+- **Modal de formulário:** `ArbitroForm.tsx` usa `@mantine/form` com modo controlado. Campos: Nome (obrigatório, min 2 caracteres), Equipe (opcional) e Faixa (obrigatório).
+- **Faixa restrita:** Apenas faixas a partir de **roxa** são permitidas para cadastro de árbitros: `roxa`, `marrom`, `preta`.
+- Nome é armazenado em minúsculo (`.trim().toLowerCase()` no submit).
+- **Duplicata:** Um árbitro é considerado duplicata quando possui o mesmo **nome** (case-insensitive, trimmed). A verificação ocorre no renderer antes do IPC, tanto para cadastro quanto para edição (ignorando o próprio `id`).
+- **Armazenamento por torneio:** Árbitros são armazenados dentro do JSON do torneio (campo `arbitros: Arbitro[]`), seguindo o mesmo padrão dos atletas.
+- **Torneio ativo obrigatório:** Para cadastrar, editar, excluir ou importar árbitros, é necessário que haja um torneio ativo.
+- **Sincronia imediata:** Qualquer operação CRUD sobre árbitros lê e escreve diretamente no arquivo JSON do torneio ativo.
+- **Equipe:** Campo opcional que registra a equipe/academia do árbitro. Utilizado na atribuição de chaves para alertar se o árbitro pertence à mesma equipe que atletas da chave (apenas aviso, não bloqueia).
+- **Importação:** Formato JSON com array de objetos contendo `{ "nome": "...", "faixa": "..." }` — `equipe` é opcional. Deduplicação por nome (case-insensitive). Validação de faixa (apenas roxa, marrom, preta).
+- **Exportação:** Array completo de árbitros com todos os campos (`nome`, `equipe`, `faixa`, `id`, `chaveIds`, `createdAt`, `updatedAt`).
+- **Exclusão:** Ao excluir um árbitro, as chaves que ele estava arbitrando ficam sem árbitro (`arbitroId = null`). Exibe modal de confirmação antes de excluir.
+- **Atribuição de chaves:** A atribuição de chaves a um árbitro é feita na tela de Gerenciamento de Chaves. Um árbitro pode arbitrar múltiplas chaves, mas uma chave pode ter no máximo 1 árbitro.
+
 ---
 
 ## 4. Plataforma
@@ -478,6 +504,12 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `regenerar-chave` | Renderer → Main → Renderer | Regenera chave de uma categoria |
 | `atualizar-luta` | Renderer → Main → Renderer | Atualiza resultado de uma luta |
 | `editar-chave` | Renderer → Main → Renderer | Salva edição manual de posições da chave |
+| `save-arbitro` | Renderer → Main | Adiciona novo árbitro ao torneio ativo |
+| `update-arbitro` | Renderer → Main | Atualiza árbitro existente (match por `id`) |
+| `delete-arbitro` | Renderer → Main | Remove árbitro do torneio ativo pelo `id` |
+| `load-arbitros` | Renderer → Main → Renderer | Carrega todos os árbitros do torneio ativo |
+| `import-arbitros` | Renderer → Main → Renderer | Abre diálogo nativo, lê JSON, mescla com lista do torneio ativo |
+| `export-arbitros` | Renderer → Main | Abre diálogo "Salvar como" e exporta JSON dos árbitros |
 
 ---
 
@@ -493,6 +525,8 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `/admin/atletas` | `AthletesMenu` | Menu de atletas com 3 cartões (Cadastrar, Listar, Importar) |
 | `/admin/atletas/lista` | `AdminAthletes` | Gerenciamento de atletas (tabela CRUD + botões) |
 | `/admin/equipes` | `Equipes` | Resumo de equipes com contagem de atletas |
+| `/admin/arbitros` | `ArbitrosMenu` | Menu intermediário de árbitros (3 cartões) |
+| `/admin/arbitros/lista` | `AdminArbitros` | Gerenciamento de árbitros (tabela CRUD + botões) |
 | `/admin/categorias/chaves` | `GerenciarChaves` | Geração, edição e visualização de chaves de luta (máx. 5 atletas) |
 
 > O roteamento utiliza `HashRouter` (não `BrowserRouter`) para compatibilidade com o protocolo `file://` no Electron em produção.
@@ -527,7 +561,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
     ├── Pesagem     → (Em breve)
     ├── Chaves      → /admin/categorias/chaves (GerenciarChaves, geração/edição)
     ├── Áreas       → (Em breve)
-    ├── Árbitros    → (Em breve)
+    ├── Árbitros    → /admin/arbitros (ArbitrosMenu)
     ├── Placar      → (Em breve)
     ├── Resultados  → (Em breve)
     └── Relatórios  → (Em breve)
@@ -550,6 +584,26 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
     │                      └── Voltar → /admin/atletas (menu)
     │
     └── Importar Atletas → IPC import-athletes (diálogo nativo, mesma página)
+```
+
+### Fluxo ArbitrosMenu
+
+```
+[ArbitrosMenu /admin/arbitros]
+    ├── Cadastrar Árbitro → abre modal ArbitroForm (mesma página, useDisclosure)
+    │                       ├── Salvar → IPC save-arbitro + recarrega lista via loadArbitros()
+    │                       └── Fechar → modal close
+    │
+    ├── Listar Árbitros  → /admin/arbitros/lista (AdminArbitros)
+    │                      ├── Importar → IPC import-arbitros (diálogo nativo)
+    │                      ├── Exportar → IPC export-arbitros (diálogo salvar como)
+    │                      ├── Cadastrar → abre modal ArbitroForm
+    │                      ├── Tabela com ações (editar, excluir)
+    │                      ├── Editar → abre modal ArbitroForm preenchido
+    │                      ├── Excluir → modal confirmação → IPC delete-arbitro
+    │                      └── Voltar → /admin/arbitros (menu)
+    │
+    └── Importar Árbitros → IPC import-arbitros (diálogo nativo, mesma página)
 ```
 
 ---
@@ -661,7 +715,15 @@ A validação ocorre:
 - **Em tempo real** ao digitar (modo controlado), com erro exibido abaixo do campo.
 - **No submit** (`form.onSubmit`): se houver erro, o formulário não é enviado.
 
-### 11.3. Importação de Atletas (main process)
+### 11.3. Árbitro (ArbitroForm)
+
+| Campo | Regra | Mensagem |
+|---|---|---|
+| **Nome** | Obrigatório, Mínimo 2 caracteres | "Nome deve ter ao menos 2 caracteres" |
+| **Equipe** | Obrigatório, se informada mínimo 2 caracteres | "Equipe deve ter ao menos 2 caracteres" |
+| **Faixa** | Obrigatório, apenas roxa/marrom/preta | "Selecione uma faixa" |
+
+### 11.4. Importação de Atletas (main process)
 
 - O conteúdo do arquivo deve ser um array.
 - Cada atleta deve ter os campos obrigatórios: `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`, `genero`, `categoria`.
@@ -733,6 +795,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `spec.md` | Diagnóstico histórico do formulário de atletas (modo uncontrolled) |
 | `spec-correção.md` | Análise da correção do formulário (modo controlled + dependência form removida) |
 | `spec/geracao-chaves.md` | Especificação da geração de chaves de luta (máx. 5 atletas, chave editável) |
+| `spec/cadastro-arbitro.md` | Especificação detalhada do CRUD de árbitros |
 
 ---
 
@@ -746,6 +809,7 @@ bjj-tournament-manager-setup/
 │   ├── tournament.ts        ← CRUD de torneios no sistema de arquivos
 │   ├── athletes.ts          ← CRUD de atletas + importação em massa
 │   ├── activation.ts        ← Ativação do software (SHA-256, HMAC)
+│   ├── referees.ts          ← Handlers IPC de árbitros (CRUD + import/export)
 │   └── brackets.ts          ← Handlers IPC de chaves de luta (máx. 5 atletas, edição)
 │
 ├── src/
@@ -760,6 +824,8 @@ bjj-tournament-manager-setup/
 │   │   ├── AthletesMenu.tsx     ← Menu intermediário de atletas (3 cartões)
 │   │   ├── AdminAthletes.tsx    ← Gerenciamento de atletas (tabela CRUD)
 │   │   ├── Equipes.tsx          ← Resumo de equipes com contagem de atletas
+│   │   ├── ArbitrosMenu.tsx     ← Menu intermediário de árbitros (3 cartões)
+│   │   ├── AdminArbitros.tsx    ← Gerenciamento de árbitros (tabela CRUD)
 │   │   └── GerenciarChaves.tsx  ← Geração, edição e visualização de chaves de luta
 │   ├── components/
 │   │   ├── AthleteForm.tsx      ← Modal de cadastro/edição de atleta (modo controlled)
@@ -770,12 +836,14 @@ bjj-tournament-manager-setup/
 │   │   ├── BracketTree.tsx      ← Árvore visual de brackets (eliminação simples)
 │   │   ├── BracketCard.tsx      ← Card de luta individual na árvore
 │   │   ├── RegistrarResultadoModal.tsx ← Modal de registro de resultado de luta
-│   │   └── EditarChaveModal.tsx ← Modal de edição manual de posições na chave
+│   │   ├── EditarChaveModal.tsx ← Modal de edição manual de posições na chave
+│   │   └── ArbitroForm.tsx      ← Modal de cadastro/edição de árbitro
 │   ├── types/
 │   │   ├── tournament.ts        ← Interfaces Torneio, CreateTorneioInput
 │   │   ├── athlete.ts           ← Interface Atleta (+genero, +categoria), tipo Faixa (union)
 │   │   ├── category.ts          ← Interface CategoriaIBJJF, FaixaEtaria, CATEGORIAS_IBJJF, classificarCategoria()
 │   │   ├── bracket.ts           ← Interfaces Chave, Luta, StatusLuta, RodadaNome
+│   │   ├── referee.ts           ← Interface Arbitro
 │   │   └── electron.d.ts        ← Tipos globais Window.electronAPI + Window.activation
 │   └── styles/
 │       ├── theme.ts             ← Tema Mantine UI (cores, fontes, componentes)
@@ -788,7 +856,8 @@ bjj-tournament-manager-setup/
 │   ├── spec-import-atleta.md  ← Spec detalhado da importação em massa de atletas
 │   ├── validacao-credential.md ← Spec da ativação do software
 │   ├── ANALISE-CATEGORIA-ATLETA.md ← Análise da obrigatoriedade de categoria/gênero
-│   └── geracao-chaves.md    ← Spec da geração de chaves de luta (máx. 5 atletas, chave editável)
+│   ├── geracao-chaves.md    ← Spec da geração de chaves de luta (máx. 5 atletas, chave editável)
+│   └── cadastro-arbitro.md  ← Spec detalhado do CRUD de árbitros
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)
 ```

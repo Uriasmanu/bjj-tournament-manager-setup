@@ -34,6 +34,7 @@ function saveArbitro(torneioId: string, data: Omit<Arbitro, 'id' | 'createdAt' |
   const arbitro: Arbitro = {
     id: crypto.randomUUID(),
     nome: data.nome.trim().toLowerCase(),
+    equipe: (data.equipe ?? '').trim().toLowerCase(),
     faixa: data.faixa,
     chaveIds: data.chaveIds ?? [],
     createdAt: now,
@@ -105,6 +106,9 @@ function importArbitrosFromFile(torneioId: string, filePath: string): { imported
     if (!a.faixa || typeof a.faixa !== 'string' || !faixasValidas.has(a.faixa)) {
       throw new Error(`Árbitro inválido no arquivo: "${a.nome}" — faixa inválida.`)
     }
+    if (a.equipe !== undefined && (typeof a.equipe !== 'string' || (a.equipe as string).trim().length < 2)) {
+      throw new Error(`Árbitro inválido no arquivo: "${a.nome}" — equipe deve ter ao menos 2 caracteres se informada.`)
+    }
   }
 
   const torneio = loadTorneio(torneioId)
@@ -121,6 +125,7 @@ function importArbitrosFromFile(torneioId: string, filePath: string): { imported
       current.push({
         id: crypto.randomUUID(),
         nome: nomeLower,
+        equipe: (a.equipe && typeof a.equipe === 'string' ? (a.equipe as string).trim().toLowerCase() : ''),
         faixa: a.faixa as Arbitro['faixa'],
         chaveIds: [],
         createdAt: now,

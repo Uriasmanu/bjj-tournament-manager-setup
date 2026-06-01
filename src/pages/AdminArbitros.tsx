@@ -82,6 +82,7 @@ export function AdminArbitros() {
       } else {
         await window.electronAPI.saveArbitro({
           nome: arbitro.nome,
+          equipe: arbitro.equipe,
           faixa: arbitro.faixa,
           chaveIds: arbitro.chaveIds,
         });
@@ -185,6 +186,7 @@ export function AdminArbitros() {
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Nome</Table.Th>
+                <Table.Th>Equipe</Table.Th>
                 <Table.Th>Faixa</Table.Th>
                 <Table.Th>Chaves Atribuídas</Table.Th>
                 <Table.Th style={{ width: 100 }}>Ações</Table.Th>
@@ -194,6 +196,7 @@ export function AdminArbitros() {
               {arbitros.map((a) => (
                 <Table.Tr key={a.id}>
                   <Table.Td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 200 }}>{a.nome}</Table.Td>
+                  <Table.Td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 150 }}>{a.equipe || '-'}</Table.Td>
                   <Table.Td>
                     <Badge variant="light" color="gray" size="sm">
                       {faixaLabels[a.faixa] || a.faixa}

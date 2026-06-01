@@ -21,10 +21,12 @@ export function ArbitroForm({ opened, onClose, onSave, arbitro }: ArbitroFormPro
   const form = useForm({
     initialValues: {
       nome: '',
+      equipe: '',
       faixa: '' as string,
     },
     validate: {
       nome: (v) => (v.trim().length < 2 ? 'Nome deve ter ao menos 2 caracteres' : null),
+      equipe: (v) => (v.trim().length > 0 && v.trim().length < 2 ? 'Equipe deve ter ao menos 2 caracteres' : null),
       faixa: (v) => (!v ? 'Selecione uma faixa' : null),
     },
   });
@@ -34,6 +36,7 @@ export function ArbitroForm({ opened, onClose, onSave, arbitro }: ArbitroFormPro
       if (arbitro) {
         form.setValues({
           nome: arbitro.nome || '',
+          equipe: arbitro.equipe || '',
           faixa: arbitro.faixa || '',
         });
       } else {
@@ -47,6 +50,7 @@ export function ArbitroForm({ opened, onClose, onSave, arbitro }: ArbitroFormPro
     const data: Arbitro = {
       id: arbitro?.id || crypto.randomUUID(),
       nome: values.nome.trim().toLowerCase(),
+      equipe: values.equipe.trim().toLowerCase(),
       faixa: values.faixa as Faixa,
       chaveIds: arbitro?.chaveIds || [],
       createdAt: arbitro?.createdAt || now,
@@ -70,6 +74,12 @@ export function ArbitroForm({ opened, onClose, onSave, arbitro }: ArbitroFormPro
             label="Nome *"
             placeholder="Nome do árbitro"
             {...form.getInputProps('nome')}
+          />
+
+          <TextInput
+            label="Equipe"
+            placeholder="Equipe / academia do árbitro"
+            {...form.getInputProps('equipe')}
           />
 
           <Select

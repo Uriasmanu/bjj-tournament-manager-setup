@@ -8,6 +8,7 @@ O módulo de **Árbitros** é responsável pelo cadastro e gerenciamento dos ár
 
 O funcionamento é análogo ao módulo de Atletas, porém com campos simplificados:
 - **Nome** — obrigatório
+- **Equipe** — Obrigatório, utilizada para verificação de conflito de interesse (aviso se árbitro for de mesma equipe que atletas da chave)
 - **Faixa** — obrigatório (apenas faixas a partir de **roxa**: `roxa`, `marrom`, `preta`)
 - **Chaves** — array de IDs das chaves atribuídas, iniciando vazio (`[]`)
 
@@ -41,6 +42,7 @@ O módulo conta com **importação e exportação** de árbitros em formato JSON
 | Campo | Tipo | Obrigatório | Regras |
 |---|---|---|---|
 | `nome` | string | Sim | Mínimo 2 caracteres. Armazenado em lowercase (trim). |
+| `equipe` | string | Não | Equipe/academia do árbitro. Armazenado em lowercase (trim). Usado para alerta de conflito de interesse na atribuição de chaves. |
 | `faixa` | Faixa | Sim | Apenas faixas a partir de roxa: `roxa`, `marrom`, `preta` |
 | `chaveIds` | string[] | Não | Inicia como `[]`. Preenchido ao atribuir chaves ao árbitro. |
 
@@ -74,6 +76,7 @@ import type { Faixa } from './athlete';
 export interface Arbitro {
   id: string;
   nome: string;
+  equipe: string;            // Equipe/academia do árbitro (para alerta de conflito)
   faixa: Faixa;
   chaveIds: string[];         // IDs das chaves que este árbitro vai arbitrar
   createdAt: string;
@@ -114,6 +117,7 @@ export interface Torneio {
     {
       "id": "uuid-arbitro",
       "nome": "carlos silva",
+      "equipe": "gracie barra",
       "faixa": "preta",
       "chaveIds": ["uuid-chave-1", "uuid-chave-2"],
       "createdAt": "2026-05-31T10:00:00.000Z",
@@ -307,6 +311,7 @@ interface ElectronAPI {
 - Modal de cadastro/edição similar ao `AthleteForm`, porém simplificado
 - Campos:
   - **Nome** (`TextInput`, obrigatório, min 2 caracteres)
+  - **Equipe** (`TextInput`, obrigatório)
   - **Faixa** (`Select`, obrigatório, apenas opções a partir de roxa: `Roxa`, `Marrom`, `Preta`)
 - Botões "Salvar" e "Cancelar"
 - Validação em tempo real (modo controlled com `@mantine/form`)
@@ -315,7 +320,7 @@ interface ElectronAPI {
 ### 9.3. AdminArbitros (`/admin/arbitros/lista`)
 
 - Botões "Cadastrar", "Importar" e "Exportar" no topo
-- Tabela com colunas: Nome, Faixa, Chaves Atribuídas, Ações
+- Tabela com colunas: Nome, Equipe, Faixa, Chaves Atribuídas, Ações
   - **Chaves Atribuídas:** badge/count com número de chaves que o árbitro está vinculado
 - Ações por linha: lápis (editar), lixeira (excluir)
 - Modal de confirmação ao excluir
@@ -325,7 +330,7 @@ interface ElectronAPI {
 ### 9.4. Importação de Árbitros
 
 - **Gatilhos:** Botão "Importar" em `AdminArbitros` e cartão "Importar Árbitros" em `ArbitrosMenu`
-- **Formato:** Arquivo `.json` com array de objetos `{ "nome": "...", "faixa": "..." }` — apenas `nome` e `faixa` são exigidos
+- **Formato:** Arquivo `.json` com array de objetos `{ "nome": "...", "faixa": "..." }` — apenas `nome` e `faixa` são exigidos. `equipe` é obrigatório.
 - **Diálogo nativo:** `dialog.showOpenDialog` do Electron com filtro `*.json`
 - **Validação:** Cada objeto deve ter `nome` (string, min 2 chars) e `faixa` (string: `roxa`, `marrom` ou `preta`). Array vazio é válido.
 - **Deduplicação:** Ignorado se mesmo `nome` (case-insensitive, trimmed) já existe na lista.
@@ -335,7 +340,7 @@ interface ElectronAPI {
 
 - **Gatilhos:** Botão "Exportar" em `AdminArbitros`
 - **Diálogo nativo:** `dialog.showSaveDialog` com nome sugerido `"{torneio}_arbitros.json"`
-- **Conteúdo:** Array completo de árbitros (campos `nome`, `faixa`, `id`, `chaveIds`, `createdAt`, `updatedAt`)
+- **Conteúdo:** Array completo de árbitros (campos `nome`, `equipe`, `faixa`, `id`, `chaveIds`, `createdAt`, `updatedAt`)
 
 ---
 
@@ -442,6 +447,7 @@ bjj-tournament-manager-setup/
 | Regra | Mensagem |
 |---|---|
 | Nome obrigatório (mín. 2 caracteres) | "Nome deve ter ao menos 2 caracteres" |
+| Equipe (se informada, mín. 2 caracteres) | "Equipe deve ter ao menos 2 caracteres" |
 | Faixa obrigatória | "Selecione uma faixa" |
 | Faixa inválida (menor que roxa) | "Árbitro deve ter faixa mínima Roxa" |
 | Nome duplicado (case-insensitive) | "Já existe um árbitro com este nome" |
