@@ -96,8 +96,8 @@ export function ListarTorneios() {
 
   if (loading) {
     return (
-      <Container size="clamp(360px, 95vw, 720px)" py="xl">
-        <Center py="xl">
+      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
+        <Center py="xl" style={{ minHeight: 'calc(100vh - 4rem)' }}>
           <Loader />
         </Center>
       </Container>
@@ -106,8 +106,8 @@ export function ListarTorneios() {
 
   if (error) {
     return (
-      <Container size="clamp(360px, 95vw, 720px)" py="xl">
-        <Paper withBorder shadow="sm" p="lg" radius="md">
+      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
+        <Paper withBorder shadow="sm" p="lg" radius="md" style={{ minHeight: 'calc(100vh - 4rem)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Stack align="center" gap="md">
             <Text c="red">Erro ao carregar torneios.</Text>
             <Button onClick={loadTorneios}>Tentar novamente</Button>

@@ -60,8 +60,8 @@ export function Dashboard() {
 
   if (loading) {
     return (
-      <Container size="sm" py="xl">
-        <Center py="xl">
+      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
+        <Center py="xl" style={{ minHeight: 'calc(100vh - 4rem)' }}>
           <Loader />
         </Center>
       </Container>
