@@ -17,6 +17,16 @@ function getTorneioPath(id: string): string {
   return path.join(TORNEIOS_DIR, `${id}.json`);
 }
 
+export function getActiveTournamentId(): string | null {
+  if (!fs.existsSync(ATIVO_FILE)) return null;
+  try {
+    const { id } = JSON.parse(fs.readFileSync(ATIVO_FILE, 'utf-8'));
+    return id;
+  } catch {
+    return null;
+  }
+}
+
 export function registerTournamentHandlers(): void {
   ipcMain.handle('create-tournament', (_event, data: { nome: string; data: string }): Torneio => {
     ensureDirs();
@@ -26,6 +36,7 @@ export function registerTournamentHandlers(): void {
       data: data.data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      atletas: [],
     };
     fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), 'utf-8');
     return torneio;
@@ -56,15 +67,11 @@ export function registerTournamentHandlers(): void {
 
   ipcMain.handle('get-active-tournament', (): Torneio | null => {
     ensureDirs();
-    if (!fs.existsSync(ATIVO_FILE)) return null;
-    try {
-      const { id } = JSON.parse(fs.readFileSync(ATIVO_FILE, 'utf-8'));
-      const filePath = getTorneioPath(id);
-      if (!fs.existsSync(filePath)) return null;
-      return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Torneio;
-    } catch {
-      return null;
-    }
+    const id = getActiveTournamentId();
+    if (!id) return null;
+    const filePath = getTorneioPath(id);
+    if (!fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Torneio;
   });
 
   ipcMain.handle('export-tournament', async (_event, id: string): Promise<void> => {

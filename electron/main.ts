@@ -1,9 +1,10 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { registerTournamentHandlers } from './tournament'
-import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
+import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
+import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes, migrateGlobalAthletes } from './athletes'
 import { checkActivation, validatePassword, activateLicense } from './activation'
+import type { Atleta } from '../src/types/athlete'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -70,29 +71,41 @@ app.on('activate', () => {
 
 function registerAthleteHandlers(): void {
   ipcMain.handle('load-athletes', (): ReturnType<typeof loadAthletes> => {
-    return loadAthletes()
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadAthletes(torneioId)
   })
 
-  ipcMain.handle('save-athlete', (_event, athlete: Parameters<typeof saveAthlete>[0]): ReturnType<typeof saveAthlete> => {
-    return saveAthlete(athlete)
+  ipcMain.handle('save-athlete', (_event, athlete: Atleta): ReturnType<typeof saveAthlete> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return saveAthlete(torneioId, athlete)
   })
 
-  ipcMain.handle('update-athlete', (_event, athlete: Parameters<typeof updateAthlete>[0]): ReturnType<typeof updateAthlete> => {
-    return updateAthlete(athlete)
+  ipcMain.handle('update-athlete', (_event, athlete: Atleta): ReturnType<typeof updateAthlete> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return updateAthlete(torneioId, athlete)
   })
 
   ipcMain.handle('delete-athlete', (_event, id: string): ReturnType<typeof deleteAthlete> => {
-    return deleteAthlete(id)
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return deleteAthlete(torneioId, id)
   })
 
   ipcMain.handle('import-athletes', async (): Promise<{ imported: number; skipped: number }> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
     const filePath = await openAthleteFileDialog()
     if (!filePath) return { imported: 0, skipped: 0 }
-    return importAthletesFromFile(filePath)
+    return importAthletesFromFile(torneioId, filePath)
   })
 
   ipcMain.handle('export-athletes', async (): Promise<void> => {
-    return exportAthletes()
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return exportAthletes(torneioId)
   })
 }
 
@@ -111,6 +124,7 @@ function registerActivationHandlers(): void {
 }
 
 app.whenReady().then(() => {
+  migrateGlobalAthletes(getActiveTournamentId)
   registerTournamentHandlers()
   registerAthleteHandlers()
   registerActivationHandlers()

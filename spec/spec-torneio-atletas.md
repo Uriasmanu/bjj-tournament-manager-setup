@@ -145,18 +145,19 @@ O handler `import-tournament` persiste o JSON recebido (incluindo `atletas` se p
 ## 5. Arquivos Afetados
 
 | # | Arquivo | Tipo | Descrição |
-|---|---|---|---|
+|---|---|---|---|---|
 | 1 | `src/types/tournament.ts` | **Modificar** | Adicionar `atletas?: Atleta[]` na interface `Torneio` |
 | 2 | `electron/athletes.ts` | **Modificar** | Todas as funções passam a receber `torneioId: string` e operam sobre `torneios/{torneioId}.json` em vez de `atletas.json` |
-| 3 | `electron/main.ts` | **Modificar** | Handlers `save-athlete`, `update-athlete`, `delete-athlete`, `load-athletes`, `import-athletes`, `export-athletes` passam a ler o torneio ativo e injetar o `torneioId` nas funções de `athletes.ts`. Bloquear operações se não houver torneio ativo. |
-| 4 | `electron/preload.ts` | **Modificar** | Os canais IPC de atletas podem precisar receber o `torneioId` como parâmetro OU `main.ts` resolve o torneio ativo internamente |
-| 5 | `src/types/electron.d.ts` | **Modificar** | Ajustar assinaturas dos métodos de atleta se `torneioId` for passado do renderer |
-| 6 | `src/pages/AdminAthletes.tsx` | **Possível alteração** | Pode precisar exibir o nome do torneio ativo; verificar se há torneio ativo antes de operar |
-| 7 | `src/pages/AthletesMenu.tsx` | **Possível alteração** | Mesma verificação de torneio ativo |
-| 8 | `src/pages/ListarTorneios.tsx` | **Nenhuma** | Continua consumindo apenas `id`, `nome`, `data` |
-| 9 | `src/pages/Dashboard.tsx` | **Nenhuma** | Continua consumindo apenas dados do torneio |
-| 10 | `spec/spec-torneio-atletas.md` | **Novo** | Este documento |
-| 11 | `doc/requisitos.md` | **Modificar** | Atualizar regras de negócio de atletas e torneio |
+| 3 | `electron/tournament.ts` | **Modificar** | `create-tournament` deve inicializar `atletas: []`; exportar `getActiveTournamentId()` ou função similar para reuso em `main.ts` |
+| 4 | `electron/main.ts` | **Modificar** | Handlers de atleta passam a importar `getActiveTournamentId()` de `tournament.ts` e injetar o `torneioId` nas funções de `athletes.ts`. Bloquear operações se não houver torneio ativo. |
+| 5 | `electron/preload.ts` | **Modificar** | O canal `importTournament` deve propagar o campo `atletas` (se presente) ao passar dados para o handler IPC. Demais canais de atleta permanecem inalterados (resolução do torneio ativo fica no main). |
+| 6 | `src/types/electron.d.ts` | **Nenhuma** | Assinaturas públicas permanecem idênticas — resolução do torneio ativo é interna ao main process |
+| 7 | `src/pages/AdminAthletes.tsx` | **Possível alteração** | Pode precisar exibir o nome do torneio ativo; verificar se há torneio ativo antes de operar |
+| 8 | `src/pages/AthletesMenu.tsx` | **Possível alteração** | Mesma verificação de torneio ativo |
+| 9 | `src/pages/ListarTorneios.tsx` | **Nenhuma** | Continua consumindo apenas `id`, `nome`, `data` |
+| 10 | `src/pages/Dashboard.tsx` | **Nenhuma** | Continua consumindo apenas dados do torneio |
+| 11 | `spec/spec-torneio-atletas.md` | **Novo** | Este documento |
+| 12 | `doc/requisitos.md` | **Modificar** | Atualizar regras de negócio de atletas e torneio |
 
 ---
 
@@ -175,6 +176,41 @@ export interface Torneio {
   updatedAt: string;
   startedAt?: string;
   atletas?: Atleta[];  // ← NOVO
+}
+```
+
+### 6.1b. `electron/tournament.ts`
+
+O handler `create-tournament` deve inicializar `atletas: []` no novo torneio. A função `getActiveTournamentId()` (leitura do arquivo `torneio-ativo.json`) deve ser **exportada** para reuso em `main.ts`, evitando duplicação de lógica:
+
+```typescript
+import type { Atleta } from '../src/types/athlete';  // ← NOVO
+
+// handler create-tournament:
+ipcMain.handle('create-tournament', (_event, data: { nome: string; data: string }): Torneio => {
+  ensureDirs();
+  const torneio: Torneio = {
+    id: crypto.randomUUID(),
+    nome: data.nome,
+    data: data.data,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    atletas: [],       // ← NOVO
+  };
+  fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), 'utf-8');
+  return torneio;
+});
+
+// Exportar função de leitura do torneio ativo para reuso em main.ts:
+export function getActiveTournamentId(): string | null {
+  const ativoPath = ATIVO_FILE;  // já definido no módulo
+  if (!fs.existsSync(ativoPath)) return null;
+  try {
+    const { id } = JSON.parse(fs.readFileSync(ativoPath, 'utf-8'))
+    return id
+  } catch {
+    return null
+  }
 }
 ```
 
@@ -313,24 +349,78 @@ async function exportAthletes(torneioId: string): Promise<void> {
 export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes }
 ```
 
+### 6.2b. Migração do arquivo global `atletas.json`
+
+Na primeira execução pós-atualização, se existir o arquivo global `{userData}/data/atletas.json` e houver um torneio ativo, os atletas globais devem ser migrados para o torneio ativo. A migração ocorre **uma única vez** e pode ser implementada como uma função executada durante a inicialização do app em `main.ts`:
+
+```typescript
+function migrateGlobalAthletes(): void {
+  const globalPath = path.join(app.getPath('userData'), 'data', 'atletas.json');
+  if (!fs.existsSync(globalPath)) return;
+
+  const torneioId = getActiveTournamentId();
+  if (!torneioId) return;  // sem torneio ativo, mantém arquivo global para migração futura
+
+  try {
+    const globalAthletes: Atleta[] = JSON.parse(fs.readFileSync(globalPath, 'utf-8'));
+    if (!Array.isArray(globalAthletes) || globalAthletes.length === 0) {
+      fs.unlinkSync(globalPath);  // arquivo vazio ou inválido — remove
+      return;
+    }
+
+    const torneio: Torneio = JSON.parse(
+      fs.readFileSync(getTorneioPath(torneioId), 'utf-8')
+    );
+    const existing = torneio.atletas ?? [];
+    const merged = [...existing];
+    let migrated = 0;
+
+    for (const a of globalAthletes) {
+      const alreadyExists = existing.some(
+        ex => (a.id && ex.id === a.id) ||
+              (ex.nome === a.nome && ex.anoNascimento === a.anoNascimento)
+      );
+      if (!alreadyExists) {
+        merged.push(a);
+        migrated++;
+      }
+    }
+
+    if (migrated > 0) {
+      torneio.atletas = merged;
+      torneio.updatedAt = new Date().toISOString();
+      fs.writeFileSync(getTorneioPath(torneioId), JSON.stringify(torneio, null, 2), 'utf-8');
+    }
+
+    // Remove ou renomeia o arquivo global após migração
+    fs.renameSync(globalPath, globalPath.replace('.json', '.migrated.json'));
+  } catch {
+    // Falha na migração — não bloqueia o app
+  }
+}
+```
+
+> **Nota:** A migração é um utilitário descartável. Após algumas versões, o código de migração pode ser removido junto com a documentação de suporte ao arquivo global.
+
 ### 6.3. `electron/main.ts`
 
 Os handlers de atleta precisam:
-1. Obter o ID do torneio ativo (lendo `torneio-ativo.json`)
+1. Obter o ID do torneio ativo (importando `getActiveTournamentId` de `electron/tournament.ts`)
 2. Passar esse ID para as funções em `athletes.ts`
 3. Lançar erro se não houver torneio ativo
+4. Executar migração do arquivo global na inicialização
 
 ```typescript
-function getActiveTournamentId(): string | null {
-  const ativoPath = path.join(app.getPath('userData'), 'data', 'torneio-ativo.json')
-  if (!fs.existsSync(ativoPath)) return null
-  try {
-    const { id } = JSON.parse(fs.readFileSync(ativoPath, 'utf-8'))
-    return id
-  } catch {
-    return null
-  }
-}
+import { getActiveTournamentId } from './tournament'   // ← importa do tournament.ts
+import { migrateGlobalAthletes } from './athletes'      // ← opcional: ou executa inline
+
+app.whenReady().then(() => {
+  migrateGlobalAthletes()                                // ← migração única na inicialização
+  registerTournamentHandlers()
+  registerAthleteHandlers()
+  registerActivationHandlers()
+  createWindow()
+})
 
 function registerAthleteHandlers(): void {
   ipcMain.handle('load-athletes', (): Atleta[] => {
@@ -375,11 +465,25 @@ function registerAthleteHandlers(): void {
 
 ### 6.4. `electron/preload.ts`
 
-**Nenhuma alteração na assinatura dos canais.** O resolvedor do torneio ativo fica no `main.ts`, não no renderer. Os canais IPC continuam com os mesmos nomes e parâmetros.
+**Canais de atleta:** Nenhuma alteração na assinatura. O resolvedor do torneio ativo fica no `main.ts`, não no renderer. Os canais `load-athletes`, `save-athlete`, `update-athlete`, `delete-athlete`, `import-athletes` e `export-athletes` continuam com os mesmos nomes e parâmetros.
+
+**Canal `importTournament`:** Deve propagar o campo `atletas` (se presente no JSON importado) para que o handler em `tournament.ts` persista os atletas junto com o torneio:
+
+```typescript
+// Antes (não propaga atletas):
+importTournament: (data: { id: string; nome: string; data: string; createdAt: string; updatedAt: string }) =>
+  ipcRenderer.invoke('import-tournament', data),
+
+// Depois (propaga o Torneio completo, incluindo atletas):
+importTournament: (data: { id: string; nome: string; data: string; createdAt: string; updatedAt: string; startedAt?: string; atletas?: Atleta[] }) =>
+  ipcRenderer.invoke('import-tournament', data),
+```
+
+> **Nota:** O tipo `Torneio` já inclui `atletas?: Atleta[]` após a alteração em `src/types/tournament.ts`. O preload pode usar `import type { Torneio } from '../src/types/tournament'` e tipar o parâmetro como `Torneio` para simplicidade.
 
 ### 6.5. `src/types/electron.d.ts`
 
-**Nenhuma alteração necessária.** As assinaturas públicas permanecem idênticas.
+**Nenhuma alteração necessária.** As assinaturas públicas permanecem idênticas — `importTournament(data: Torneio)` já usa o tipo `Torneio` completo.
 
 ### 6.6. `src/pages/AdminAthletes.tsx` e `src/pages/AthletesMenu.tsx`
 
@@ -448,5 +552,6 @@ EXPORTAÇÃO DA LISTA DE ATLETAS (apenas atletas):
 | **Exportar torneio sem atletas** | JSON exportado contém `"atletas": []` |
 | **Importar torneio antigo (sem `atletas`)** | `atletas` fica `undefined` → tratado como `[]` |
 | **Múltiplos torneios** | Cada um tem sua própria lista de atletas |
-| **Migração de dados globais** | `atletas.json` global pode ser ignorado ou migrado manualmente |
+| **Migração automática de dados globais** | Na inicialização, se `atletas.json` existir e houver torneio ativo, os atletas são migrados para o torneio ativo e o arquivo global é renomeado para `.migrated.json` |
+| **Falha na migração** | A migração falha silenciosamente — não bloqueia a inicialização do app. O arquivo global permanece intacto para tentativa futura |
 | **Excluir torneio** | Remove o arquivo JSON — atletas são perdidos junto (esperado) |

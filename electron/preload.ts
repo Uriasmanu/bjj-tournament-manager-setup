@@ -1,4 +1,5 @@
 import { ipcRenderer, contextBridge } from 'electron'
+import type { Torneio } from '../src/types/tournament'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   createTournament: (data: { nome: string; data: string }) =>
@@ -9,13 +10,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('start-tournament', id),
   exportTournament: (id: string) =>
     ipcRenderer.invoke('export-tournament', id),
-  importTournament: (data: { id: string; nome: string; data: string; createdAt: string; updatedAt: string }) =>
+  importTournament: (data: Torneio) =>
     ipcRenderer.invoke('import-tournament', data),
-  importTournamentOverwrite: (data: { id: string; nome: string; data: string; createdAt: string; updatedAt: string }) =>
+  importTournamentOverwrite: (data: Torneio) =>
     ipcRenderer.invoke('import-tournament-overwrite', data),
   getActiveTournament: () =>
     ipcRenderer.invoke('get-active-tournament'),
-  updateTournament: (data: { id: string; nome: string; data: string; createdAt: string; updatedAt: string }) =>
+  updateTournament: (data: Torneio) =>
     ipcRenderer.invoke('update-tournament', data),
   deleteTournament: (id: string) =>
     ipcRenderer.invoke('delete-tournament', id),
