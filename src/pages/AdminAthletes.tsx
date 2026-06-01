@@ -1,12 +1,26 @@
-import { Container, Paper, Title, Text, Button, Stack, Group, Loader, Center, Modal } from '@mantine/core';
+import { Container, Paper, Title, Text, Button, Stack, Group, Loader, Center, Modal, Badge } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconPlus, IconFileUpload, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { useEffect, useState } from 'react';
-import type { Atleta } from '../types/athlete';
+import { useEffect, useState, useMemo } from 'react';
+import type { Atleta, Faixa } from '../types/athlete';
 import { AthleteForm } from '../components/AthleteForm';
 import { AthleteTable } from '../components/AthleteTable';
 import { PageLayout } from '../components/PageLayout';
+
+const faixaLabels: Record<Faixa, string> = {
+  branca: 'Branca',
+  cinza: 'Cinza',
+  amarela: 'Amarela',
+  laranja: 'Laranja',
+  verde: 'Verde',
+  azul: 'Azul',
+  roxa: 'Roxa',
+  marrom: 'Marrom',
+  preta: 'Preta',
+};
+
+const faixaOrder: Faixa[] = ['branca', 'cinza', 'amarela', 'laranja', 'verde', 'azul', 'roxa', 'marrom', 'preta'];
 
 export function AdminAthletes() {
   const [athletes, setAthletes] = useState<Atleta[]>([]);
@@ -114,6 +128,14 @@ export function AdminAthletes() {
     }
   };
 
+  const faixaCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const a of athletes) {
+      counts[a.faixa] = (counts[a.faixa] || 0) + 1;
+    }
+    return counts;
+  }, [athletes]);
+
   if (loading) {
     return (
       <Container size="clamp(360px, 95vw, 720px)" py="xl">
@@ -153,6 +175,20 @@ export function AdminAthletes() {
           </Button>
         </Group>
       </Group>
+
+      {athletes.length > 0 && (
+        <Paper withBorder p="sm" mb="md" radius="md">
+          <Group gap="xs">
+            <Text size="sm" fw={600}>Total: {athletes.length}</Text>
+            <Text size="sm" c="dimmed">|</Text>
+            {faixaOrder.map((faixa) => (
+              <Badge key={faixa} variant="light" color="gray" size="sm">
+                {faixaLabels[faixa]}: {faixaCounts[faixa] || 0}
+              </Badge>
+            ))}
+          </Group>
+        </Paper>
+      )}
 
       {athletes.length === 0 ? (
         <Stack align="center" gap="md" py="xl">
