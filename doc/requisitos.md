@@ -38,7 +38,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Cadastro de Categorias | ⏳ Parcial | Categorias IBJJF implementadas como tipo (`src/types/category.ts`) e campo obrigatório no formulário de atleta. Gerenciamento dedicado de categorias (CRUD) ainda pendente. |
 | Controle de Inscrições | ❌ Pendente |
 | Controle de Pesagem | ❌ Pendente |
-| Geração de Chaves | ❌ Pendente |
+| Geração de Chaves | ❌ Pendente | Máximo de 5 atletas por chave, chave editável manualmente |
 | Áreas de Luta | ❌ Pendente |
 | Árbitros | ❌ Pendente |
 | Chamadas / Placar / Resultados | ❌ Pendente |
@@ -180,7 +180,23 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - Ano de nascimento `0`: rejeitado por truthy check (`!a.anoNascimento` com `0` é falsy).
   - Nomes com espaços extras internos não são normalizados (ex.: `"joão  silva"` vs `"joão silva"` não são considerados duplicatas).
 
-### 3.11. Ativação do Software (Implementado)
+### 3.11. Geração de Chaves (Planejado)
+
+- **Máximo de 5 atletas por chave:** Cada chave suporta no máximo 5 atletas. Categorias com mais de 5 atletas não podem gerar chave — o administrador deve ajustar a categoria.
+- **Mínimo de 2 atletas:** Categorias com 1 atleta têm campeão declarado automaticamente; com 0 atletas, nenhuma chave é gerada.
+- **Formato eliminatório simples:** Sem repescagem, sem disputa de 3º lugar.
+- **Estrutura por quantidade de atletas:**
+  - 2 atletas: 1 luta (Final direta)
+  - 3 atletas: 2 lutas (1 Semifinal + Final, 1 bye)
+  - 4 atletas: 3 lutas (2 Semifinais + Final)
+  - 5 atletas: 4 lutas (1 Quartas + 2 Semifinais + Final)
+- **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
+- **Bloqueio de edição:** Após a primeira luta ser iniciada, a edição é bloqueada.
+- **Seed sorting:** Atletas posicionados por bloqueio de equipe (lados opostos), peso, idade e ordem alfabética.
+- **Regeneração:** Permitida apenas se nenhuma luta foi iniciada.
+- **Especificação detalhada:** Ver `spec/geracao-chaves.md`.
+
+### 3.12. Ativação do Software (Implementado)
 
 - Na primeira execução, exige senha de ativação fornecida pelo desenvolvedor.
 - Senha validada por hash SHA-256 (nunca armazenada em texto puro).
@@ -190,18 +206,18 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Fallback para `crypto.randomUUID()` se o comando `wmic` falhar (Linux/macOS ou restrição de segurança).
 - O `App.tsx` faz 3 estados: `null` (carregando), `false` (tela de ativação), `true` (app principal). O `.catch(() => setActivated(false))` trata falhas de IPC.
 
-### 3.12. Error Boundary
+### 3.13. Error Boundary
 
 - Um componente `ErrorBoundary` (classe React) envolve as `<Routes>` no `HashRouter`.
 - Captura erros de renderização em qualquer página filha.
 - Exibe tela de fallback com: título "Erro inesperado", descrição, mensagem do erro (primeiras 4 linhas do stack) e botão "Tentar novamente".
 - O botão "Tentar novamente" reseta o estado de erro (`setState({ hasError: false })`) e re-renderiza os children.
 
-### 3.14. Categorias IBJJF
+### 3.15. Categorias IBJJF
 
 As categorias de inscrição seguem o padrão oficial da IBJJF (International Brazilian Jiu-Jitsu Federation) para competições com kimono (Gi).
 
-#### 3.14.1. Fatores de Classificação
+#### 3.15.1. Fatores de Classificação
 
 A categoria de um atleta é determinada pela combinação de quatro fatores:
 
@@ -210,7 +226,7 @@ A categoria de um atleta é determinada pela combinação de quatro fatores:
 3. **Gênero** — masculino ou feminino
 4. **Peso** — peso do atleta em kg
 
-#### 3.14.2. Faixas Etárias IBJJF
+#### 3.15.2. Faixas Etárias IBJJF
 
 | Faixa Etária | Idade |
 |---|---|
@@ -230,7 +246,7 @@ A categoria de um atleta é determinada pela combinação de quatro fatores:
 | Master 6 | 56–60 anos |
 | Master 7 | 61+ anos |
 
-#### 3.14.3. Categorias de Peso por Gênero
+#### 3.15.3. Categorias de Peso por Gênero
 
 **Masculino:**
 
@@ -261,7 +277,7 @@ A categoria de um atleta é determinada pela combinação de quatro fatores:
 
 > Pesadíssimo feminino não se aplica na IBJJF.
 
-#### 3.14.4. Classificação Automática
+#### 3.15.4. Classificação Automática
 
 A função `classificarCategoria(atleta)` em `src/types/category.ts` determina automaticamente a categoria de um atleta com base em:
 
@@ -271,7 +287,7 @@ A função `classificarCategoria(atleta)` em `src/types/category.ts` determina a
 
 A classificação automática não substitui a seleção manual no formulário — o usuário sempre escolhe a categoria explicitamente.
 
-#### 3.14.5. ID da Categoria
+#### 3.15.5. ID da Categoria
 
 Cada categoria possui um identificador único no formato `{faixaEtaria}-{genero}-{peso}`, ex.:
 - `adulto-masculino-leve`
@@ -280,13 +296,13 @@ Cada categoria possui um identificador único no formato `{faixaEtaria}-{genero}
 
 O campo `categoria` no JSON do atleta armazena este ID.
 
-#### 3.14.6. Dados de Referência
+#### 3.15.6. Dados de Referência
 
 Todas as categorias são geradas programaticamente no array `CATEGORIAS_IBJJF` em `src/types/category.ts`, totalizando 151 categorias (9 faixas etárias × 2 gêneros × 9 pesos, excluindo pesadíssimo feminino). O arquivo `doc/IBJJF.md` contém as tabelas de referência originais.
 
 ---
 
-### 3.13. Layout Responsivo — Ocupação de Tela
+### 3.14. Layout Responsivo — Ocupação de Tela
 
 Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da altura** da janela do Electron, independentemente do conteúdo interno.
 
@@ -456,6 +472,12 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `check-activation` | Renderer → Main → Renderer | Verifica se o software está ativado |
 | `validate-password` | Renderer → Main → Renderer | Valida senha de ativação (hash SHA-256) |
 | `activate-license` | Renderer → Main → Renderer | Gera e salva token HMAC de ativação |
+| `gerar-chave` | Renderer → Main → Renderer | Gera chave para uma categoria (mín. 2, máx. 5 atletas) |
+| `load-chaves` | Renderer → Main → Renderer | Carrega todas as chaves do torneio ativo |
+| `load-chave-por-categoria` | Renderer → Main → Renderer | Carrega chave de uma categoria específica |
+| `regenerar-chave` | Renderer → Main → Renderer | Regenera chave de uma categoria |
+| `atualizar-luta` | Renderer → Main → Renderer | Atualiza resultado de uma luta |
+| `editar-chave` | Renderer → Main → Renderer | Salva edição manual de posições da chave |
 
 ---
 
@@ -471,6 +493,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `/admin/atletas` | `AthletesMenu` | Menu de atletas com 3 cartões (Cadastrar, Listar, Importar) |
 | `/admin/atletas/lista` | `AdminAthletes` | Gerenciamento de atletas (tabela CRUD + botões) |
 | `/admin/equipes` | `Equipes` | Resumo de equipes com contagem de atletas |
+| `/admin/categorias/chaves` | `GerenciarChaves` | Geração, edição e visualização de chaves de luta (máx. 5 atletas) |
 
 > O roteamento utiliza `HashRouter` (não `BrowserRouter`) para compatibilidade com o protocolo `file://` no Electron em produção.
 
@@ -502,7 +525,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
     ├── Categorias  → (Em breve)
     ├── Inscrições  → (Em breve)
     ├── Pesagem     → (Em breve)
-    ├── Chaves      → (Em breve)
+    ├── Chaves      → /admin/categorias/chaves (GerenciarChaves, geração/edição)
     ├── Áreas       → (Em breve)
     ├── Árbitros    → (Em breve)
     ├── Placar      → (Em breve)
@@ -709,6 +732,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `spec/ANALISE-CATEGORIA-ATLETA.md` | Análise de impacto da obrigatoriedade de categoria/gênero no cadastro/import de atletas |
 | `spec.md` | Diagnóstico histórico do formulário de atletas (modo uncontrolled) |
 | `spec-correção.md` | Análise da correção do formulário (modo controlled + dependência form removida) |
+| `spec/geracao-chaves.md` | Especificação da geração de chaves de luta (máx. 5 atletas, chave editável) |
 
 ---
 
@@ -721,7 +745,8 @@ bjj-tournament-manager-setup/
 │   ├── preload.ts           ← Exposição dos canais IPC (contextBridge)
 │   ├── tournament.ts        ← CRUD de torneios no sistema de arquivos
 │   ├── athletes.ts          ← CRUD de atletas + importação em massa
-│   └── activation.ts        ← Ativação do software (SHA-256, HMAC)
+│   ├── activation.ts        ← Ativação do software (SHA-256, HMAC)
+│   └── brackets.ts          ← Handlers IPC de chaves de luta (máx. 5 atletas, edição)
 │
 ├── src/
 │   ├── main.tsx             ← Entry point React
@@ -734,17 +759,23 @@ bjj-tournament-manager-setup/
 │   │   ├── Dashboard.tsx        ← Dashboard Administrativo do torneio ativo
 │   │   ├── AthletesMenu.tsx     ← Menu intermediário de atletas (3 cartões)
 │   │   ├── AdminAthletes.tsx    ← Gerenciamento de atletas (tabela CRUD)
-│   │   └── Equipes.tsx          ← Resumo de equipes com contagem de atletas
+│   │   ├── Equipes.tsx          ← Resumo de equipes com contagem de atletas
+│   │   └── GerenciarChaves.tsx  ← Geração, edição e visualização de chaves de luta
 │   ├── components/
 │   │   ├── AthleteForm.tsx      ← Modal de cadastro/edição de atleta (modo controlled)
 │   │   ├── AthleteTable.tsx     ← Tabela de listagem de atletas
 │   │   ├── PageLayout.tsx       ← Layout padrão (Container, Paper, título, voltar)
 │   │   ├── ActivationScreen.tsx ← Tela de ativação do software
-│   │   └── ErrorBoundary.tsx    ← Captura de erros de renderização
+│   │   ├── ErrorBoundary.tsx    ← Captura de erros de renderização
+│   │   ├── BracketTree.tsx      ← Árvore visual de brackets (eliminação simples)
+│   │   ├── BracketCard.tsx      ← Card de luta individual na árvore
+│   │   ├── RegistrarResultadoModal.tsx ← Modal de registro de resultado de luta
+│   │   └── EditarChaveModal.tsx ← Modal de edição manual de posições na chave
 │   ├── types/
 │   │   ├── tournament.ts        ← Interfaces Torneio, CreateTorneioInput
 │   │   ├── athlete.ts           ← Interface Atleta (+genero, +categoria), tipo Faixa (union)
 │   │   ├── category.ts          ← Interface CategoriaIBJJF, FaixaEtaria, CATEGORIAS_IBJJF, classificarCategoria()
+│   │   ├── bracket.ts           ← Interfaces Chave, Luta, StatusLuta, RodadaNome
 │   │   └── electron.d.ts        ← Tipos globais Window.electronAPI + Window.activation
 │   └── styles/
 │       ├── theme.ts             ← Tema Mantine UI (cores, fontes, componentes)
@@ -757,7 +788,7 @@ bjj-tournament-manager-setup/
 │   ├── spec-import-atleta.md  ← Spec detalhado da importação em massa de atletas
 │   ├── validacao-credential.md ← Spec da ativação do software
 │   ├── ANALISE-CATEGORIA-ATLETA.md ← Análise da obrigatoriedade de categoria/gênero
-│   └── geracao-chaves.md    ← Spec da geração de chaves de luta
+│   └── geracao-chaves.md    ← Spec da geração de chaves de luta (máx. 5 atletas, chave editável)
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)
 ```
