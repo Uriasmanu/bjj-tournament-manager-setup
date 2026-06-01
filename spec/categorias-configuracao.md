@@ -46,18 +46,38 @@ A resolução da categoria para um atleta segue a ordem de precedência:
 3. **Peso** — divisão por peso corporal
 4. **Idade** — divisão por faixa etária (infantil, adulto, master, sênior)
 
-### 3.3. Regras de Faixa por Idade (Regra Geral)
+### 3.3. Cálculo de Idade (Ano Calendário)
 
-No Jiu-Jitsu, as faixas disponíveis dependem da idade do atleta:
+A IBJJF não considera o mês de nascimento, apenas o ano. A idade do atleta é calculada subtraindo o ano de nascimento do ano corrente: `idade = anoAtual - anoNascimento`.
 
-| Faixa Etária | Faixas Permitidas |
-|---|---|
-| **Infantil** (4–15 anos) | Branca, Cinza, Amarela, Laranja, Verde |
-| **Adulto** (16–29 anos) | Branca, Azul, Roxa, Marrom, Preta |
-| **Master** (30–39 anos) | Branca, Azul, Roxa, Marrom, Preta |
-| **Sênior** (40+ anos) | Branca, Azul, Roxa, Marrom, Preta |
+### 3.4. Faixas Etárias (Regra IBJJF)
 
-### 3.4. Classificação Automática
+As faixas etárias seguem a divisão oficial da IBJJF:
+
+| Faixa Etária | Idade | Faixas Permitidas |
+|---|---|---|
+| **Juvenil** | 16–17 anos | Branca, Cinza, Amarela, Laranja, Verde |
+| **Adulto** | 18–29 anos | Branca, Azul, Roxa, Marrom, Preta |
+| **Master 1** | 30–35 anos | Branca, Azul, Roxa, Marrom, Preta |
+| **Master 2** | 36–40 anos | Branca, Azul, Roxa, Marrom, Preta |
+| **Master 3** | 41–45 anos | Branca, Azul, Roxa, Marrom, Preta |
+| **Master 4** | 46–50 anos | Branca, Azul, Roxa, Marrom, Preta |
+| **Master 5** | 51–55 anos | Branca, Azul, Roxa, Marrom, Preta |
+| **Master 6** | 56–60 anos | Branca, Azul, Roxa, Marrom, Preta |
+| **Master 7** | 61+ anos | Branca, Azul, Roxa, Marrom, Preta |
+
+> O sistema deve suportar a configuração de divisões de 5 anos para Master (Master 1 a 7), mas permitir personalização pelo organizador.
+
+### 3.5. Categoria Absoluto (Open Weight)
+
+A IBJJF oferece a categoria **Absoluto** (sem limite de peso), disponível a partir da faixa azul (Adulto e Masters).
+
+- A categoria Absoluto é opcional e configurável.
+- Pode ser restrita a atletas que ficaram em 1º, 2º ou 3º lugar em suas categorias de peso.
+- O sistema deve permitir habilitar/desabilitar o Absoluto na configuração de categorias.
+- O Absoluto é gerado como uma categoria separada com `pesoMin: null` e `pesoMax: null`, agregando todas as faixas de uma mesma graduação e faixa etária.
+
+### 3.6. Classificação Automática
 
 - Ao salvar ou importar um atleta, o sistema deve classificá-lo automaticamente na categoria correspondente.
 - A classificação verifica todas as categorias configuradas e associa o atleta à primeira que satisfizer todos os 4 critérios.
@@ -67,14 +87,14 @@ No Jiu-Jitsu, as faixas disponíveis dependem da idade do atleta:
   - Ao importar atletas em massa
   - Ao alterar as regras de categorias (reatribuição em lote)
 
-### 3.5. Ajustes Manuais
+### 3.7. Ajustes Manuais
 
 - O administrador pode realocar manualmente um atleta de uma categoria para outra.
 - A realocação manual só é permitida entre categorias que compartilhem o mesmo **sexo** e **faixa** do atleta.
 - A realocação manual sobrescreve a classificação automática.
 - Atletas realocados manualmente exibem um indicador visual (badge "Manual").
 
-### 3.6. Validação de Integridade
+### 3.8. Validação de Integridade
 
 - Um atleta não pode estar em mais de uma categoria simultaneamente.
 - Ao remover ou alterar uma categoria configurada, atletas previamente classificados nela são reclassificados automaticamente.
@@ -195,7 +215,7 @@ export interface Torneio {
   "categorias": [
     {
       "id": "uuid-categoria",
-      "nome": "Masculino Adulto Azul 76kg",
+      "nome": "Masculino Adulto Leve",
       "sexo": "masculino",
       "faixas": ["azul"],
       "pesoMin": 70,
@@ -226,9 +246,10 @@ A tela deve conter:
    - Customizado (regras livres)
 
 2. **Parâmetros de geração automática**:
-   - Faixas etárias a incluir (Infantil, Adulto, Master, Sênior)
-   - Divisões de peso por faixa etária (ex.: Adulto masculino: -57kg, -64kg, -70kg, -76kg, -82kg, -88kg, -94kg, +94kg)
+   - Faixas etárias a incluir (Juvenil, Adulto, Master 1–7)
+   - Divisões de peso por faixa etária (ex.: Adulto masculino: Galo 57,5kg, Pluma 64kg, Pena 70kg, Leve 76kg, Médio 82,3kg, Meio-Pesado 88,3kg, Pesado 94,3kg, Super Pesado 97,5kg, Pesadíssimo)
    - Separar por sexo (sempre ativo, categorias nunca mistas)
+   - Incluir Absoluto (Open Weight) — opcional, disponível a partir da faixa azul
 
 3. **Tabela de categorias geradas**:
    - Lista todas as categorias com colunas: Nome, Sexo, Faixas, Peso (min-max), Idade (min-max), Atletas
@@ -246,49 +267,44 @@ O algoritmo de geração deve:
 1. Identificar todas as faixas etárias presentes (baseado no `anoNascimento` dos atletas)
 2. Para cada faixa etária, determinar as faixas (graduações) permitidas
 3. Para cada combinação sexo × faixa × faixa etária, criar divisões de peso
-4. Nomear cada categoria automaticamente: `"{Sexo} {FaixaEtária} {Faixa} {Peso}kg"`
+4. Nomear cada categoria automaticamente no formato IBJJF: `"{Sexo} {FaixaEtária} {NomeDivisão}"` (ex.: "Masculino Adulto Leve", "Feminino Adulto Galo"). Para Absoluto: `"{Sexo} {FaixaEtária} Absoluto"`.
 
-**Tabela de Peso Padrão (IBJJF — Adulto Masculino):**
+**Tabela de Peso Padrão (IBJJF — Adulto Masculino com Kimono):**
 
-| Peso (kg) | Nome da Divisão |
+| Categoria | Limite (kg) |
 |---|---|
-| 0 – 57 | Super Leve |
-| 57 – 64 | Leve |
-| 64 – 70 | Médio Leve |
-| 70 – 76 | Médio |
-| 76 – 82 | Médio Pesado |
-| 82 – 88 | Pesado |
-| 88 – 94 | Super Pesado |
-| 94+ | Pesadíssimo |
+| **Galo** | Até 57,50 |
+| **Pluma** | Até 64,00 |
+| **Pena** | Até 70,00 |
+| **Leve** | Até 76,00 |
+| **Médio** | Até 82,30 |
+| **Meio-Pesado** | Até 88,30 |
+| **Pesado** | Até 94,30 |
+| **Super Pesado** | Até 97,50 |
+| **Pesadíssimo** | Sem limite máximo |
 
-**Tabela de Peso Padrão (IBJJF — Adulto Feminino):**
+> ⚠️ O peso limite já inclui o peso total do kimono. Não há tolerância de gramas na balança oficial.
 
-| Peso (kg) | Nome da Divisão |
+**Tabela de Peso Padrão (IBJJF — Adulto Feminino com Kimono):**
+
+| Categoria | Limite (kg) |
 |---|---|
-| 0 – 48 | Super Leve |
-| 48 – 53 | Leve |
-| 53 – 58 | Médio Leve |
-| 58 – 64 | Médio |
-| 64 – 69 | Médio Pesado |
-| 69 – 74 | Pesado |
-| 74+ | Super Pesado |
+| **Galo** | Até 48,50 |
+| **Pluma** | Até 53,50 |
+| **Pena** | Até 58,50 |
+| **Leve** | Até 64,00 |
+| **Médio** | Até 69,00 |
+| **Meio-Pesado** | Até 74,00 |
+| **Pesado** | Até 79,30 |
+| **Super Pesado** | Sem limite máximo |
 
-**Tabela de Peso Infantil (4–15 anos, ambos os sexos):**
+**Tabela de Peso Juvenil (16–17 anos, ambos os sexos):**
 
-| Peso (kg) |
-|---|
-| 0 – 20 |
-| 20 – 25 |
-| 25 – 30 |
-| 30 – 35 |
-| 35 – 40 |
-| 40 – 45 |
-| 45 – 50 |
-| 50 – 55 |
-| 55 – 60 |
-| 60 – 65 |
-| 65 – 70 |
-| 70+ |
+> A IBJJF não define tabela de peso específica para Juvenil no documento de referência. O sistema deve permitir configuração personalizada ou replicar as divisões de peso adulto com limites inferiores.
+
+**Geração da Categoria Absoluto:**
+
+Além das divisões de peso, o modelo IBJJF gera uma categoria **Absoluto** (Open Weight) para cada combinação de sexo × faixa etária × faixa (a partir da azul), com `pesoMin: null` e `pesoMax: null`, agregando todos os pesos em uma única categoria.
 
 ### 5.3. Fluxo de Classificação Automática
 
@@ -296,14 +312,19 @@ O algoritmo de geração deve:
 [Atleta salvo/importado]
     │
     ▼
-Calcular idade: anoAtual - anoNascimento
+Calcular idade: anoAtual - anoNascimento  (ano calendário, ignora mês)
     │
     ▼
 Determinar faixa etária:
-  - 4 a 15  → Infantil
-  - 16 a 29 → Adulto
-  - 30 a 39 → Master
-  - 40+     → Sênior
+  - 16 a 17 → Juvenil
+  - 18 a 29 → Adulto
+  - 30 a 35 → Master 1
+  - 36 a 40 → Master 2
+  - 41 a 45 → Master 3
+  - 46 a 50 → Master 4
+  - 51 a 55 → Master 5
+  - 56 a 60 → Master 6
+  - 61+     → Master 7
     │
     ▼
 Verificar se faixa do atleta é permitida na faixa etária
@@ -316,9 +337,11 @@ Percorrer categorias configuradas filtrando:
   3. pesoMin <= atleta.pesoKg < pesoMax
   4. idadeMin <= idadeCalculada <= idadeMax
     │
-    ▼
-Se encontrada → atribuir categoriaId
-Se não → marcar "Sem categoria"
+    ├── Encontrada → atribuir categoriaId
+    │
+    └── Não encontrada:
+         ├── Se existe Absoluto (pesoMax: null) compatível → atribuir Absoluto
+         └── Se não → marcar "Sem categoria"
 ```
 
 ### 5.4. Reclassificação em Lote
@@ -475,8 +498,8 @@ Menu intermediário (padrão adotado no sistema) com 3 cards:
 
 - Usa `PageLayout` com título "Configurar Categorias"
 - Formulário dividido em seções:
-  1. **Modelo Base** — Radio: IBJJF / Customizado
-  2. **Faixas Etárias** — Checkboxes: Infantil, Adulto, Master, Sênior
+1. **Modelo Base** — Radio: IBJJF / Customizado
+2. **Faixas Etárias** — Checkboxes: Juvenil, Adulto, Master 1, Master 2, Master 3, Master 4, Master 5, Master 6, Master 7
   3. **Divisões de Peso** — Tabela editável com botão "Adicionar divisão"
   4. **Pré-visualização** — Tabela com categorias que serão geradas
 - Botão "Salvar Configuração" no final
@@ -626,9 +649,10 @@ bjj-tournament-manager-setup/
 | Regra | Mensagem |
 |---|---|
 | Pelo menos uma faixa etária deve ser selecionada | "Selecione ao menos uma faixa etária" |
-| Cada divisão de peso deve ter `pesoMin < pesoMax` | "Peso mínimo deve ser menor que o máximo" |
+| Cada divisão de peso deve ter `pesoMin < pesoMax` (exceto Aberto/Absoluto) | "Peso mínimo deve ser menor que o máximo" |
 | Divisões de peso não podem se sobrepor na mesma faixa etária/sexo | "Divisões de peso não podem se sobrepor" |
 | `idadeMin <= idadeMax` | "Idade mínima deve ser menor ou igual à máxima" |
+| Limites de peso devem usar uma casa decimal (ex.: 57,5) para compatibilidade IBJJF | "Use uma casa decimal para os limites de peso (ex.: 57,5)" |
 
 ---
 
@@ -649,8 +673,8 @@ bjj-tournament-manager-setup/
 
 1. **Torneio sem atletas:** Configurar categorias com 0 atletas é válido. A classificação será aplicada quando atletas forem cadastrados.
 2. **Torneio sem categorias configuradas:** Todos os atletas ficam como "Sem categoria". O card do Dashboard deve redirecionar para configuração.
-3. **Atleta com peso acima do limite máximo de todas as categorias:** Vai para "Sem categoria" a menos que exista uma categoria "Aberto" (pesoMax = null).
-4. **Atleta muito jovem (abaixo de 4 anos):** Não é válido para competição. Marcar como "Sem categoria" e exibir alerta.
+3. **Atleta com peso acima do limite máximo de todas as categorias:** Vai para "Sem categoria" a menos que exista uma categoria "Absoluto" (pesoMax = null). O Absoluto é gerado automaticamente no modelo IBJJF a partir da faixa azul.
+4. **Atleta muito jovem (abaixo de 16 anos):** Não é válido para competição IBJJF (categoria Juvenil inicia aos 16 anos). Marcar como "Sem categoria" e exibir alerta.
 5. **Atleta sem sexo definido (dados legados):** Ao carregar atletas existentes sem o campo `sexo`, o sistema deve exibir notificação para complementar o cadastro.
 6. **Categoria sem atletas:** Deve ser exibida normalmente na lista com contagem 0, para permitir que atletas sejam posteriormente classificados nela.
 7. **Exclusão de categoria com atletas:** Atletas são reclassificados automaticamente. Se falharem, vão para "Sem categoria".

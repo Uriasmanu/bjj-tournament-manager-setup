@@ -31,32 +31,34 @@ A geração de chaves depende exclusivamente do módulo de **Categorias** (espec
 
 ### 3.2. Formato da Chave
 
-O sistema adota o formato **eliminatório simples** (single-elimination):
+O sistema adota o formato **eliminatório simples** (single-elimination) da IBJJF:
 
 - Cada luta elimina o perdedor.
 - O vencedor avança para a rodada seguinte.
 - Ao final, resta um campeão invicto.
-- Não há repescagem.
+- **Não há repescagem** para disputa de primeiro lugar.
+- **Não há disputa de terceiro lugar.** Os dois atletas que perdem nas semifinais recebem a medalha de bronze e dividem o 3º lugar no pódio.
+- A única exceção ao formato de eliminação direta é a chave de **3 atletas**, que utiliza o sistema *Three-Competitor Repechage* (ver seção 3.2.3).
 
 #### 3.2.1. Definição de Rodadas
 
-O número de rodadas é definido pelo total de atletas na categoria:
+O número de rodadas (excluindo chaves de 3 atletas) é definido pelo total de atletas na categoria:
 
 | Atletas | Rodadas | Total de Lutas |
 |---|---|---|
 | 2 | 1 (Final) | 1 |
-| 3–4 | 2 (Semifinais + Final) | 3 |
+| 4 | 2 (Semifinais + Final) | 3 |
 | 5–8 | 3 (Quartas + Semi + Final) | 7 |
 | 9–16 | 4 (Oitavas + Quartas + Semi + Final) | 15 |
 | 17–32 | 5 | 31 |
 | 33–64 | 6 | 63 |
 | 65–128 | 7 | 127 |
 
-Fórmula: `rodadas = ceil(log2(N))` onde N é o número de atletas.
+Fórmula: `rodadas = ceil(log2(N))` onde N é o número de atletas (válido para N ≠ 3).
 
 #### 3.2.2. Byes (Folgas)
 
-Quando o número de atletas **não é potência de 2**, atletas recebem byes automaticamente na primeira rodada.
+Quando o número de atletas **não é potência de 2** (e N ≠ 3), atletas recebem byes automaticamente na primeira rodada.
 
 - Número de byes = `próximaPotenciaDe2(N) - N`
 - Byes são distribuídos preferencialmente para os atletas melhor posicionados (seed sorting).
@@ -64,41 +66,74 @@ Quando o número de atletas **não é potência de 2**, atletas recebem byes aut
 
 Exemplo: 5 atletas → potência = 8 → 3 byes na primeira rodada.
 
-### 3.3. Seed Sorting (Posicionamento)
+#### 3.2.3. Exceção: Chave de 3 Atletas (Three-Competitor Repechage)
 
-O posicionamento dos atletas na chave (seeds) segue os critérios abaixo, em ordem de precedência:
+Quando exatamente **3** atletas estão inscritos na categoria, a IBJJF aplica o sistema de repescagem restrita (*Three-Competitor Repechage*), **não** o sistema de bye:
 
-1. **Equipe** — atletas da mesma equipe são separados ao máximo (não se enfrentam na primeira rodada).
-2. **Peso** — atletas com peso mais próximo do limite superior da categoria recebem seeds mais altos (lower seed number).
-3. **Idade** — desempate: atleta mais velho recebe seed mais alto.
-4. **Ordem alfabética** — desempate final.
+```
+Luta 1 (Semifinal): Atleta A vs Atleta B
+    ├── Vencedor → aguarda na Final
+    └── Perdedor → Luta 2
 
-#### 3.3.1. Algoritmo de Separação por Equipe
+Luta 2 (Repescagem): Perdedor da Luta 1 vs Atleta C
+    └── Vencedor → Final
+
+Luta 3 (Final): Vencedor da Luta 1 vs Vencedor da Luta 2
+```
+
+Regras:
+- Um atleta pode perder a primeira luta e ainda se sagrar campeão se vencer as duas etapas seguintes.
+- O Atleta C (que não lutou na Luta 1) **não** recebe bye — ele luta contra o perdedor da Luta 1.
+- A chave de 3 atletas possui 3 lutas no total (não 2 como no sistema de bye).
+- A alocação de A, B e C aos slots segue o seed sorting (equipes separadas ao máximo).
+
+### 3.3. Seed Sorting (Posicionamento) — Regra IBJJF
+
+A IBJJF determina que **atletas da mesma equipe/academia sejam colocados em lados opostos da chave**, de forma que só possam se enfrentar na final. Este é o critério mais importante e deve ser rigorosamente respeitado.
+
+#### 3.3.1. Algoritmo de Separação por Equipe (IBJJF)
 
 ```
 1. Agrupar atletas por equipe.
 2. Ordenar grupos do maior para o menor (mais atletas primeiro).
-3. Distribuir atletas intercaladamente nas posições da chave:
-   - Posição 1 → atleta da maior equipe
-   - Posição N → atleta da segunda maior equipe
-   - Posição 2 → atleta da terceira maior equipe
-   - Posição N-1 → atleta da quarta maior equipe
-   - (alternando entre topo e base da chave)
-4. Repetir até todos os atletas serem posicionados.
+3. Distribuir atletas intercaladamente nos lados opostos da chave:
+   - Metade superior: posições 1, 2, 3, ..., N/2
+   - Metade inferior: posições N, N-1, N-2, ..., N/2+1
+4. Atletas da MESMA equipe devem cair em lados OPOSTOS:
+   - Primeiro atleta da equipe → metade superior
+   - Segundo atleta da mesma equipe → metade inferior
+   - Terceiro atleta → metade superior (se houver)
+   - (alternando sempre entre superior e inferior)
+5. Dentro de cada metade, a ordem é definida por peso (maior peso primeiro).
 ```
 
-Esquema visual da distribuição (exemplo com 8 atletas):
+#### 3.3.2. Critérios de Desempate (para ranked seeding em grandes eventos)
+
+Em eventos como o Mundial, a IBJJF utiliza ranking oficial para posicionar **cabeças de chave** (seeds) em posições estratégicas, evitando que os melhores atletas se enfrentem nas primeiras rodadas.
+
+Para torneios sem ranking, o sistema utiliza como critérios de desempate:
+1. **Bloqueio de equipe** (obrigatório) — lados opostos, só se encontram na final
+2. **Peso** — atletas com peso mais próximo do limite superior recebem seeds mais altos
+3. **Idade** — desempate: atleta mais velho recebe seed mais alto
+4. **Ordem alfabética** — desempate final
+
+Esquema visual da distribuição (exemplo com 8 atletas, 3 equipes):
 
 ```
-Posição 1  ─────  Atleta A (Equipe X)
-Posição 8  ─────  Atleta B (Equipe Y)
-Posição 4  ─────  Atleta C (Equipe Z)
-Posição 5  ─────  Atleta D (Equipe X)
-Posição 2  ─────  Atleta E (Equipe W)
-Posição 7  ─────  Atleta F (Equipe Y)
-Posição 3  ─────  Atleta G (Equipe Z)
-Posição 6  ─────  Atleta H (Equipe X)
+Metade Superior:
+Posição 1  ─────  Atleta A (Equipe X)  ← maior equipe
+Posição 2  ─────  Atleta C (Equipe Z)  ← terceira equipe
+Posição 3  ─────  Atleta E (Equipe X)  ← mesmo lado, evita 1º confrontation
+Posição 4  ─────  Atleta G (Equipe Z)
+
+Metade Inferior:
+Posição 8  ─────  Atleta B (Equipe Y)  ← segunda maior equipe
+Posição 7  ─────  Atleta D (Equipe X)  ← mesmo lado oposto do Atleta A
+Posição 6  ─────  Atleta F (Equipe Y)
+Posição 5  ─────  Atleta H (Equipe X)
 ```
+
+> Atletas da Equipe X (A, D, E, H) estão em lados opostos: A e E na superior, D e H na inferior. Eles só se enfrentam na final.
 
 ### 3.4. Posições na Chave
 
@@ -282,29 +317,40 @@ function gerarChave(categoria: Categoria, atletas: Atleta[]): Chave {
   // 1. Validar mínimo de atletas
   if (atletas.length < 2) throw new Error("Mínimo de 2 atletas necessário");
 
-  // 2. Aplicar seed sorting (separação por equipe)
-  const posicoes = aplicarSeedSorting(atletas);
+  // 2. Caso especial: 3 atletas (Three-Competitor Repechage)
+  if (atletas.length === 3) {
+    return gerarChaveTresAtletas(atletas);
+  }
 
-  // 3. Calcular estrutura da chave
+  // 3. Aplicar seed sorting com separação IBJJF (lados opostos)
+  const posicoes = aplicarSeedSortingIBJJF(atletas);
+
+  // 4. Calcular estrutura da chave
   const totalAtletas = posicoes.length;
   const potencia = próximaPotênciaDe2(totalAtletas);
   const totalRodadas = Math.log2(potencia);
   const totalLutas = potencia - 1;
   const numByes = potencia - totalAtletas;
 
-  // 4. Preencher posições com byes
-  //    Byes ocupam as últimas posições da chave
+  // 5. Preencher posições com byes
   const chavePreenchida = preencherByes(posicoes, numByes, potencia);
 
-  // 5. Gerar lutas por rodada
+  // 6. Gerar lutas por rodada (emparelhamento padrão: 1 vs N, 2 vs N-1, etc.)
   const lutas: Luta[] = [];
-  // ... lógica de emparelhamento padrão de torneios
-  // (1 vs N, 2 vs N-1, etc.)
+  // ...
 
-  // 6. Vincular lutas anteriores (para propagação de vencedores)
+  // 7. Vincular lutas anteriores (propagação de vencedores)
   //    Luta X na rodada R é alimentada pelas lutas Y e Z da rodada R-1
 
   return { id, categoriaId, lutas, ... };
+}
+
+function gerarChaveTresAtletas(atletas: Atleta[]): Chave {
+  // Three-Competitor Repechage (IBJJF):
+  // Luta 1: Atleta A vs Atleta B  (semifinal)
+  // Luta 2: Perdedor L1 vs Atleta C (repescagem)
+  // Luta 3: Vencedor L1 vs Vencedor L2 (final)
+  // Nota: Não há disputa de 3º lugar
 }
 ```
 
@@ -704,6 +750,7 @@ bjj-tournament-manager-setup/
 |---|---|
 | Categoria deve ter ≥ 2 atletas para gerar chave | "A categoria precisa de no mínimo 2 atletas para gerar uma chave." |
 | Categoria com 1 atleta: campeão declarado automaticamente | "Atleta {nome} declarado campeão — categoria com apenas 1 atleta." |
+| Categoria com 3 atletas: gera chave de 3 com repescagem (3 lutas) | "Chave de 3 atletas gerada com sistema de repescagem (3 lutas)." |
 | Chave já existe e está em andamento: bloqueia regeneração | "Não é possível regenerar a chave pois já existem lutas em andamento ou concluídas." |
 | Luta já possui resultado: bloqueia re-registro | "Esta luta já possui resultado registrado." |
 | Atleta não pertence à categoria: bloqueia atribuição como vencedor | "O atleta selecionado não pertence a esta categoria." |
@@ -714,7 +761,8 @@ bjj-tournament-manager-setup/
 
 | Evento | Tipo | Mensagem |
 |---|---|---|
-| Chave gerada com sucesso | Sucesso (verde) | "Chave gerada com sucesso para {nome da categoria}." |
+| Chave gerada com sucesso (N ≥ 4) | Sucesso (verde) | "Chave gerada com sucesso para {nome da categoria}." |
+| Chave de 3 atletas gerada | Sucesso (verde) | "Chave de 3 atletas gerada para {nome da categoria} com sistema de repescagem IBJJF." |
 | Chave regenerada | Sucesso (verde) | "Chave regenerada com sucesso para {nome da categoria}." |
 | Resultado registrado | Sucesso (verde) | "Resultado registrado: {nome do atleta} venceu." |
 | Luta iniciada | Informação (azul) | "Luta {id} iniciada: {atletaA} vs {atletaB}." |
@@ -732,7 +780,7 @@ bjj-tournament-manager-setup/
 
 2. **Categoria com 2 atletas:** Chave com 1 única luta (Final). Não há byes. A geração é direta.
 
-3. **Categoria com 3 atletas:** Potência = 4. 1 bye. Dois atletas lutam na semifinal; o terceiro aguarda na final com bye. O algoritmo de seed sorting determina quem recebe o bye.
+3. **Categoria com 3 atletas:** Aplica-se o sistema *Three-Competitor Repechage* da IBJJF (seção 3.2.3). **Não há bye.** Atleta A vs B na Luta 1; perdedor vs Atleta C na Luta 2; vencedores se enfrentam na Final (Luta 3). Total de 3 lutas.
 
 4. **Todos os atletas da mesma equipe:** Não é possível separar por equipe. A distribuição segue critérios de peso e idade. O seed sorting simplesmente ordena os atletas e distribui nas posições padrão.
 
@@ -742,8 +790,12 @@ bjj-tournament-manager-setup/
 
 7. **Chave em andamento com interrupção:** Se o sistema for fechado durante uma luta `in_progress`, o status permanece `in_progress` ao recarregar. O administrador pode finalizar a luta ou marcar como WO.
 
-8. **Bye em luta da primeira rodada:** A luta é gerada com apenas 1 atleta (slot oponente = null, status = `wo`). O vencedor é o atleta presente, e a propagação ocorre automaticamente.
+8. **Bye em luta da primeira rodada:** (Apenas para N ≥ 4 e não potência de 2) A luta é gerada com apenas 1 atleta (slot oponente = null, status = `wo`). O vencedor é o atleta presente, e a propagação ocorre automaticamente. Para N = 3, o sistema de repescagem é usado, não byes.
 
 9. **Empate não é permitido:** No Jiu-Jitsu competitivo não há empate. O sistema não prevê este estado. Toda luta deve ter um vencedor.
 
 10. **Ausência de ambos os atletas:** Se ambos os atletas não comparecerem para uma luta, o administrador pode marcar ambos como WO. Neste caso, a luta seguinte recebe um slot vazio (null), propagando a desistência.
+
+11. **Disputa de 3º lugar:** A IBJJF **não** realiza disputa de terceiro lugar. Ambos os perdedores das semifinais recebem medalha de bronze. O sistema não deve gerar luta para 3º lugar em nenhuma chave.
+
+12. **Chave de 3 atletas sem 3º lugar:** Na chave de 3 atletas, o atleta que perder ambas as lutas (Luta 1 e Luta 2) é o 3º colocado. O perdedor da Final é o 2º colocado. Não há luta extra.
