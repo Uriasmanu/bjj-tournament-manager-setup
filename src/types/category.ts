@@ -66,34 +66,26 @@ const kidsLabel: Record<string, string> = {
   'infanto-juvenil-b': 'Infanto-Juvenil B',
 };
 
-const KIDS_WEIGHT_FACTOR: Record<string, number> = {
-  'pre-mirim': 0.30,
-  'mirim': 0.40,
-  'infantil-a': 0.50,
-  'infantil-b': 0.60,
-  'infanto-juvenil-a': 0.70,
-  'infanto-juvenil-b': 0.85,
+const KIDS_PESO_LIMITES: Record<string, Record<string, number | null>> = {
+  'pre-mirim':         { galo: 14.7, pluma: 17.9, pena: 20.0, leve: 24.0, medio: 26.0, 'meio-pesado': 29.0, pesado: 31.2, 'super-pesado': 33.2, pesadissimo: null },
+  'mirim':             { galo: 21.0, pluma: 24.0, pena: 27.0, leve: 30.2, medio: 33.2, 'meio-pesado': 36.2, pesado: 39.3, 'super-pesado': 42.3, pesadissimo: null },
+  'infantil-a':        { galo: 27.0, pluma: 30.2, pena: 33.2, leve: 36.2, medio: 39.3, 'meio-pesado': 42.3, pesado: 45.3, 'super-pesado': 48.3, pesadissimo: null },
+  'infantil-b':        { galo: 36.2, pluma: 40.3, pena: 44.3, leve: 48.3, medio: 52.5, 'meio-pesado': 56.5, pesado: 60.5, 'super-pesado': 65.0, pesadissimo: null },
+  'infanto-juvenil-a': { galo: 40.3, pluma: 44.3, pena: 48.3, leve: 52.5, medio: 56.5, 'meio-pesado': 60.5, pesado: 65.0, 'super-pesado': 69.5, pesadissimo: null },
+  'infanto-juvenil-b': { galo: 48.3, pluma: 52.5, pena: 56.5, leve: 60.5, medio: 65.0, 'meio-pesado': 69.5, pesado: 74.0, 'super-pesado': 78.5, pesadissimo: null },
 };
-
-function arredondar(valor: number | null): number | null {
-  if (valor === null) return null;
-  return Math.round(valor * 10) / 10;
-}
 
 function getPesoLimite(
   faixaEtaria: FaixaEtaria,
   genero: 'masculino' | 'feminino',
   cat: CategoriaDef
 ): number | null {
-  const base = genero === 'masculino' ? cat.masculino : cat.feminino;
-
-  const factor = KIDS_WEIGHT_FACTOR[faixaEtaria];
-  if (factor !== undefined) {
-    if (cat.peso === 'pesadissimo') return null;
-    if (cat.peso === 'super-pesado' && base === null) return null;
-    return base !== null ? arredondar(base * factor) : null;
+  const kidsLimites = KIDS_PESO_LIMITES[faixaEtaria];
+  if (kidsLimites) {
+    return kidsLimites[cat.peso] ?? null;
   }
 
+  const base = genero === 'masculino' ? cat.masculino : cat.feminino;
   if (cat.peso === 'pesadissimo' && genero === 'feminino') return null;
   return base;
 }

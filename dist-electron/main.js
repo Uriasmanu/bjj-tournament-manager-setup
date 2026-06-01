@@ -147,26 +147,20 @@ const kidsLabel = {
   "infanto-juvenil-a": "Infanto-Juvenil A",
   "infanto-juvenil-b": "Infanto-Juvenil B"
 };
-const KIDS_WEIGHT_FACTOR = {
-  "pre-mirim": 0.3,
-  "mirim": 0.4,
-  "infantil-a": 0.5,
-  "infantil-b": 0.6,
-  "infanto-juvenil-a": 0.7,
-  "infanto-juvenil-b": 0.85
+const KIDS_PESO_LIMITES = {
+  "pre-mirim": { galo: 14.7, pluma: 17.9, pena: 20, leve: 24, medio: 26, "meio-pesado": 29, pesado: 31.2, "super-pesado": 33.2, pesadissimo: null },
+  "mirim": { galo: 21, pluma: 24, pena: 27, leve: 30.2, medio: 33.2, "meio-pesado": 36.2, pesado: 39.3, "super-pesado": 42.3, pesadissimo: null },
+  "infantil-a": { galo: 27, pluma: 30.2, pena: 33.2, leve: 36.2, medio: 39.3, "meio-pesado": 42.3, pesado: 45.3, "super-pesado": 48.3, pesadissimo: null },
+  "infantil-b": { galo: 36.2, pluma: 40.3, pena: 44.3, leve: 48.3, medio: 52.5, "meio-pesado": 56.5, pesado: 60.5, "super-pesado": 65, pesadissimo: null },
+  "infanto-juvenil-a": { galo: 40.3, pluma: 44.3, pena: 48.3, leve: 52.5, medio: 56.5, "meio-pesado": 60.5, pesado: 65, "super-pesado": 69.5, pesadissimo: null },
+  "infanto-juvenil-b": { galo: 48.3, pluma: 52.5, pena: 56.5, leve: 60.5, medio: 65, "meio-pesado": 69.5, pesado: 74, "super-pesado": 78.5, pesadissimo: null }
 };
-function arredondar(valor) {
-  if (valor === null) return null;
-  return Math.round(valor * 10) / 10;
-}
 function getPesoLimite(faixaEtaria, genero, cat) {
-  const base = genero === "masculino" ? cat.masculino : cat.feminino;
-  const factor = KIDS_WEIGHT_FACTOR[faixaEtaria];
-  if (factor !== void 0) {
-    if (cat.peso === "pesadissimo") return null;
-    if (cat.peso === "super-pesado" && base === null) return null;
-    return base !== null ? arredondar(base * factor) : null;
+  const kidsLimites = KIDS_PESO_LIMITES[faixaEtaria];
+  if (kidsLimites) {
+    return kidsLimites[cat.peso] ?? null;
   }
+  const base = genero === "masculino" ? cat.masculino : cat.feminino;
   if (cat.peso === "pesadissimo" && genero === "feminino") return null;
   return base;
 }

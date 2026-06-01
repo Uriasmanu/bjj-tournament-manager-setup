@@ -210,3 +210,47 @@ Abaixo estão os limites máximos de peso (já considerando o atleta **com o kim
 
 * **Inscrição sem erro:** Como as tabelas mudam muito de um ano de idade para o outro, errar o ano de nascimento no sistema joga a criança direto para uma categoria com limites de peso totalmente diferentes.
 * **Margem de segurança:** Como a pesagem infantil é rigorosa e idêntica à do adulto (subiu na balança uma única vez, passou do peso tá desclassificado), o ideal é que a criança pese pelo menos 500g a menos do limite em casa para compensar a variação de precisão das balanças oficiais de campeonato.
+
+Como a **CBJJ** é a filial oficial da **IBJJF** no Brasil, os dois órgãos utilizam exatamente o **mesmo livro de regras e o mesmo sistema de gerenciamento de chaves**. O algoritmo que gera as chaves de luta segue critérios automatizados e matemáticos para garantir que o torneio seja justo, eliminando qualquer intervenção manual ou favoritismo na hora do sorteio.
+
+O funcionamento do sistema de chaves da IBJJF/CBJJ é estruturado da seguinte forma:
+
+---
+
+## 1. O Formato de Eliminação (Mata-Mata)
+
+A estrutura principal da chave depende exclusivamente do número de atletas inscritos na categoria:
+
+* **Chave Olímpica (4 ou mais atletas):** Sistema de eliminatória simples. Quem perdeu está fora. Não existe repescagem para o primeiro lugar.
+* **Chave de 3 Atletas (Triângulo):** É a única exceção ao mata-mata direto. O perdedor da primeira semifinal tem uma segunda chance: ele luta contra o terceiro atleta que estava esperando. O vencedor desse segundo combate vai para a final contra o vencedor da primeira luta.
+* **Chave de 2 Atletas:** Confronto direto em luta única valendo o ouro.
+
+---
+
+## 2. As Regras de Ouro do Algoritmo de Geração
+
+Quando as inscrições fecham, o sistema roda um sorteio automatizado que obedece a duas restrições críticas de programação:
+
+### A. Bloqueio de Equipe (Team Shielding)
+
+O sistema impede que atletas que treinam juntos se enfrentem nas primeiras rodadas.
+
+* **Divisão em Lados Opostos:** Se houver dois atletas da **mesma equipe** (ex: Alliance, Gracie Barra, GFTeam) na mesma categoria, o sistema os joga obrigatoriamente em lados opostos da chave (Chave A e Chave B). Eles só podem se enfrentar se ambos vencerem todas as suas lutas e chegarem à grande **Final**.
+* **Limite de Inscrição:** Cada equipe só pode inscrever, no máximo, **dois atletas** por categoria de peso/faixa/idade. Se uma filial tiver mais atletas querendo lutar, eles precisam se inscrever por outras filiais associadas ou passar por uma seletiva interna da equipe antes do campeonato.
+
+### B. O Sistema de Cabeças de Chave (Seeding)
+
+Nos principais campeonatos (como o Mundial, Pan, Europeu e o Brasileiro da CBJJ), as chaves não são 100% aleatórias. O sistema utiliza o **Ranking Oficial da IBJJF** para proteger os atletas de elite.
+
+* Os atletas com maior pontuação no ranking são definidos como "Cabeças de Chave" e são espalhados estrategicamente para que os favoritos não se enfrentem logo na primeira luta do campeonato.
+* Os atletas sem pontos no ranking são sorteados aleatoriamente para preencher as vagas restantes da chave, enfrentando os cabeças de chave nas rodadas iniciais.
+
+---
+
+## 3. Critérios de W.O. e Progressão da Chave
+
+A chave é considerada "viva" e em andamento. Isso gera regras rígidas sobre o que acontece quando alguém não bate o peso ou se lesiona:
+
+* **Desclassificação na Balança (W.O.):** Se um atleta não comparecer ou estourar o peso, o seu adversário direto passa para a próxima rodada por W.O. A chave **não é refeita** e as lutas não são rearranjadas para cobrir o buraco de quem saiu.
+* **Dupla Desclassificação por Falta de Combatividade:** Se em uma luta de semifinal ambos os atletas forem desclassificados (por exemplo, se ambos ficarem amarrando a luta na guarda dupla puxada por mais tempo do que o permitido e estourarem as punições), o vencedor da **outra semifinal** é automaticamente declarado o Campeão da categoria.
+* **Sem disputa de 3º Lugar:** O sistema encerra a chave nas semifinais para quem perdeu. Os dois atletas derrotados nas semis sobem juntos no terceiro degrau do pódio e ganham a medalha de bronze, sem necessidade de se enfrentarem.
