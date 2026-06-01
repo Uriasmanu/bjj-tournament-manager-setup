@@ -159,7 +159,7 @@ function importAthletesFromFile(filePath) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de atletas.");
   }
   for (const a of incoming) {
-    if (!a.id || !a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg) {
+    if (!a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg) {
       throw new Error(`Atleta inválido no arquivo: "${a.nome || "sem nome"}" — campos obrigatórios ausentes.`);
     }
   }
@@ -170,7 +170,7 @@ function importAthletesFromFile(filePath) {
     const nomeLower = a.nome.trim().toLowerCase();
     const equipeLower = a.equipe.trim().toLowerCase();
     const exists = current.some(
-      (ex) => ex.id === a.id || ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento
+      (ex) => a.id && ex.id === a.id || ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento
     );
     if (!exists) {
       a.nome = nomeLower;

@@ -138,7 +138,7 @@ export function AdminAthletes() {
   }
 
   return (
-    <PageLayout title="Cadastro de Atletas" backRoute="/admin/atletas">
+    <PageLayout title="Cadastro de Atletas " backRoute="/admin/atletas">
       <Group mb="md" justify="space-between">
         <Title order={2} style={{ flex: 1 }}>Cadastro de Atletas</Title>
         <Group>
