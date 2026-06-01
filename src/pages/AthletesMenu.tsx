@@ -59,8 +59,9 @@ export function AthletesMenu() {
       const msg = `${result.imported} atleta(s) importado(s)${result.skipped > 0 ? `, ${result.skipped} ignorado(s) (já existentes)` : ''}.`;
       notifications.show({ title: 'Sucesso', message: msg, color: 'green' });
       await loadAthletes();
-    } catch {
-      notifications.show({ title: 'Erro', message: 'Erro ao importar atletas.', color: 'red' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao importar atletas.';
+      notifications.show({ title: 'Erro ao importar', message: msg, color: 'red', autoClose: false });
     }
   };
 

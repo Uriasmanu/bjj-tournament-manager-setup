@@ -37,7 +37,13 @@ function categoriasFiltradas(genero: string, faixa: string, anoNascimento: strin
   const idade = anoNascimento ? calcularIdade(Number(anoNascimento)) : 0;
 
   let faixaEtariaMatch: string | null = null;
-  if (idade >= 16 && idade <= 17) faixaEtariaMatch = 'juvenil';
+  if (idade >= 4 && idade <= 5) faixaEtariaMatch = 'pre-mirim';
+  else if (idade >= 6 && idade <= 7) faixaEtariaMatch = 'mirim';
+  else if (idade >= 8 && idade <= 9) faixaEtariaMatch = 'infantil-a';
+  else if (idade >= 10 && idade <= 11) faixaEtariaMatch = 'infantil-b';
+  else if (idade >= 12 && idade <= 13) faixaEtariaMatch = 'infanto-juvenil-a';
+  else if (idade >= 14 && idade <= 15) faixaEtariaMatch = 'infanto-juvenil-b';
+  else if (idade >= 16 && idade <= 17) faixaEtariaMatch = 'juvenil';
   else if (idade >= 18 && idade <= 29) faixaEtariaMatch = 'adulto';
   else if (idade >= 30 && idade <= 35) faixaEtariaMatch = 'master1';
   else if (idade >= 36 && idade <= 40) faixaEtariaMatch = 'master2';

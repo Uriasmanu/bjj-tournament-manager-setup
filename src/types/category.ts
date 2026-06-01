@@ -1,6 +1,12 @@
 import type { Faixa } from './athlete';
 
 export type FaixaEtaria =
+  | 'pre-mirim'
+  | 'mirim'
+  | 'infantil-a'
+  | 'infantil-b'
+  | 'infanto-juvenil-a'
+  | 'infanto-juvenil-b'
   | 'juvenil'
   | 'adulto'
   | 'master1'
@@ -51,8 +57,51 @@ const CATEGORIAS_PESO: CategoriaDef[] = [
   { peso: 'pesadissimo', nome: 'Pesadíssimo', masculino: null, feminino: null },
 ];
 
+const kidsLabel: Record<string, string> = {
+  'pre-mirim': 'Pré-Mirim',
+  'mirim': 'Mirim',
+  'infantil-a': 'Infantil A',
+  'infantil-b': 'Infantil B',
+  'infanto-juvenil-a': 'Infanto-Juvenil A',
+  'infanto-juvenil-b': 'Infanto-Juvenil B',
+};
+
+const KIDS_WEIGHT_FACTOR: Record<string, number> = {
+  'pre-mirim': 0.30,
+  'mirim': 0.40,
+  'infantil-a': 0.50,
+  'infantil-b': 0.60,
+  'infanto-juvenil-a': 0.70,
+  'infanto-juvenil-b': 0.85,
+};
+
+function arredondar(valor: number | null): number | null {
+  if (valor === null) return null;
+  return Math.round(valor * 10) / 10;
+}
+
+function getPesoLimite(
+  faixaEtaria: FaixaEtaria,
+  genero: 'masculino' | 'feminino',
+  cat: CategoriaDef
+): number | null {
+  const base = genero === 'masculino' ? cat.masculino : cat.feminino;
+
+  const factor = KIDS_WEIGHT_FACTOR[faixaEtaria];
+  if (factor !== undefined) {
+    if (cat.peso === 'pesadissimo') return null;
+    if (cat.peso === 'super-pesado' && base === null) return null;
+    return base !== null ? arredondar(base * factor) : null;
+  }
+
+  if (cat.peso === 'pesadissimo' && genero === 'feminino') return null;
+  return base;
+}
+
 function gerarCategorias(): CategoriaIBJJF[] {
   const faixasEtarias: FaixaEtaria[] = [
+    'pre-mirim', 'mirim', 'infantil-a', 'infantil-b',
+    'infanto-juvenil-a', 'infanto-juvenil-b',
     'juvenil', 'adulto', 'master1', 'master2', 'master3',
     'master4', 'master5', 'master6', 'master7',
   ];
@@ -60,12 +109,12 @@ function gerarCategorias(): CategoriaIBJJF[] {
   const result: CategoriaIBJJF[] = [];
 
   for (const fe of faixasEtarias) {
-    const feLabel = fe.charAt(0).toUpperCase() + fe.slice(1);
+    const feLabel = kidsLabel[fe] || fe.charAt(0).toUpperCase() + fe.slice(1);
     for (const gen of generos) {
       const genLabel = gen === 'masculino' ? 'Masculino' : 'Feminino';
       for (const cat of CATEGORIAS_PESO) {
-        const pesoLimite = gen === 'masculino' ? cat.masculino : cat.feminino;
-        if (cat.peso === 'pesadissimo' && gen === 'feminino') continue;
+        const pesoLimite = getPesoLimite(fe, gen, cat);
+        if (pesoLimite === undefined) continue;
         result.push({
           id: `${fe}-${gen}-${cat.peso}`,
           nome: `${feLabel} ${genLabel} ${cat.nome}`,
@@ -88,6 +137,12 @@ for (const c of CATEGORIAS_IBJJF) {
 }
 
 function calcularFaixaEtaria(idade: number): FaixaEtaria | null {
+  if (idade >= 4 && idade <= 5) return 'pre-mirim';
+  if (idade >= 6 && idade <= 7) return 'mirim';
+  if (idade >= 8 && idade <= 9) return 'infantil-a';
+  if (idade >= 10 && idade <= 11) return 'infantil-b';
+  if (idade >= 12 && idade <= 13) return 'infanto-juvenil-a';
+  if (idade >= 14 && idade <= 15) return 'infanto-juvenil-b';
   if (idade >= 16 && idade <= 17) return 'juvenil';
   if (idade >= 18 && idade <= 29) return 'adulto';
   if (idade >= 30 && idade <= 35) return 'master1';

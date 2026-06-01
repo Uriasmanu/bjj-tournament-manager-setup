@@ -214,6 +214,12 @@ A categoria de um atleta é determinada pela combinação de quatro fatores:
 
 | Faixa Etária | Idade |
 |---|---|
+| Pré-Mirim | 4–5 anos |
+| Mirim | 6–7 anos |
+| Infantil A | 8–9 anos |
+| Infantil B | 10–11 anos |
+| Infanto-Juvenil A | 12–13 anos |
+| Infanto-Juvenil B | 14–15 anos |
 | Juvenil | 16–17 anos |
 | Adulto | 18–29 anos |
 | Master 1 | 30–35 anos |

@@ -139,8 +139,45 @@ const CATEGORIAS_PESO = [
   { peso: "super-pesado", nome: "Super Pesado", masculino: 97.5, feminino: null },
   { peso: "pesadissimo", nome: "Pesadíssimo", masculino: null, feminino: null }
 ];
+const kidsLabel = {
+  "pre-mirim": "Pré-Mirim",
+  "mirim": "Mirim",
+  "infantil-a": "Infantil A",
+  "infantil-b": "Infantil B",
+  "infanto-juvenil-a": "Infanto-Juvenil A",
+  "infanto-juvenil-b": "Infanto-Juvenil B"
+};
+const KIDS_WEIGHT_FACTOR = {
+  "pre-mirim": 0.3,
+  "mirim": 0.4,
+  "infantil-a": 0.5,
+  "infantil-b": 0.6,
+  "infanto-juvenil-a": 0.7,
+  "infanto-juvenil-b": 0.85
+};
+function arredondar(valor) {
+  if (valor === null) return null;
+  return Math.round(valor * 10) / 10;
+}
+function getPesoLimite(faixaEtaria, genero, cat) {
+  const base = genero === "masculino" ? cat.masculino : cat.feminino;
+  const factor = KIDS_WEIGHT_FACTOR[faixaEtaria];
+  if (factor !== void 0) {
+    if (cat.peso === "pesadissimo") return null;
+    if (cat.peso === "super-pesado" && base === null) return null;
+    return base !== null ? arredondar(base * factor) : null;
+  }
+  if (cat.peso === "pesadissimo" && genero === "feminino") return null;
+  return base;
+}
 function gerarCategorias() {
   const faixasEtarias = [
+    "pre-mirim",
+    "mirim",
+    "infantil-a",
+    "infantil-b",
+    "infanto-juvenil-a",
+    "infanto-juvenil-b",
     "juvenil",
     "adulto",
     "master1",
@@ -154,12 +191,12 @@ function gerarCategorias() {
   const generos = ["masculino", "feminino"];
   const result = [];
   for (const fe of faixasEtarias) {
-    const feLabel = fe.charAt(0).toUpperCase() + fe.slice(1);
+    const feLabel = kidsLabel[fe] || fe.charAt(0).toUpperCase() + fe.slice(1);
     for (const gen of generos) {
       const genLabel = gen === "masculino" ? "Masculino" : "Feminino";
       for (const cat of CATEGORIAS_PESO) {
-        const pesoLimite = gen === "masculino" ? cat.masculino : cat.feminino;
-        if (cat.peso === "pesadissimo" && gen === "feminino") continue;
+        const pesoLimite = getPesoLimite(fe, gen, cat);
+        if (pesoLimite === void 0) continue;
         result.push({
           id: `${fe}-${gen}-${cat.peso}`,
           nome: `${feLabel} ${genLabel} ${cat.nome}`,
