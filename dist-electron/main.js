@@ -195,6 +195,17 @@ async function openAthleteFileDialog() {
   });
   return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
 }
+async function exportAthletes() {
+  const list = loadAthletes();
+  const result = await dialog.showSaveDialog({
+    title: "Exportar Atletas",
+    defaultPath: "atletas.json",
+    filters: [{ name: "JSON", extensions: ["json"] }]
+  });
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(list, null, 2), "utf-8");
+  }
+}
 const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "57a8d2d84be94e9bdae407ad8352065346269c6997b0be31ff32101fc51e7c3e";
 const ACTIVATION_FILE = "activation.json";
 function getActivationPath() {
@@ -288,6 +299,9 @@ function registerAthleteHandlers() {
     const filePath = await openAthleteFileDialog();
     if (!filePath) return { imported: 0, skipped: 0 };
     return importAthletesFromFile(filePath);
+  });
+  ipcMain.handle("export-athletes", async () => {
+    return exportAthletes();
   });
 }
 function registerActivationHandlers() {

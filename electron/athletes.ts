@@ -91,4 +91,16 @@ async function openAthleteFileDialog(): Promise<string | null> {
   return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0]
 }
 
-export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog }
+async function exportAthletes(): Promise<void> {
+  const list = loadAthletes()
+  const result = await dialog.showSaveDialog({
+    title: 'Exportar Atletas',
+    defaultPath: 'atletas.json',
+    filters: [{ name: 'JSON', extensions: ['json'] }],
+  })
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(list, null, 2), 'utf-8')
+  }
+}
+
+export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, importAthletesFromFile, openAthleteFileDialog, exportAthletes }

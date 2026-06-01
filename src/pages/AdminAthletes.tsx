@@ -1,6 +1,6 @@
 import { Container, Paper, Title, Text, Button, Stack, Group, Loader, Center, Modal } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconFileUpload } from '@tabler/icons-react';
+import { IconPlus, IconFileUpload, IconDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState } from 'react';
 import type { Atleta } from '../types/athlete';
@@ -93,6 +93,15 @@ export function AdminAthletes() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      await window.electronAPI.exportAthletes();
+      notifications.show({ title: 'Sucesso', message: 'Atletas exportados com sucesso!', color: 'green' });
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao exportar atletas.', color: 'red' });
+    }
+  };
+
   const handleImport = async () => {
     try {
       const result = await window.electronAPI.importAthletes();
@@ -133,6 +142,9 @@ export function AdminAthletes() {
       <Group mb="md" justify="space-between">
         <Title order={2} style={{ flex: 1 }}>Cadastro de Atletas</Title>
         <Group>
+          <Button variant="outline" leftSection={<IconDownload size={16} />} onClick={handleExport}>
+            Exportar
+          </Button>
           <Button variant="outline" leftSection={<IconFileUpload size={16} />} onClick={handleImport}>
             Importar
           </Button>

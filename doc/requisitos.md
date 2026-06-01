@@ -4,7 +4,7 @@
 
 O **BJJ Tournament Manager** é um software desktop desenvolvido para gerenciamento completo de campeonatos de Jiu-Jitsu.
 
-O sistema será responsável por controlar todas as etapas do evento, desde o cadastro dos participantes até a definição dos campeões de cada categoria, incluindo gerenciamento de chaves, acompanhamento de lutas em tempo real, placares, árbitros, áreas de luta e resultados.
+O sistema é responsável por controlar todas as etapas do evento, desde o cadastro dos participantes até a definição dos campeões de cada categoria, incluindo gerenciamento de chaves, acompanhamento de lutas em tempo real, placares, árbitros, áreas de luta e resultados.
 
 O objetivo é fornecer uma solução centralizada para organizadores, árbitros e equipes, reduzindo erros operacionais e agilizando a condução dos campeonatos.
 
@@ -20,27 +20,28 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Criar Torneio | ✅ Completo | Formulário com nome (opcional), data (futura), validação, IPC |
 | Importar Torneio | ✅ Completo | Upload JSON, validação de estrutura, modal de sobrescrita |
 | Listar Torneios | ✅ Completo | Tabela com Iniciar/Exportar/Excluir; registro de startedAt no Play |
-| Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (electron/tournament.ts) |
-| Tema Mantine UI | ✅ Completo | Tema azul royal, fonte Inter |
-| Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal, validação, tabela, duplicata, normalização de texto, IPC (spec/cadastro-atletas.md) |
-| Dashboard Administrativo | ✅ Completo | Tela com cards em grid, funcionalidades implementadas × planejadas (rota /admin/dashboard) |
+| Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (`electron/tournament.ts`) |
+| Tema Mantine UI | ✅ Completo | Tema azul royal (#1565C0), fonte Inter, componentes responsivos com `clamp()` |
+| Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC |
+| Dashboard Administrativo | ✅ Completo | Tela com cards em grid (1-4 colunas responsivas), funcionalidades implementadas × planejadas |
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
+| Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
+| PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
 
 ### 2.2. Não Implementado (Planejado)
 
-| Módulo | Status | Observação |
-|---|---|---|
-| Cadastro de Equipes | ❌ Pendente | Apenas mencionado |
-| Cadastro de Categorias | ❌ Pendente | Apenas mencionado |
-| Controle de Inscrições | ❌ Pendente | Apenas mencionado |
-| Controle de Pesagem | ❌ Pendente | Apenas mencionado |
-| Geração de Chaves | ❌ Pendente | Apenas mencionado |
-| Áreas de Luta | ❌ Pendente | Apenas mencionado |
-| Árbitros | ❌ Pendente | Apenas mencionado |
-| Chamadas / Placar / Resultados | ❌ Pendente | Apenas mencionado |
-| Ranking / Medalhistas | ❌ Pendente | Apenas mencionado |
-| Relatórios | ❌ Pendente | Apenas mencionado |
-| Exportação/Importação de dados completos | ❌ Pendente | Apenas exportação do JSON do torneio |
+| Módulo | Status |
+|---|---|
+| Cadastro de Equipes | ❌ Pendente |
+| Cadastro de Categorias | ❌ Pendente |
+| Controle de Inscrições | ❌ Pendente |
+| Controle de Pesagem | ❌ Pendente |
+| Geração de Chaves | ❌ Pendente |
+| Áreas de Luta | ❌ Pendente |
+| Árbitros | ❌ Pendente |
+| Chamadas / Placar / Resultados | ❌ Pendente |
+| Ranking / Medalhistas | ❌ Pendente |
+| Relatórios | ❌ Pendente |
 
 ---
 
@@ -49,82 +50,103 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 ### 3.1. Torneio
 
 - **Entidade raiz do sistema:** Para acessar qualquer funcionalidade administrativa (atletas, chaves, categorias), é necessário primeiro **iniciar um torneio** (defini-lo como ativo).
-- **Múltiplos torneios:** O sistema suporta múltiplos torneios simultaneamente, cada um armazenado em arquivo JSON individual.
-- **Torneio ativo:** Apenas um torneio pode estar ativo por vez. O ID do torneio ativo é armazenado em `torneio-ativo.json`.
+- **Múltiplos torneios:** O sistema suporta múltiplos torneios simultaneamente, cada um armazenado em arquivo JSON individual no diretório `{userData}/data/torneios/`.
+- **Torneio ativo:** Apenas um torneio pode estar ativo por vez. O ID do torneio ativo é armazenado em `{userData}/data/torneio-ativo.json`.
 - **Título do torneio:** Se o campo `nome` for preenchido, o título exibido é o nome informado. Caso contrário, o título é "Torneio {data}" no formato `dd/MM/yyyy`.
 - **Data futura:** A data do torneio deve ser posterior ao dia atual (dia atual e passados são rejeitados).
-- **ID único:** Cada torneio recebe um UUID v4 gerado no momento da criação.
+- **ID único:** Cada torneio recebe um UUID v4 gerado no momento da criação (`crypto.randomUUID()` no main process).
 - **Persistência imediata:** O arquivo JSON do torneio é criado no momento da confirmação do formulário ou da importação.
 
 ### 3.2. Criação de Torneio
 
 - Campo `nome` é opcional (string vazia se não informado).
-- Campo `data` é obrigatório e deve ser uma data futura.
+- Campo `data` é obrigatório e deve ser uma data futura (rejeita dia atual e passados).
 - Data é armazenada em ISO (`YYYY-MM-DD`) e exibida no formato brasileiro (`DD/MM/YYYY`).
-- Após criar, o usuário é redirecionado para a listagem de torneios.
+- Utiliza `dayjs` para comparação de datas e formatação.
+- Após criar com sucesso, o usuário é redirecionado para a listagem de torneios (`/admin/listar-torneios`).
+- O formulário (`CriarTorneio.tsx`) usa `@mantine/form` com `mode: 'uncontrolled'`.
 
 ### 3.3. Importação de Torneio
 
-- Apenas arquivos com extensão `.json` são aceitos.
-- O arquivo deve conter os campos obrigatórios: `id`, `data`, `nome`.
-- Se o `id` do torneio importado já existir no diretório, o sistema pergunta se deseja sobrescrever.
-- Após importar, o usuário é redirecionado para a listagem de torneios.
+- Apenas arquivos com extensão `.json` são aceitos (filtro nativo do diálogo).
+- O arquivo deve conter os campos obrigatórios: `id`, `data`, `nome` (validação no import).
+- Se o `id` do torneio importado já existir no diretório, o sistema pergunta se deseja sobrescrever via modal de confirmação.
+- Após importar com sucesso, o usuário é redirecionado para a listagem de torneios.
+- A importação é feita via upload de arquivo (não diálogo nativo), com leitura do conteúdo via `FileReader` e envio ao IPC.
 
 ### 3.4. Exportação de Torneio
 
 - Abre diálogo nativo "Salvar como" para o usuário escolher o destino.
-- Gera uma cópia exata do arquivo JSON do torneio.
-- Nome padrão sugerido: `{nome}_Torneio_{data}.json` (caracteres especiais substituídos por `_`).
+- Gera uma cópia exata do arquivo JSON do torneio via `fs.copyFileSync`.
+- Nome padrão sugerido: `{nome}_Torneio_{data}.json` com caracteres especiais substituídos por `_`.
 
 ### 3.5. Inicialização de Torneio (Iniciar)
 
-- Define o torneio como ativo escrevendo seu `id` em `torneio-ativo.json`.
+- Define o torneio como ativo escrevendo seu `id` em `{userData}/data/torneio-ativo.json`.
 - Após iniciar, redireciona para o Dashboard Administrativo (`/admin/dashboard`).
-- Apenas um torneio pode estar ativo por vez (iniciar um novo substitui o anterior).
-- Registra o timestamp `startedAt` no arquivo JSON do torneio no momento do Play.
+- Apenas um torneio pode estar ativo por vez (iniciar um novo substitui o anterior no arquivo).
+- Registra o timestamp `startedAt` no JSON do torneio no momento do Play (`new Date().toISOString()`).
+- O badge "Iniciado {data}" é exibido no Dashboard para torneios com `startedAt` preenchido.
 
 ### 3.6. Dashboard Administrativo
 
 - O Dashboard é a tela central de administração do torneio ativo, acessível via `/admin/dashboard`.
-- Exibe o nome e data do torneio ativo, além de um badge com a data de início.
-- Contém cards em layout **grid** (responsivo: 1 coluna mobile, 2 tablet, 3 desktop, 4 widescreen) para cada funcionalidade: Atletas, Equipes, Categorias, Inscrições, Pesagem, Chaves, Áreas de Luta, Árbitros, Placar, Resultados, Relatórios.
-- Cards de funcionalidades implementadas são clicáveis com hover elevado (translateY(-2px)).
-- Cards de funcionalidades não implementadas são exibidos com opacidade 0.5 e badge "Em breve".
-- O botão "Voltar" (ícone de seta) retorna ao Menu Inicial.
+- Ao carregar, obtém o torneio ativo via IPC `get-active-tournament`.
+- Exibe o nome e data do torneio ativo, além de um badge verde "Iniciado {data}" se `startedAt` existir.
+- Contém cards em layout **Grid** (1 coluna <700px, 2 colunas <1400px, 3 colunas <1800px, 4 colunas ≥1800px).
+- Cards de funcionalidades implementadas: clicáveis com hover elevado (translateY(-2px)), opacidade 1.
+- Cards de funcionalidades não implementadas: opacidade 0.5, cursor `not-allowed`, badge "Em breve".
+- Atalho: card "Atletas" navega para `/admin/atletas` (menu intermediário).
+- Botão "Voltar": ícone de seta que retorna ao Menu Inicial (`/`).
 
 ### 3.7. Exclusão de Torneio
 
-- Cada torneio na listagem exibe um botão "Excluir" (ícone de lixeira).
-- Ao clicar em "Excluir", abre um modal de confirmação: "Deseja realmente excluir este torneio? Esta ação não pode ser desfeita."
-- Se confirmado, o arquivo JSON do torneio é removido do diretório `{userData}/data/torneios/`.
-- Se o torneio excluído for o torneio ativo, o arquivo `torneio-ativo.json` também deve ser removido.
-- Notificação de sucesso é exibida e a listagem é atualizada.
-- Se houver erro, notificação de erro é exibida.
+- Cada torneio na listagem exibe botão "Excluir" (ícone de lixeira) com `ActionIcon` vermelho.
+- Ao clicar, abre modal de confirmação: "Deseja realmente excluir o torneio **{nome}**? Esta ação não pode ser desfeita."
+- Se confirmado, o arquivo JSON é removido do diretório `{userData}/data/torneios/` via `fs.unlinkSync`.
+- Se o torneio excluído for o torneio ativo, o arquivo `torneio-ativo.json` também é removido.
+- Notificação verde de sucesso e listagem recarregada.
+- Modal usa `useDisclosure` para controle de abertura.
 
 ### 3.8. Atletas (Implementado)
 
-- **Menu intermediário:** Ao clicar no card "Atletas" no Dashboard, o usuário é levado a um menu (`/admin/atletas`) com 3 cartões: "Cadastrar Atleta", "Listar Atletas" e "Importar Atletas".
-- **Cadastrar e Listar** redirecionam para `/admin/atletas/lista`, que exibe a tela unificada de CRUD com tabela e botões de ação.
-- **Importar** dispara o diálogo nativo de seleção de arquivo JSON diretamente do menu.
-- **Botão "Cadastrar"** no topo da tela de listagem abre o modal de formulário. Após salvamento bem-sucedido, o modal é fechado automaticamente. Em caso de erro (duplicata, falha de IPC), o modal permanece aberto e uma notificação é exibida.
-- Nome e equipe são obrigatórios (mínimo 2 caracteres) e armazenados em minúsculo (normalizados no submit).
+- **Menu intermediário:** Ao clicar no card "Atletas" no Dashboard, navega para `/admin/atletas` que renderiza `AthletesMenu` — um menu com 3 cartões:
+  - **Cadastrar Atleta** — Abre o modal `AthleteForm` diretamente na mesma página para criar um novo atleta.
+  - **Listar Atletas** — Navega para `/admin/atletas/lista` (tela `AdminAthletes` com tabela CRUD).
+  - **Importar Atletas** — Dispara o diálogo nativo de seleção de arquivo JSON via IPC `import-athletes`.
+- **Tela de listagem (`/admin/atletas/lista`):** Exibe `AdminAthletes` com:
+  - Botões "Importar" e "Cadastrar" no topo.
+  - Tabela com colunas: Nome, Equipe, Faixa, Idade, Ações (editar/excluir).
+  - Empty state com "Nenhum atleta cadastrado" + botão "Cadastrar primeiro atleta".
+  - Ações por linha: lápis (editar) e lixeira (excluir).
+  - Botão "Voltar" retorna para `/admin/atletas` (menu), não para o Dashboard.
+- **Modal de formulário:** `AthleteForm.tsx` usa `@mantine/form` com **modo controlado** (`mode: 'controlled'`). Cada campo recebe os props diretamente de `form.getInputProps(path)`. O `useEffect` de inicialização do formulário depende apenas de `opened` e `athlete` (não de `form`) para evitar loop de re-renderização.
+- Nome e equipe são obrigatórios (mínimo 2 caracteres) e armazenados em minúsculo (`.trim().toLowerCase()` no submit).
 - Peso deve estar entre 1 e 300 kg.
-- Faixa segue enum: infantil (branca, cinza, amarela, laranja, verde) e adulto (branca, azul, roxa, marrom, preta).
+- Faixa segue enum: infantil (branca, cinza, amarela, laranja, verde) e adulto (branca-adulto, azul, roxa, marrom, preta). O valor `branca-adulto` é mapeado para `branca` na persistência.
 - Ano de nascimento entre 1920 e ano atual.
-- Idade é calculada dinamicamente (`ano atual - ano nascimento`), não persistida.
-- **Duplicata:** Um atleta é considerado duplicata de outro quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**. A verificação ocorre:
-  - No renderer (`AdminAthletes.tsx:handleSave`) antes de chamar o IPC, tanto para cadastro quanto para edição (ignorando o próprio `id` na edição).
+- Idade é calculada dinamicamente (`ano atual - anoNascimento`), não persistida.
+- **Duplicata:** Um atleta é considerado duplicata quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**. A verificação ocorre:
+  - No renderer (`AdminAthletes.tsx:handleSave`) antes do IPC, tanto para cadastro quanto para edição (ignorando o próprio `id`).
   - No main process (`athletes.ts:importAthletesFromFile`) durante importação em massa.
-- **Modal de formulário** usa `key` incremental para forçar remontagem limpa a cada abertura, evitando sujeira de estado entre criações e edições consecutivas.
-- Atletas são armazenados em arquivo global `{userData}/data/atletas.json` (não vinculado a um torneio específico).
+- Atletas são armazenados em arquivo global `{userData}/data/atletas.json` (compartilhado entre torneios).
 
 ### 3.9. Ativação do Software (Implementado)
 
 - Na primeira execução, exige senha de ativação fornecida pelo desenvolvedor.
 - Senha validada por hash SHA-256 (nunca armazenada em texto puro).
-- Após ativação bem-sucedida, gera token HMAC vinculado ao hardware (UUID da máquina).
-- Token salvo em `userData`; execuções subsequentes verificam o token automaticamente.
-- Senha mestra padrão: `Bjj@2025!Secure` (hash SHA-256 incorporado no código).
+- Após ativação bem-sucedida, gera token HMAC-SHA256 vinculado ao hardware da máquina (UUID obtido via `wmic csproduct get uuid`).
+- Token salvo em `{userData}/activation.json`; execuções subsequentes verificam o token automaticamente.
+- Senha mestra padrão: `Bjj@2025!Secure` (hash SHA-256: `57a8d2d84be94e9bdae407ad8352065346269c6997b0be31ff32101fc51e7c3e`).
+- Fallback para `crypto.randomUUID()` se o comando `wmic` falhar (Linux/macOS ou restrição de segurança).
+- O `App.tsx` faz 3 estados: `null` (carregando), `false` (tela de ativação), `true` (app principal). O `.catch(() => setActivated(false))` trata falhas de IPC.
+
+### 3.10. Error Boundary
+
+- Um componente `ErrorBoundary` (classe React) envolve as `<Routes>` no `HashRouter`.
+- Captura erros de renderização em qualquer página filha.
+- Exibe tela de fallback com: título "Erro inesperado", descrição, mensagem do erro (primeiras 4 linhas do stack) e botão "Tentar novamente".
+- O botão "Tentar novamente" reseta o estado de erro (`setState({ hasError: false })`) e re-renderiza os children.
 
 ---
 
@@ -142,25 +164,29 @@ O sistema será distribuído como software desktop utilizando Electron.
 ## 5. Stack Tecnológica
 
 ### Desktop
-
 - Electron 30
 
 ### Interface
-
-- React 18
-- TypeScript 5
-- Vite 5
-- Mantine UI 7
+- React 18 + TypeScript 5
+- Vite 5 (bundler)
+- Mantine UI 7 (componentes)
 - Tabler Icons 3
-- React Router 6
-- dayjs
+- React Router 6 (`HashRouter`)
+- dayjs (datas)
 
 ### Formulários
+- `@mantine/form` com `@mantine/core` (TextInput, NumberInput, Select, DatePickerInput)
 
-- `@mantine/form` com validação
+### Validação
+- `@mantine/form` com regras `validate`
+
+### Notificações
+- `@mantine/notifications`
+
+### Persistência
+- `fs` (Electron main process)
 
 ### Build
-
 - electron-builder
 - vite-plugin-electron
 
@@ -168,17 +194,13 @@ O sistema será distribuído como software desktop utilizando Electron.
 
 ## 6. Persistência de Dados
 
-O sistema utiliza exclusivamente arquivos JSON para armazenamento local.
-
-Não há dependência de banco de dados externo.
-
-Toda a operação deve funcionar offline.
+O sistema utiliza exclusivamente arquivos JSON para armazenamento local, sem dependência de banco de dados externo. Toda operação funciona offline.
 
 ### 6.1. Geração dos Arquivos JSON
 
-Cada entidade do sistema é persistida em um ou mais arquivos JSON. Os torneios são armazenados em arquivos individuais dentro do diretório `{userData}/data/torneios/`. O arquivo JSON de cada torneio é gerado **no momento da criação** (ao preencher Nome + Data e confirmar) ou no momento da **importação** (ao selecionar um JSON válido). Antes dessas ações o arquivo não existe em disco.
+Cada entidade é persistida em um ou mais arquivos JSON. Os torneios são armazenados em arquivos individuais dentro de `{userData}/data/torneios/`. O arquivo de cada torneio é gerado no momento da criação ou importação.
 
-O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que armazena o `id` do torneio em uso.
+O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazena o `id` do torneio em uso.
 
 ### 6.2. Estrutura de Diretórios
 
@@ -189,50 +211,84 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
       {id}.json           # Arquivo individual de cada torneio
     torneio-ativo.json    # { "id": "uuid-do-torneio-ativo" }
     atletas.json          # Lista global de atletas (compartilhada entre torneios)
+    activation.json       # { "token": "hmac-token", "activatedAt": "ISO" }
+```
+
+### 6.3. Estrutura do JSON de Torneio (`{userData}/data/torneios/{id}.json`)
+
+```json
+{
+  "id": "uuid-v4",
+  "nome": "Nome do Torneio",
+  "data": "2026-12-25",
+  "createdAt": "2026-05-31T10:00:00.000Z",
+  "updatedAt": "2026-05-31T10:00:00.000Z",
+  "startedAt": "2026-06-01T08:00:00.000Z"
+}
+```
+
+### 6.4. Estrutura do JSON de Atletas (`{userData}/data/atletas.json`)
+
+```json
+[
+  {
+    "id": "uuid-v4",
+    "nome": "joão silva",
+    "equipe": "gracie barra",
+    "pesoKg": 76.5,
+    "faixa": "azul",
+    "anoNascimento": 1998,
+    "createdAt": "2026-05-31T10:00:00.000Z",
+    "updatedAt": "2026-05-31T10:00:00.000Z"
+  }
+]
 ```
 
 ---
 
 ## 7. Comunicação Main <> Renderer (IPC)
 
-| Canal | Direção | Status | Descrição |
-|---|---|---|---|
-| `create-tournament` | Renderer → Main | ✅ | Cria novo torneio e salva no diretório |
-| `list-tournaments` | Renderer → Main → Renderer | ✅ | Retorna array com todos os torneios |
-| `start-tournament` | Renderer → Main | ✅ | Define torneio como ativo e registra startedAt |
-| `get-active-tournament` | Renderer → Main → Renderer | ✅ | Retorna torneio ativo ou null |
-| `export-tournament` | Renderer → Main | ✅ | Abre diálogo para exportar JSON |
-| `import-tournament` | Renderer → Main | ✅ | Importa JSON para diretório de torneios |
-| `import-tournament-overwrite` | Renderer → Main | ✅ | Sobrescreve torneio existente |
-| `read-file` | Renderer → Main → Renderer | ✅ | Lê conteúdo de arquivo do disco |
-| `update-tournament` | Renderer → Main | ✅ | Atualizar dados do torneio |
-| `delete-tournament` | Renderer → Main | ✅ | Remove arquivo JSON do torneio |
-| `load-athletes` | Renderer → Main → Renderer | ✅ | Carregar atletas do JSON |
-| `save-athlete` | Renderer → Main | ✅ | Adicionar novo atleta ao JSON |
-| `update-athlete` | Renderer → Main | ✅ | Atualizar atleta existente |
-| `delete-athlete` | Renderer → Main | ✅ | Remover atleta do JSON |
-| `check-activation` | Renderer → Main → Renderer | ✅ | Verificar se o software está ativado |
-| `validate-password` | Renderer → Main → Renderer | ✅ | Validar senha de ativação |
-| `activate-license` | Renderer → Main → Renderer | ✅ | Gerar e salvar token de ativação |
+| Canal | Direção | Descrição |
+|---|---|---|
+| `create-tournament` | Renderer → Main | Cria novo torneio e salva no diretório |
+| `list-tournaments` | Renderer → Main → Renderer | Retorna array com todos os torneios |
+| `start-tournament` | Renderer → Main | Define torneio como ativo e registra `startedAt` |
+| `get-active-tournament` | Renderer → Main → Renderer | Retorna torneio ativo ou `null` |
+| `export-tournament` | Renderer → Main | Abre diálogo "Salvar como" e copia JSON |
+| `import-tournament` | Renderer → Main | Importa JSON verificando duplicidade de ID |
+| `import-tournament-overwrite` | Renderer → Main | Sobrescreve torneio existente (mesmo ID) |
+| `read-file` | Renderer → Main → Renderer | Lê conteúdo de arquivo do disco |
+| `update-tournament` | Renderer → Main | Atualiza dados do torneio |
+| `delete-tournament` | Renderer → Main | Remove arquivo JSON do torneio (+ `torneio-ativo.json` se for o ativo) |
+| `load-athletes` | Renderer → Main → Renderer | Carrega atletas do JSON |
+| `save-athlete` | Renderer → Main | Adiciona novo atleta ao JSON |
+| `update-athlete` | Renderer → Main | Atualiza atleta existente (match por `id`) |
+| `delete-athlete` | Renderer → Main | Remove atleta do JSON pelo `id` |
+| `import-athletes` | Renderer → Main → Renderer | Abre diálogo nativo, lê JSON, mescla com lista, retorna `{imported, skipped}` |
+| `check-activation` | Renderer → Main → Renderer | Verifica se o software está ativado |
+| `validate-password` | Renderer → Main → Renderer | Valida senha de ativação (hash SHA-256) |
+| `activate-license` | Renderer → Main → Renderer | Gera e salva token HMAC de ativação |
 
 ---
 
 ## 8. Rotas da Aplicação
 
-| Rota | Componente | Status | Descrição |
-|---|---|---|---|
-| `/` | MenuInicial | ✅ | Menu principal com 3 opções |
-| `/admin/criar-torneio` | CriarTorneio | ✅ | Formulário de criação |
-| `/admin/importar-torneio` | ImportarTorneio | ✅ | Tela de importação |
-| `/admin/listar-torneios` | ListarTorneios | ✅ | Lista com Iniciar / Exportar / Excluir |
-| `/admin/dashboard` | Dashboard | ✅ | Dashboard Administrativo do torneio ativo |
-| `/admin/atletas` | AthletesMenu | ✅ | Menu de atletas com 3 cartões (Cadastrar, Listar, Importar) |
-| `/admin/atletas/lista` | AdminAthletes | ✅ | Gerenciamento de atletas (tabela CRUD + botões) |
+| Rota | Componente | Descrição |
+|---|---|---|
+| `/` | `MenuInicial` | Menu principal com 3 opções (Criar, Importar, Listar) |
+| `/admin/criar-torneio` | `CriarTorneio` | Formulário de criação de torneio |
+| `/admin/importar-torneio` | `ImportarTorneio` | Tela de importação com upload e validação |
+| `/admin/listar-torneios` | `ListarTorneios` | Lista com ações Iniciar / Exportar / Excluir |
+| `/admin/dashboard` | `Dashboard` | Dashboard Administrativo do torneio ativo |
+| `/admin/atletas` | `AthletesMenu` | Menu de atletas com 3 cartões (Cadastrar, Listar, Importar) |
+| `/admin/atletas/lista` | `AdminAthletes` | Gerenciamento de atletas (tabela CRUD + botões) |
+
+> O roteamento utiliza `HashRouter` (não `BrowserRouter`) para compatibilidade com o protocolo `file://` no Electron em produção.
 
 ### Fluxo de Navegação
 
 ```
-[Menu Inicial]
+[Menu Inicial (/)]
   ├── Criar Torneio      → /admin/criar-torneio
   │                        └── (após criar) → /admin/listar-torneios
   │
@@ -240,19 +296,19 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
   │                        └── (após importar) → /admin/listar-torneios
   │
    └── Listar Torneios    → /admin/listar-torneios
-                            ├── [Iniciar] → /admin/dashboard (registra startedAt)
-                            ├── [Exportar] → diálogo "Salvar como"
-                            └── [Excluir] → modal de confirmação → remove arquivo
+                             ├── [Iniciar] → /admin/dashboard (registra startedAt)
+                             ├── [Exportar] → diálogo "Salvar como"
+                             └── [Excluir] → modal de confirmação → remove arquivo
 ```
 
-#### Fluxo Dashboard → Funcionalidades
+### Fluxo Dashboard → Funcionalidades
 
 ```
 [Dashboard /admin/dashboard]
     ├── Atletas     → /admin/atletas (AthletesMenu)
-    │                 ├── Cadastrar Atleta → /admin/atletas/lista (AdminAthletes)
-    │                 ├── Listar Atletas   → /admin/atletas/lista (AdminAthletes)
-    │                 └── Importar Atletas → diálogo nativo de arquivo JSON
+    │                 ├── Cadastrar Atleta → modal AthleteForm inline + IPC save
+    │                 ├── Listar Atletas   → /admin/atletas/lista (AdminAthletes, tabela CRUD)
+    │                 └── Importar Atletas → diálogo nativo de arquivo JSON via IPC
     ├── Equipes     → (Em breve)
     ├── Categorias  → (Em breve)
     ├── Inscrições  → (Em breve)
@@ -263,6 +319,26 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
     ├── Placar      → (Em breve)
     ├── Resultados  → (Em breve)
     └── Relatórios  → (Em breve)
+```
+
+### Fluxo AthletesMenu
+
+```
+[AthletesMenu /admin/atletas]
+    ├── Cadastrar Atleta → abre modal AthleteForm (mesma página, useDisclosure)
+    │                      ├── Salvar → IPC save-athlete + recarrega lista via loadAthletes()
+    │                      └── Fechar → modal close
+    │
+    ├── Listar Atletas   → /admin/atletas/lista (AdminAthletes)
+    │                      ├── Importar → IPC import-athletes (diálogo nativo)
+    │                      ├── Cadastrar → abre modal AthleteForm
+    │                      ├── Tabela com ações (editar, excluir)
+    │                      ├── Editar → abre modal AthleteForm preenchido
+    │                      ├── Excluir → modal confirmação → IPC delete-athlete
+    │                      └── Voltar → /admin/atletas (menu)
+    │
+    └── Importar Atletas → IPC import-athletes (diálogo nativo, mesma página)
+```
 
 ---
 
@@ -270,7 +346,7 @@ O torneio ativo é definido por um arquivo separado (`torneio-ativo.json`) que a
 
 ### 9.1 Tema Principal
 
-A identidade visual do sistema será inspirada em aplicações administrativas modernas, utilizando cores que transmitam organização, confiança e profissionalismo.
+A identidade visual utiliza cores que transmitam organização, confiança e profissionalismo.
 
 #### 9.1.1 Paleta de Cores
 
@@ -278,16 +354,14 @@ A identidade visual do sistema será inspirada em aplicações administrativas m
 |---|---|---|
 | **Fundo principal** | `#f8f9fa` (Gray 0) | Fundo da interface |
 | **Título principal** | `#212529` (Gray 9) | Títulos e logotipo |
-| **Botões / Destaques** | Azul Royal (`#1565C0`) | Botões primários, barra superior, menus ativos, indicadores, links |
+| **Botões / Destaques** | Azul Royal (`#1565C0`) | Botões primários, indicadores, links |
 | **Hover/Focus** | Azul escuro (`#0d47a1`) | Feedback visual em interações |
 | **Texto secundário** | `#6c757d` (Gray 6) | Descrições e textos auxiliares |
 | **Divisores/Bordas** | `#e9ecef` (Gray 2) | Separar elementos |
-| **Confirmação** | Verde (`#2E7D32`) | Resultados positivos, status concluídos, aprovações |
-| **Alerta** | Amarelo Royal | Alertas, avisos, destaques temporários, indicadores de atenção |
+| **Confirmação** | Verde (`#2E7D32`) | Resultados positivos, status concluídos |
+| **Alerta** | Vermelho | Erros, exclusões |
 
-### 9.2 Minimalist Design Approach
-
-The design of the system follows a minimalist approach, focusing on clarity and usability. The interface is designed to be clean and uncluttered, with a focus on the essential elements. The use of a limited color palette and clear typography contributes to a professional and easy-to-use experience.
+### 9.2 Tipografia
 
 | Elemento | Fonte | Peso | Tamanho |
 |---|---|---|---|
@@ -295,174 +369,167 @@ The design of the system follows a minimalist approach, focusing on clarity and 
 | **Opções do menu** | Inter, sans-serif | Semibold (600) | `clamp(18px, 1.5vw, 22px)` |
 | **Texto auxiliar** | Inter, sans-serif | Regular (400) | `clamp(14px, 1vw, 16px)` |
 
+### 9.3 Responsividade
+
+O tema define tamanhos de fonte usando `clamp()` para garantir proporcionalidade à janela. Componentes Mantine são configurados com `defaultRadius: 'md'` e tamanhos `md` para botões e inputs.
+
 ---
 
 ## 10. Tela Inicial — Menu de Seleção
 
 ### 10.1 User Story
 
-O usuário principal, após fechar as inscrições em seu sistema externo, abre o BJJ Tournament Manager para organizar o torneio que acontecerá no futuro. Ele então escolhe entre **criar um novo torneio** ou **importar um torneio** previamente exportado. Também pode **listar os torneios** já cadastrados para iniciar ou exportar um deles.
+O usuário principal, após fechar as inscrições em seu sistema externo, abre o BJJ Tournament Manager para organizar o torneio. Ele escolhe entre criar um novo torneio, importar um torneio previamente exportado, ou listar os torneios já cadastrados.
 
 ### 10.2 Descrição
 
-A primeira tela do sistema exibe um menu com três opções principais:
+A primeira tela exibe um menu com três opções principais:
 
-1. **Criar Torneio** — Abertura do formulário de cadastro de um novo torneio.
-2. **Importar Torneio** — Importação de um torneio a partir de um arquivo JSON.
-3. **Listar Torneios** — Visualização de todos os torneios cadastrados, com ações de iniciar, editar, exportar ou excluir cada um.
-
-> **Fluxo:** Criar e importar geram o arquivo JSON do torneio no disco. Para acessar o Dashboard Administrativo é necessário primeiro **iniciar** ou **editar** um torneio pela lista.
+1. **Criar Torneio** — Abertura do formulário de cadastro de um novo torneio (`/admin/criar-torneio`).
+2. **Importar Torneio** — Importação de um torneio a partir de um arquivo JSON (`/admin/importar-torneio`).
+3. **Listar Torneios** — Visualização de todos os torneios cadastrados (`/admin/listar-torneios`).
 
 ### 10.3 Layout
 
 ```
 +--------------------------------------------------+
-|                                                    |
 |   ┌──────────────────────────────────────────┐    |
 |   │           BJJ TOURNAMENT MANAGER          │    |
 |   │         Gerencie seu campeonato           │    |
 |   └──────────────────────────────────────────┘    |
 |                                                    |
 |   ┌──────────────────────────────────────────┐    |
-|   │   [Ícone de troféu / plus]               │    |
-|   │   Criar Torneio                          │    |
+|   │   [IconPlus]  Criar Torneio              │    |
 |   │   Cadastre um novo torneio               │    |
 |   └──────────────────────────────────────────┘    |
-|                                                    |
 |   ┌──────────────────────────────────────────┐    |
-|   │   [Ícone de pasta / upload]              │    |
-|   │   Importar Torneio                       │    |
+|   │   [IconFileUpload]  Importar Torneio     │    |
 |   │   Importe torneio de arquivo JSON        │    |
 |   └──────────────────────────────────────────┘    |
-|                                                    |
 |   ┌──────────────────────────────────────────┐    |
-|   │   [Ícone de lista]                       │    |
-|   │   Listar Torneios                        │    |
+|   │   [IconList]  Listar Torneios            │    |
 |   │   Veja todos os torneios cadastrados     │    |
 |   └──────────────────────────────────────────┘    |
 |                                                    |
 |   Pressione 1, 2 ou 3 para selecionar             |
-|                                                    |
 +--------------------------------------------------+
 ```
 
-### 10.4 Componentes da Tela
+### 10.4 Comportamento
 
-1. **Logotipo / Título:** Centralizado no topo.
-2. **Cartões de opção:** Cada opção é um cartão (Card do Mantine) com:
-   - Ícone representativo (36px) na cor Azul Royal.
-   - Título da opção em negrito.
-   - Descrição curta em cinza (`#666`).
-   - Sombra suave (box-shadow) para elevação.
-   - Borda arredondada (`border-radius: md`).
-3. **Instrução de navegação:** Texto centralizado na parte inferior indicando as teclas `1`, `2` ou `3`.
-
-### 10.5 Comportamento
-
-#### Abertura do sistema
-- Ao iniciar o Electron, esta tela é carregada imediatamente como rota padrão (`/`).
-- O menu é exibido sempre com as mesmas três opções, independentemente de haver torneios cadastrados ou não.
-
-#### Seleção de opção
-O usuário pode selecionar uma opção de três formas:
-- **Clique/Touch:** Clica ou toca no cartão desejado.
-- **Teclado numérico:** Pressiona `1` para Criar, `2` para Importar, `3` para Listar.
-- **Tab + Enter:** Navega entre os cartões com Tab e confirma com Enter.
-
-#### Feedback visual
-- **Hover:** Cartão eleva-se ligeiramente (sombra mais pronunciada, translateY(-2px)).
-- **Focus (teclado):** Anel de foco visível (outline Azul Royal) ao redor do cartão.
-- **Active/Pressionado:** Efeito de clique (escala 0.98, sombra reduzida).
-- **Transição:** Animações suaves de 200ms para hover, focus e active.
-
-#### Navegação pós-seleção
-
-| Opção | Ação |
-|---|---|
-| **Criar Torneio** | Redireciona para `/admin/criar-torneio`. |
-| **Importar Torneio** | Redireciona para `/admin/importar-torneio`. |
-| **Listar Torneios** | Redireciona para `/admin/listar-torneios`. |
-
-### 10.6 Estados da Tela
-
-| Estado | Descrição |
-|---|---|
-| **Normal** | Tela exibida com as três opções prontas para seleção. |
-
-### 10.7 Acessibilidade
-
-- Cartões utilizam `role="button"`, `tabIndex={0}` e `onKeyDown`.
-- Atributos `aria-label` nos cartões.
-- Suporte a navegação por teclado (Tab, Enter, teclas numéricas).
+- Ao iniciar o Electron, a rota `/` é carregada imediatamente.
+- O menu é exibido independentemente de haver torneios cadastrados.
+- Seleção: clique/touch, teclado numérico (1/2/3) ou Tab + Enter.
+- Feedback visual: hover (translateY(-2px), sombra), active (scale 0.98), foco (outline).
+- Teclas 1/2/3 registradas via `window.addEventListener('keydown')` no `useEffect`.
 
 ---
 
-## 11. Requisitos Não Funcionais
+## 11. Regras de Validação
 
-### 11.1 Requisitos Gerais
+### 11.1. Torneio (CriarTorneio)
 
-O sistema deverá:
+| Campo | Regra | Mensagem |
+|---|---|---|
+| **Data** | Obrigatório, deve ser futura (após hoje) | "A data do torneio deve ser futura" |
+
+### 11.2. Atleta (AthleteForm)
+
+| Campo | Regra | Mensagem |
+|---|---|---|
+| **Nome** | Mínimo 2 caracteres | "Nome deve ter ao menos 2 caracteres" |
+| **Equipe** | Mínimo 2 caracteres | "Equipe deve ter ao menos 2 caracteres" |
+| **Peso** | Número entre 1 e 300 | "Peso deve estar entre 1 e 300 kg" |
+| **Faixa** | Deve ser uma faixa válida do enum | "Selecione uma faixa válida" |
+| **Ano Nascimento** | Inteiro entre 1920 e ano atual | "Ano deve estar entre 1920 e {anoAtual}" |
+
+A validação ocorre:
+- **Em tempo real** ao digitar (modo controlado), com erro exibido abaixo do campo.
+- **No submit** (`form.onSubmit`): se houver erro, o formulário não é enviado.
+
+### 11.3. Importação de Atletas (main process)
+
+- O conteúdo do arquivo deve ser um array.
+- Cada atleta deve ter os campos obrigatórios: `id`, `nome`, `equipe`, `faixa`, `anoNascimento`, `pesoKg`.
+- Atletas com `id` já existente na lista são ignorados (skipped).
+- Atletas com mesmo `nome` (case-insensitive) + `anoNascimento` são ignorados (skipped).
+
+---
+
+## 12. Regras de Duplicidade
+
+### 12.1. Atletas
+
+Um atleta é considerado **duplicata** quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**.
+
+| Operação | Local da Verificação | Comportamento |
+|---|---|---|
+| **Cadastro individual** | Renderer (`AdminAthletes.tsx:handleSave`) | Antes de chamar o IPC, percorre a lista local. Se duplicata (excluindo próprio `id`), exibe notificação vermelha e não salva. |
+| **Edição** | Renderer (`AdminAthletes.tsx:handleSave`) | Mesma verificação, ignorando o atleta sendo editado pelo `id`. |
+| **Importação em massa** | Main process (`athletes.ts:importAthletesFromFile`) | Durante mesclagem, verifica `id` duplicado E nome + anoNascimento. Duplicatas são ignoradas e contabilizadas em `skipped`. |
+
+---
+
+## 13. Requisitos Não Funcionais
+
+### 13.1. Requisitos Gerais
 
 - Funcionar sem conexão com a internet.
-- Possuir carregamento rápido.
-- Ser capaz de armazenar milhares de atletas.
+- Carregamento rápido.
+- Capaz de armazenar milhares de atletas.
 - Permitir backup manual dos arquivos JSON.
-- Possuir interface responsiva para diferentes resoluções.
-- Ser simples de instalar.
-- Possuir estrutura de código organizada e escalável.
-- Utilizar TypeScript em todo o projeto.
-- Seguir os princípios **SOLID** em toda a arquitetura do código.
-- Seguir as **boas práticas de programação** (código limpo, legível, testável e de fácil manutenção).
+- Interface responsiva para diferentes resoluções.
+- TypeScript em todo o projeto.
 
-### 11.2 UI Responsiva — Tamanhos Proporcionais à Tela
+### 13.2. UI Responsiva
 
-Todos os elementos da interface (fontes, padding, margens, ícones, cartões, tabelas, modais, botões, inputs) devem ser proporcionais ao tamanho da janela, respeitando os princípios de UI e UX.
-
-| Dispositivo | Largura típica | Comportamento |
+| Dispositivo | Largura | Comportamento |
 |---|---|---|
-| **Desktop / Notebook** | ≥ 1024px | Layout centralizado, cartões com largura máxima. |
-| **Tablet** | 768px – 1023px | Cartões empilhados verticalmente, fonte ajustada. |
-| **TV (monitor grande)** | ≥ 1920px | Escala proporcional. |
-| **Resoluções muito baixas** | < 768px | Rolagem vertical se necessário; fonte reduzida. |
+| Desktop / Notebook | ≥ 1024px | Layout centralizado |
+| Tablet | 768px – 1023px | Cartões empilhados, fonte ajustada |
+| TV / Monitor grande | ≥ 1920px | Escala proporcional |
+| Resoluções baixas | < 768px | Rolagem vertical se necessário |
 
-**Diretrizes de implementação:**
+Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizontal em tabelas.
 
-- **Viewport:** Usar `clamp()` para tamanhos de fonte e dimensões de componentes (ex.: `font-size: clamp(14px, 2vw, 18px)`).
-- **Unidades relativas:** Preferir `rem`, `em`, `%` e `vw` sobre `px` fixos sempre que possível.
-- **Espaçamentos:** `padding` e `margin` dos componentes Mantine devem usar valores relativos ou tokens de tema (`theme.spacing`), não `px` fixos.
-- **Tabelas:** Em resoluções baixas, considerar scroll horizontal ou colunas responsivas (esconder colunas menos importantes).
-- **Modais:** Largura do modal deve ser relativa à viewport (ex.: `90vw` em mobile, `40vw` em desktop).
-- **Cartões do menu inicial:** Largura deve ser relativa ao container, não fixa.
-- **Quebra de layout:** Testar em 1024px, 1280px, 1440px, 1920px e viewports menores que 768px.
-- **Zoom do sistema:** A interface não deve quebrar com zoom de 100% a 150%.
+### 13.3. Acessibilidade
 
-### 11.3 Acessibilidade
-
-- Contraste de cores deve atender WCAG AA (taxa mínima de 4.5:1 para texto normal).
-- Suporte a `prefers-reduced-motion`.
+- Contraste WCAG AA (taxa mínima 4.5:1).
+- Suporte a `prefers-reduced-motion` (desativa animações).
 - Navegação por teclado (Tab, Enter, teclas numéricas).
-- Atributos `aria-label` em todos os elementos interativos.
+- Atributos `aria-label` em elementos interativos.
+- Cartões com `role="button"` e `tabIndex`.
 
 ---
 
-## 12. Estrutura de Arquivos (Implementada)
+## 14. Documentação Relacionada
+
+| Arquivo | Conteúdo |
+|---|---|
+| `doc/requisitos.md` | Este documento — regras de negócio e especificação geral |
+| `spec/cadastro-atletas.md` | Especificação detalhada do CRUD de atletas |
+| `spec/validacao-credential.md` | Especificação da ativação do software |
+| `spec.md` | Diagnóstico histórico do formulário de atletas (modo uncontrolled) |
+| `spec-correção.md` | Análise da correção do formulário (modo controlled + dependência form removida) |
+
+---
+
+## 15. Estrutura de Arquivos (Implementada)
 
 ```
 bjj-tournament-manager-setup/
 ├── electron/
 │   ├── main.ts              ← Registro dos handlers IPC, criação da janela
 │   ├── preload.ts           ← Exposição dos canais IPC (contextBridge)
-│   ├── tournament.ts        ← Lógica CRUD de torneios no sistema de arquivos
-│   ├── athletes.ts          ← Lógica CRUD de atletas + importação em massa
-│   ├── activation.ts        ← Lógica de ativação do software
-│   └── electron-env.d.ts    ← Tipos de ambiente Electron
+│   ├── tournament.ts        ← CRUD de torneios no sistema de arquivos
+│   ├── athletes.ts          ← CRUD de atletas + importação em massa
+│   └── activation.ts        ← Ativação do software (SHA-256, HMAC)
 │
 ├── src/
 │   ├── main.tsx             ← Entry point React
-│   ├── App.tsx              ← Rotas e providers (Mantine, Notifications, Router)
-│   ├── vite-env.d.ts
+│   ├── App.tsx              ← Rotas (HashRouter), providers, ativação gate
 │   ├── pages/
-│   │   ├── MenuInicial.tsx      ← Tela inicial (Criar / Importar / Listar)
+│   │   ├── MenuInicial.tsx      ← Menu principal (Criar / Importar / Listar)
 │   │   ├── CriarTorneio.tsx     ← Formulário de criação de torneio
 │   │   ├── ImportarTorneio.tsx  ← Tela de importação com upload e validação
 │   │   ├── ListarTorneios.tsx   ← Lista com ações Iniciar / Exportar / Excluir
@@ -470,31 +537,23 @@ bjj-tournament-manager-setup/
 │   │   ├── AthletesMenu.tsx     ← Menu intermediário de atletas (3 cartões)
 │   │   └── AdminAthletes.tsx    ← Gerenciamento de atletas (tabela CRUD)
 │   ├── components/
-│   │   ├── AthleteForm.tsx      ← Modal de cadastro/edição de atleta
+│   │   ├── AthleteForm.tsx      ← Modal de cadastro/edição de atleta (modo controlled)
 │   │   ├── AthleteTable.tsx     ← Tabela de listagem de atletas
-│   │   └── ActivationScreen.tsx ← Tela de ativação do software
+│   │   ├── PageLayout.tsx       ← Layout padrão (Container, Paper, título, voltar)
+│   │   ├── ActivationScreen.tsx ← Tela de ativação do software
+│   │   └── ErrorBoundary.tsx    ← Captura de erros de renderização
 │   ├── types/
 │   │   ├── tournament.ts        ← Interfaces Torneio, CreateTorneioInput
-│   │   ├── athlete.ts           ← Interface Atleta e tipo Faixa
-│   │   └── electron.d.ts        ← Tipos globais do Window.electronAPI e Window.activation
-│   ├── styles/
-│   │   ├── theme.ts             ← Tema Mantine UI (cores, fontes, componentes)
-│   │   └── global.css           ← Reset e estilos globais
-│   └── assets/                  ← (vazio)
+│   │   ├── athlete.ts           ← Interface Atleta e tipo Faixa (union)
+│   │   └── electron.d.ts        ← Tipos globais Window.electronAPI + Window.activation
+│   └── styles/
+│       ├── theme.ts             ← Tema Mantine UI (cores, fontes, componentes)
+│       └── global.css           ← Reset CSS, body, prefers-reduced-motion
 │
+├── doc/requisitos.md        ← Regras de negócio (este documento)
 ├── spec/
-│   ├── spec.md                  ← Spec da correção de rota /admin/dashboard
-│   ├── cadastro-atletas.md      ← Spec completo do cadastro de atletas (implementado)
-│   └── validacao-credential.md  ← Spec da ativação do software (implementado)
-│
-├── doc/
-│   └── requisitos.md            ← Este documento
-│
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-├── tsconfig.node.json
-├── electron-builder.json5
-├── .eslintrc.cjs
-└── .gitignore
+│   ├── cadastro-atletas.md  ← Spec detalhado do CRUD de atletas
+│   └── validacao-credential.md ← Spec da ativação do software
+├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
+└── spec-correção.md         ← Análise da correção (form em deps do useEffect)
 ```

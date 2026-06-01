@@ -47,9 +47,6 @@ export function MenuInicial() {
   return (
     <PageLayout title="BJJ TOURNAMENT MANAGER">
       <Stack align="center" gap="xs" mb="xl">
-        <Title order={1} ta="center" style={{ fontSize: 'clamp(28px, 5vw, 36px)', fontWeight: 700 }}>
-          BJJ TOURNAMENT MANAGER
-        </Title>
         <Text ta="center" size="lg" c="#1565C0" fw={500}>
           Gerencie seu campeonato
         </Text>

@@ -24,6 +24,7 @@ interface ElectronAPI {
   updateAthlete: (athlete: Atleta) => Promise<Atleta[]>;
   deleteAthlete: (id: string) => Promise<Atleta[]>;
   importAthletes: () => Promise<{ imported: number; skipped: number }>;
+  exportAthletes: () => Promise<void>;
 }
 
 interface ActivationAPI {
