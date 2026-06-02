@@ -23,14 +23,14 @@ para que nenhum atleta inscrito fique sem resolução no evento.
 
 ## 4. Requisitos Funcionais
 
-- [ ] RF-01: O tipo `Atleta` deve ter a propriedade opcional `emChave: boolean` indicando se o atleta está alocado em uma chave
-- [ ] RF-02: Ao gerar chaves, os atletas alocados devem ter `emChave = true` e os não alocados `emChave = false`
-- [ ] RF-03: A seção "Atletas Sem Chave" deve exibir cartões individuais com nome, equipe, categoria e ações disponíveis
-- [ ] RF-04: Cada cartão deve oferecer a ação "Subir peso" (próximo peso acima) quando disponível
-- [ ] RF-05: Cada cartão deve oferecer a ação "Descer peso" (próximo peso abaixo) quando disponível
-- [ ] RF-06: Cada cartão deve oferecer a ação "Declarar W.O." que gera uma chave com o atleta como campeão
-- [ ] RF-07: As ações "Subir peso" e "Descer peso" devem exibir um indicador visual da quantidade de atletas na categoria de destino ("luta casada")
-- [ ] RF-08: Quando a categoria de destino tiver atletas, o botão deve ser destacado (preenchido/amarelo) para indicar que resultará em uma luta
+- [x] RF-01: O tipo `Atleta` deve ter a propriedade opcional `emChave: boolean` indicando se o atleta está alocado em uma chave
+- [x] RF-02: Ao gerar chaves, os atletas alocados devem ter `emChave = true` e os não alocados `emChave = false`
+- [x] RF-03: A seção "Atletas Sem Chave" deve exibir cartões individuais com nome, equipe, categoria e ações disponíveis
+- [x] RF-04: Cada cartão deve oferecer a ação "Subir peso" (próximo peso acima) quando disponível
+- [x] RF-05: Cada cartão deve oferecer a ação "Descer peso" (próximo peso abaixo) quando disponível
+- [x] RF-06: Cada cartão deve oferecer a ação "Declarar W.O." — exibe notificação informando que o atleta foi declarado campeão por W.O. (não cria chave automaticamente)
+- [x] RF-07: As ações "Subir peso" e "Descer peso" devem exibir um indicador visual da quantidade de atletas na categoria de destino ("luta casada")
+- [x] RF-08: Quando a categoria de destino tiver atletas, o botão deve ser destacado (preenchido/amarelo) para indicar que resultará em uma luta
 
 ## 5. Requisitos Não-Funcionais
 
@@ -82,12 +82,12 @@ Nenhum. A propriedade é opcional e não quebra contratos existentes.
 
 ## 9. Critérios de Aceite
 
-- [ ] CA-01: Dado um atleta alocado em uma chave, quando a tela carregar, então `emChave` deve ser `true`
-- [ ] CA-02: Dado um atleta não alocado em nenhuma chave, quando a tela carregar, então `emChave` deve ser `false`
-- [ ] CA-03: Dado um atleta sem chave, quando visualizar a seção "Atletas Sem Chave", então deve ver um cartão com nome, equipe, categoria e botões de ação
-- [ ] CA-04: Dado um atleta sem chave com categoria que possui peso superior disponível, quando clicar em "Subir peso", então a categoria do atleta deve ser atualizada
-- [ ] CA-05: Dado um atleta sem chave com categoria que possui peso inferior disponível, quando clicar em "Descer peso", então a categoria do atleta deve ser atualizada
-- [ ] CA-06: Dado um atleta sem chave e uma categoria de destino com 3 atletas, quando visualizar o cartão, então o botão "Subir peso" ou "Descer peso" deve mostrar "3" como indicador
+- [x] CA-01: Dado um atleta alocado em uma chave, quando a tela carregar, então `emChave` deve ser `true`
+- [x] CA-02: Dado um atleta não alocado em nenhuma chave, quando a tela carregar, então `emChave` deve ser `false`
+- [x] CA-03: Dado um atleta sem chave, quando visualizar a seção "Atletas Sem Chave", então deve ver um cartão com nome, equipe, categoria e botões de ação
+- [x] CA-04: Dado um atleta sem chave com categoria que possui peso superior disponível, quando clicar em "Subir peso", então a categoria do atleta deve ser atualizada
+- [x] CA-05: Dado um atleta sem chave com categoria que possui peso inferior disponível, quando clicar em "Descer peso", então a categoria do atleta deve ser atualizada
+- [x] CA-06: Dado um atleta sem chave e uma categoria de destino com 3 atletas, quando visualizar o cartão, então o botão "Subir peso" ou "Descer peso" deve mostrar "3" como indicador
 
 ## 10. Plano de Implementação
 

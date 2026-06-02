@@ -29,16 +29,16 @@ para que eu encontre rapidamente o que preciso e confie nas informações exibid
 
 ### Busca
 
-- [ ] RF-01: A tela de árbitros deve ter um campo de busca que filtre por nome, equipe e faixa
-- [ ] RF-02: A tela de atletas deve ter um campo de busca que filtre por nome, equipe e categoria
-- [ ] RF-03: A tela de equipes deve ter um campo de busca que filtre por nome da equipe
-- [ ] RF-04: A tela de chaves deve ter um campo de busca que filtre por título da chave (faixa, peso, atletas)
-- [ ] RF-05: A tela de torneios deve ter um campo de busca que filtre por nome do torneio e data
+- [x] RF-01: A tela de árbitros deve ter um campo de busca que filtre por nome, equipe e faixa
+- [x] RF-02: A tela de atletas deve ter um campo de busca que filtre por nome, equipe e categoria
+- [x] RF-03: A tela de equipes deve ter um campo de busca que filtre por nome da equipe
+- [x] RF-04: A tela de chaves deve ter um campo de busca que filtre por título da chave (faixa, peso, atletas)
+- [x] RF-05: A tela de torneios deve ter um campo de busca que filtre por nome do torneio e data
 
 ### Correção
 
-- [ ] RF-06: Ao regenerar chaves, os `chaveIds` de todos os árbitros devem ser limpos antes da reatribuição automática
-- [ ] RF-07: A atribuição manual de árbitro (`atribuirArbitroHandler`) deve continuar funcionando corretamente
+- [x] RF-06: Ao regenerar chaves, os `chaveIds` de todos os árbitros devem ser limpos antes da reatribuição automática
+- [x] RF-07: A atribuição manual de árbitro (`atribuirArbitroHandler`) deve continuar funcionando corretamente
 
 ## 5. Requisitos Não-Funcionais
 
@@ -95,12 +95,12 @@ Nenhuma.
 
 ## 9. Critérios de Aceite
 
-- [ ] CA-01: Dado 50 árbitros cadastrados, quando digitar "joão" no campo de busca, então devem aparecer apenas os árbitros com "joão" no nome, equipe ou faixa
-- [ ] CA-02: Dado 100 atletas cadastrados, quando digitar "gracie" no campo de busca, então devem aparecer apenas atletas com "gracie" no nome ou equipe
-- [ ] CA-03: Dado 20 equipes, quando digitar "team" no campo de busca, então devem aparecer apenas equipes com "team" no nome
-- [ ] CA-04: Dado 158 chaves geradas, quando digitar "preta" no campo de busca, então devem aparecer apenas chaves cujo título contenha "preta"
-- [ ] CA-05: Dado 20 torneios cadastrados, quando digitar "julho" no campo de busca, então devem aparecer apenas torneios com "julho" no nome ou data
-- [ ] CA-06: Dado um torneio com chaves geradas e árbitros atribuídos, quando clicar em "Gerar Novamente", então o `chaveIds` de cada árbitro deve conter apenas IDs de chaves que existem atualmente
+- [x] CA-01: Dado 50 árbitros cadastrados, quando digitar "joão" no campo de busca, então devem aparecer apenas os árbitros com "joão" no nome, equipe ou faixa
+- [x] CA-02: Dado 100 atletas cadastrados, quando digitar "gracie" no campo de busca, então devem aparecer apenas atletas com "gracie" no nome ou equipe
+- [x] CA-03: Dado 20 equipes, quando digitar "team" no campo de busca, então devem aparecer apenas equipes com "team" no nome
+- [x] CA-04: Dado 158 chaves geradas, quando digitar "preta" no campo de busca, então devem aparecer apenas chaves cujo título contenha "preta"
+- [x] CA-05: Dado 20 torneios cadastrados, quando digitar "julho" no campo de busca, então devem aparecer apenas torneios com "julho" no nome ou data
+- [x] CA-06: Dado um torneio com chaves geradas e árbitros atribuídos, quando clicar em "Gerar Novamente", então o `chaveIds` de cada árbitro deve conter apenas IDs de chaves que existem atualmente
 
 ## 10. Plano de Implementação
 
