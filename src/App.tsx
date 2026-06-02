@@ -19,6 +19,10 @@ import { Equipes } from './pages/Equipes';
 import { GerenciarChaves } from './pages/GerenciarChaves';
 import { AreasMenu } from './pages/AreasMenu';
 import { AdminAreas } from './pages/AdminAreas';
+import { PlacarMenu } from './pages/PlacarMenu';
+import { PlacarChaves } from './pages/PlacarChaves';
+import { PlacarBracket } from './pages/PlacarBracket';
+import { PlacarLuta } from './pages/PlacarLuta';
 import { ActivationScreen } from './components/ActivationScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -40,6 +44,10 @@ function MainApp() {
           <Route path="/admin/categorias/chaves" element={<GerenciarChaves />} />
           <Route path="/admin/areas" element={<AreasMenu />} />
           <Route path="/admin/areas/lista" element={<AdminAreas />} />
+          <Route path="/admin/placar" element={<PlacarMenu />} />
+          <Route path="/admin/placar/chaves/:areaId" element={<PlacarChaves />} />
+          <Route path="/admin/placar/chave/:areaId/:chaveId" element={<PlacarBracket />} />
+          <Route path="/admin/placar/luta/:chaveId/:lutaId" element={<PlacarLuta />} />
         </Routes>
       </ErrorBoundary>
     </HashRouter>

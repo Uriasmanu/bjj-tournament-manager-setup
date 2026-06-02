@@ -39,6 +39,7 @@ export function AreaForm({ opened, onClose, onSave, area }: AreaFormProps) {
         form.reset();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, area]);
 
   const handleSubmit = async (values: typeof form.values) => {

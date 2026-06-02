@@ -43,6 +43,7 @@ export function ArbitroForm({ opened, onClose, onSave, arbitro }: ArbitroFormPro
         form.reset();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opened, arbitro]);
 
   const handleSubmit = async (values: typeof form.values) => {

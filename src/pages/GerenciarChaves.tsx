@@ -109,7 +109,7 @@ function getFirstRoundFights(chave: Chave, athletes: Atleta[]): { atletaA: strin
 }
 
 function getAtletaNomeStatic(id: string, athletes: Atleta[]): string {
-  if (id === 'bye') return '(bye)';
+  if (id === 'bye' || id === 'tbd') return '(A definir)';
   const atleta = athletes.find(a => a.id === id);
   if (!atleta) return 'Atleta removido';
   const nome = atleta.nome.charAt(0).toUpperCase() + atleta.nome.slice(1);

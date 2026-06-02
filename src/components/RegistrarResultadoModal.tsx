@@ -1,5 +1,5 @@
 import { Modal, Stack, Group, Button, Radio, Text } from '@mantine/core';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Luta } from '../types/bracket';
 
 interface RegistrarResultadoModalProps {
@@ -8,6 +8,7 @@ interface RegistrarResultadoModalProps {
   luta: Luta | null;
   atletaANome: string;
   atletaBNome: string;
+  initialVencedorId?: string | null;
   onConfirm: (vencedorId: string, status: string) => void;
 }
 
@@ -17,10 +18,18 @@ export function RegistrarResultadoModal({
   luta,
   atletaANome,
   atletaBNome,
+  initialVencedorId,
   onConfirm,
 }: RegistrarResultadoModalProps) {
-  const [vencedorId, setVencedorId] = useState<string | null>(null);
+  const [vencedorId, setVencedorId] = useState<string | null>(initialVencedorId ?? null);
   const [isWO, setIsWO] = useState(false);
+
+  useEffect(() => {
+    if (opened) {
+      setVencedorId(initialVencedorId ?? null);
+      setIsWO(false);
+    }
+  }, [opened, initialVencedorId]);
 
   if (!luta) return null;
 

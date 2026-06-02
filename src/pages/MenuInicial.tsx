@@ -1,4 +1,4 @@
-import { Title, Text, Card, Center, Stack, Group } from '@mantine/core';
+import { Text, Card, Center, Stack, Group } from '@mantine/core';
 import { IconPlus, IconFileUpload, IconList } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';

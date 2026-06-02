@@ -77,6 +77,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('delete-area', areaId),
   deleteAreas: (areaIds: string[]) =>
     ipcRenderer.invoke('delete-areas', areaIds),
+  loadChavesPorArea: (areaId: string) =>
+    ipcRenderer.invoke('load-chaves-por-area', areaId),
+  registrarResultado: (data: { chaveId: string; lutaId: string; vencedorId: string; status: string }) =>
+    ipcRenderer.invoke('registrar-resultado', data),
 })
 
 contextBridge.exposeInMainWorld('activation', {

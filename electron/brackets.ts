@@ -6,6 +6,7 @@ import type { Atleta } from '../src/types/athlete';
 import type { Chave, Luta } from '../src/types/bracket';
 import type { Torneio } from '../src/types/tournament';
 import { getActiveTournamentId } from './tournament';
+import { loadAreas } from './areas';
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios');
@@ -63,34 +64,44 @@ function aplicarSeedSorting(atletas: Atleta[]): Atleta[] {
   return sorted;
 }
 
-function criarLuta(ordem: number, atletaAId: string, atletaBId: string): Luta {
-  return { id: crypto.randomUUID(), ordem, atletaAId, atletaBId };
+function criarLuta(ordem: number, rodada: number, atletaAId: string, atletaBId: string): Luta {
+  return { id: crypto.randomUUID(), ordem, rodada, atletaAId, atletaBId, status: 'pending', vencedorId: null };
 }
 
 function gerarLutasDois(posicoes: Atleta[]): Luta[] {
-  return [criarLuta(1, posicoes[0].id, posicoes[1].id)];
+  return [criarLuta(1, 1, posicoes[0].id, posicoes[1].id)];
 }
+
+const TBD = 'tbd';
 
 function gerarLutasTres(posicoes: Atleta[]): Luta[] {
   return [
-    criarLuta(1, posicoes[0].id, posicoes[1].id),
-    criarLuta(2, posicoes[2].id, 'bye'),
+    criarLuta(1, 1, posicoes[0].id, posicoes[1].id),
+    criarLuta(2, 2, TBD, posicoes[2].id),
   ];
 }
 
 function gerarLutasQuatro(posicoes: Atleta[]): Luta[] {
   return [
-    criarLuta(1, posicoes[0].id, posicoes[3].id),
-    criarLuta(2, posicoes[1].id, posicoes[2].id),
+    criarLuta(1, 1, posicoes[0].id, posicoes[3].id),
+    criarLuta(2, 1, posicoes[1].id, posicoes[2].id),
+    criarLuta(3, 2, TBD, TBD),
   ];
 }
 
 function gerarLutasCinco(posicoes: Atleta[]): Luta[] {
   return [
-    criarLuta(1, posicoes[0].id, posicoes[1].id),
-    criarLuta(2, posicoes[2].id, posicoes[3].id),
-    criarLuta(3, posicoes[4].id, 'bye'),
+    criarLuta(1, 1, posicoes[0].id, posicoes[1].id),
+    criarLuta(2, 1, posicoes[2].id, posicoes[3].id),
+    criarLuta(3, 2, TBD, posicoes[4].id),
+    criarLuta(4, 3, TBD, TBD),
   ];
+}
+
+function getTotalRodadas(totalAtletas: number): number {
+  if (totalAtletas <= 2) return 1;
+  if (totalAtletas <= 4) return 2;
+  return 3;
 }
 
 function gerarLutas(posicoes: Atleta[]): Luta[] {
@@ -126,6 +137,7 @@ function gerarChave(categoriaId: string, atletas: Atleta[]): Chave {
     arbitroId: null,
     totalAtletas: posicoes.length,
     totalLutas: lutas.length,
+    totalRodadas: getTotalRodadas(posicoes.length),
     status: 'gerada',
   };
 }
@@ -418,6 +430,124 @@ async function exportChavesToFile(torneioId: string): Promise<void> {
   }
 }
 
+function normalizeLuta(luta: Record<string, unknown>): Luta {
+  return {
+    id: luta.id as string,
+    ordem: (luta.ordem as number) ?? 0,
+    rodada: (luta.rodada as number) ?? 1,
+    atletaAId: (luta.atletaAId as string) ?? '',
+    atletaBId: (luta.atletaBId as string) ?? '',
+    status: (luta.status as Luta['status']) ?? 'pending',
+    vencedorId: (luta.vencedorId as string | null) ?? null,
+  };
+}
+
+function normalizeChave(chave: Record<string, unknown>): Chave {
+  const lutas = (chave.lutas as Record<string, unknown>[] ?? []).map(normalizeLuta);
+  return {
+    id: chave.id as string,
+    categoriaId: (chave.categoriaId as string) ?? '',
+    lutas,
+    posicoesAtletas: (chave.posicoesAtletas as string[]) ?? [],
+    arbitroId: (chave.arbitroId as string | null) ?? null,
+    totalAtletas: (chave.totalAtletas as number) ?? 0,
+    totalLutas: (chave.totalLutas as number) ?? 0,
+    totalRodadas: (chave.totalRodadas as number) ?? (lutas.length > 0 ? Math.max(...lutas.map(l => l.rodada)) : 1),
+    status: (chave.status as Chave['status']) ?? 'gerada',
+  };
+}
+
+function loadChavesPorAreaHandler(torneioId: string, areaId: string): Chave[] {
+  const torneio = loadTorneio(torneioId);
+  const areas = loadAreas(torneioId);
+  const area = areas.find(a => a.id === areaId);
+  if (!area) return [];
+  const arbitroIds = new Set(area.arbitroIds);
+  return (torneio.chaves ?? [])
+    .map(c => normalizeChave(c as unknown as Record<string, unknown>))
+    .filter(c => c.arbitroId && arbitroIds.has(c.arbitroId));
+}
+
+function clearWinnerFromLaterRounds(chave: Chave, rodada: number, atletaId: string): void {
+  for (const l of chave.lutas) {
+    if (l.rodada <= rodada) continue;
+    if (l.atletaAId === atletaId) {
+      l.atletaAId = 'tbd';
+      l.vencedorId = null;
+      if (l.status === 'completed' || l.status === 'wo') l.status = 'pending';
+      clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
+    }
+    if (l.atletaBId === atletaId) {
+      l.atletaBId = 'tbd';
+      l.vencedorId = null;
+      if (l.status === 'completed' || l.status === 'wo') l.status = 'pending';
+      clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
+    }
+  }
+}
+
+function advanceWinnerInChave(chave: Chave, luta: Luta): void {
+  const currentRoundLutas = chave.lutas.filter(l => l.rodada === luta.rodada);
+  const matchIndex = currentRoundLutas.indexOf(luta);
+  if (matchIndex < 0) return;
+
+  let targetRodada = luta.rodada + 1;
+  while (targetRodada <= (chave.totalRodadas || 3)) {
+    const nextRoundLutas = chave.lutas.filter(l => l.rodada === targetRodada);
+    if (nextRoundLutas.length === 0) return;
+
+    const pairsPerMatch = Math.pow(2, targetRodada - luta.rodada - 1);
+    const nextMatchIndex = Math.floor(matchIndex / pairsPerMatch);
+    if (nextMatchIndex >= nextRoundLutas.length) return;
+
+    const nextLuta = nextRoundLutas[nextMatchIndex];
+    const slotIndex = matchIndex % Math.pow(2, targetRodada - luta.rodada);
+    const firstSlotAt = Math.floor(slotIndex / pairsPerMatch);
+
+    if (firstSlotAt === 0 && (nextLuta.atletaAId === 'tbd' || nextLuta.atletaAId === '')) {
+      nextLuta.atletaAId = luta.vencedorId!;
+      return;
+    }
+    if (firstSlotAt === 1 && (nextLuta.atletaBId === 'tbd' || nextLuta.atletaBId === '')) {
+      nextLuta.atletaBId = luta.vencedorId!;
+      return;
+    }
+
+    targetRodada++;
+  }
+}
+
+function registrarResultadoHandler(
+  torneioId: string,
+  data: { chaveId: string; lutaId: string; vencedorId: string; status: string }
+): Chave {
+  const torneio = loadTorneio(torneioId);
+  const chaves = [...(torneio.chaves ?? [])];
+  const chaveIndex = chaves.findIndex(c => c.id === data.chaveId);
+  if (chaveIndex < 0) throw new Error('Chave não encontrada');
+
+  const chave = JSON.parse(JSON.stringify(chaves[chaveIndex])) as Chave;
+  const luta = chave.lutas.find(l => l.id === data.lutaId);
+  if (!luta) throw new Error('Luta não encontrada');
+
+  const oldWinnerId = luta.vencedorId;
+  if (oldWinnerId && oldWinnerId !== data.vencedorId) {
+    clearWinnerFromLaterRounds(chave, luta.rodada, oldWinnerId);
+  }
+
+  luta.vencedorId = data.vencedorId;
+  luta.status = data.status === 'wo' ? 'wo' : 'completed';
+
+  advanceWinnerInChave(chave, luta);
+
+  chaves[chaveIndex] = chave;
+  torneio.chaves = chaves;
+  torneio.updatedAt = new Date().toISOString();
+  saveTorneio(torneio);
+
+  return chave;
+}
+
 export function registerBracketHandlers(): void {
   ipcMain.handle('gerar-todas-chaves', (): GerarTodasResult => {
     const torneioId = getActiveTournamentId();
@@ -458,13 +588,13 @@ export function registerBracketHandlers(): void {
   ipcMain.handle('load-chaves', (): Chave[] => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error('Nenhum torneio ativo');
-    return loadTorneio(torneioId).chaves ?? [];
+    return (loadTorneio(torneioId).chaves ?? []).map(c => normalizeChave(c as unknown as Record<string, unknown>));
   });
 
   ipcMain.handle('load-chave-por-categoria', (_event, categoriaId: string): Chave | null => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error('Nenhum torneio ativo');
-    const chaves = loadTorneio(torneioId).chaves ?? [];
+    const chaves = (loadTorneio(torneioId).chaves ?? []).map(c => normalizeChave(c as unknown as Record<string, unknown>));
     return chaves.find(c => c.categoriaId === categoriaId) ?? null;
   });
 
@@ -492,5 +622,17 @@ export function registerBracketHandlers(): void {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error('Nenhum torneio ativo');
     return exportChavesToFile(torneioId);
+  });
+
+  ipcMain.handle('load-chaves-por-area', (_event, areaId: string): Chave[] => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error('Nenhum torneio ativo');
+    return loadChavesPorAreaHandler(torneioId, areaId);
+  });
+
+  ipcMain.handle('registrar-resultado', (_event, data: { chaveId: string; lutaId: string; vencedorId: string; status: string }): Chave => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error('Nenhum torneio ativo');
+    return registrarResultadoHandler(torneioId, data);
   });
 }

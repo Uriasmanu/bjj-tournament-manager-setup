@@ -1,5 +1,5 @@
 import { Container, Paper, Title, Text, Card, Center, Stack, Group, Badge, Loader, Grid } from '@mantine/core';
-import { IconUsers, IconBuildingSkyscraper, IconCategory, IconClipboardText, IconScale, IconBrackets, IconMapPin, IconUserShield, IconScoreboard, IconTrophy, IconFileReport } from '@tabler/icons-react';
+import { IconUsers, IconBuildingSkyscraper, IconBrackets, IconMapPin, IconUserShield, IconScoreboard, IconTrophy } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
@@ -20,6 +20,7 @@ const dashboardCards: DashboardCard[] = [
   { label: 'Geração de Chaves', description: 'Criação de chaves por categoria', icon: IconBrackets, route: '/admin/categorias/chaves', status: 'implemented' },
   { label: 'Áreas de Luta', description: 'Gerenciamento de áreas de competição', icon: IconMapPin, route: '/admin/areas', status: 'implemented' },
   { label: 'Árbitros', description: 'Cadastro e escala de árbitros', icon: IconUserShield, route: '/admin/arbitros', status: 'implemented' },
+  { label: 'Placar', description: 'Acompanhamento de lutas e resultados', icon: IconScoreboard, route: '/admin/placar', status: 'implemented' },
   { label: 'Resultados', description: 'Classificação e medalhistas', icon: IconTrophy, status: 'planned' },
 ];
 
