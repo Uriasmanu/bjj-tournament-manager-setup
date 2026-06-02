@@ -234,6 +234,18 @@ function gerarTodasChavesHandler(torneioId: string): GerarTodasResult {
 
   torneio.chaves = novasChaves;
   autoAtribuirArbitros(torneio);
+
+  // Mark emChave on all athletes
+  const atletasEmChaves = new Set<string>();
+  for (const chave of novasChaves) {
+    for (const id of chave.posicoesAtletas) {
+      atletasEmChaves.add(id);
+    }
+  }
+  for (const a of (torneio.atletas ?? [])) {
+    a.emChave = atletasEmChaves.has(a.id);
+  }
+
   torneio.updatedAt = new Date().toISOString();
   saveTorneio(torneio);
 
@@ -292,6 +304,14 @@ function randomizarChaveHandler(torneioId: string, data: { chaveId: string }): C
 
   chaves[index] = chave;
   torneio.chaves = chaves;
+
+  // Mark emChave on athletes in this chave
+  for (const a of (torneio.atletas ?? [])) {
+    if (chave.posicoesAtletas.includes(a.id)) {
+      a.emChave = true;
+    }
+  }
+
   torneio.updatedAt = new Date().toISOString();
   saveTorneio(torneio);
 
@@ -361,6 +381,18 @@ function importChavesFromFile(torneioId: string, filePath: string): { imported: 
     } as Chave;
   });
   torneio.chaves = chaves;
+
+  // Mark emChave on athletes
+  const atletasEmChaves = new Set<string>();
+  for (const chave of chaves) {
+    for (const id of chave.posicoesAtletas) {
+      atletasEmChaves.add(id);
+    }
+  }
+  for (const a of (torneio.atletas ?? [])) {
+    a.emChave = atletasEmChaves.has(a.id);
+  }
+
   torneio.updatedAt = new Date().toISOString();
   saveTorneio(torneio);
 
@@ -406,6 +438,14 @@ export function registerBracketHandlers(): void {
 
     const chave = gerarChave(data.categoriaId, atletas);
     torneio.chaves = [...chaves, chave];
+
+    // Mark emChave on athletes in this chave
+    for (const a of (torneio.atletas ?? [])) {
+      if (chave.posicoesAtletas.includes(a.id)) {
+        a.emChave = true;
+      }
+    }
+
     torneio.updatedAt = new Date().toISOString();
     saveTorneio(torneio);
     return chave;

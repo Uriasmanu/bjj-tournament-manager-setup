@@ -18,6 +18,7 @@ export interface Atleta {
   pesoKg: number;
   faixa: Faixa;
   anoNascimento: number;
+  emChave?: boolean;
   createdAt: string;
   updatedAt: string;
 }

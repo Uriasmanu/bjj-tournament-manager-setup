@@ -754,6 +754,15 @@ function gerarTodasChavesHandler(torneioId) {
   }
   torneio.chaves = novasChaves;
   autoAtribuirArbitros(torneio);
+  const atletasEmChaves = /* @__PURE__ */ new Set();
+  for (const chave of novasChaves) {
+    for (const id of chave.posicoesAtletas) {
+      atletasEmChaves.add(id);
+    }
+  }
+  for (const a of torneio.atletas ?? []) {
+    a.emChave = atletasEmChaves.has(a.id);
+  }
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   saveTorneio(torneio);
   return { chaves: novasChaves, metadados, atletasSemChave };
@@ -800,6 +809,11 @@ function randomizarChaveHandler(torneioId, data) {
   chave.lutas = gerarLutas(atletas);
   chaves[index] = chave;
   torneio.chaves = chaves;
+  for (const a of torneio.atletas ?? []) {
+    if (chave.posicoesAtletas.includes(a.id)) {
+      a.emChave = true;
+    }
+  }
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   saveTorneio(torneio);
   return chave;
@@ -855,6 +869,15 @@ function importChavesFromFile(torneioId, filePath) {
     };
   });
   torneio.chaves = chaves;
+  const atletasEmChaves = /* @__PURE__ */ new Set();
+  for (const chave of chaves) {
+    for (const id of chave.posicoesAtletas) {
+      atletasEmChaves.add(id);
+    }
+  }
+  for (const a of torneio.atletas ?? []) {
+    a.emChave = atletasEmChaves.has(a.id);
+  }
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   saveTorneio(torneio);
   return { imported: incoming.length };
@@ -891,6 +914,11 @@ function registerBracketHandlers() {
     }
     const chave = gerarChave(data.categoriaId, atletas);
     torneio.chaves = [...chaves, chave];
+    for (const a of torneio.atletas ?? []) {
+      if (chave.posicoesAtletas.includes(a.id)) {
+        a.emChave = true;
+      }
+    }
     torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
     saveTorneio(torneio);
     return chave;

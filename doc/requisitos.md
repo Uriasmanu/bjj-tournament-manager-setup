@@ -39,7 +39,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Cadastro de Categorias | ⏳ Parcial | Categorias IBJJF implementadas como tipo (`src/types/category.ts`) e campo obrigatório no formulário de atleta. Gerenciamento dedicado de categorias (CRUD) ainda pendente. |
 | Controle de Inscrições | ❌ Pendente |
 | Controle de Pesagem | ❌ Pendente |
-| Geração de Chaves | ❌ Pendente | Máximo de 5 atletas por chave, chave editável manualmente |
+| Geração de Chaves | ✅ Completo | Máximo de 5 atletas por chave, chave editável manualmente, shuffle com separação de equipes, import/export JSON. Atletas sem oponente exibidos em cartões com opções de remanejamento (subir/descer peso) e indicador de "luta casada". |
 | Áreas de Luta | ❌ Pendente |
 | Chamadas / Placar / Resultados | ❌ Pendente |
 | Ranking / Medalhistas | ❌ Pendente |
@@ -187,10 +187,10 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - Ano de nascimento `0`: rejeitado por truthy check (`!a.anoNascimento` com `0` é falsy).
   - Nomes com espaços extras internos não são normalizados (ex.: `"joão  silva"` vs `"joão silva"` não são considerados duplicatas).
 
-### 3.11. Geração de Chaves (Planejado)
+### 3.11. Geração de Chaves (Implementado)
 
-- **Máximo de 5 atletas por chave:** Cada chave suporta no máximo 5 atletas. Categorias com mais de 5 atletas não podem gerar chave — o administrador deve ajustar a categoria.
-- **Mínimo de 2 atletas:** Categorias com 1 atleta têm campeão declarado automaticamente; com 0 atletas, nenhuma chave é gerada.
+- **Máximo de 5 atletas por chave:** Cada chave suporta no máximo 5 atletas. Categorias com mais de 5 atletas são divididas em subgrupos de até 5.
+- **Mínimo de 2 atletas:** Categorias com 1 atleta não geram chave — o atleta é listado como "sem chave". Com 0 atletas, nenhuma chave é gerada.
 - **Formato eliminatório simples:** Sem repescagem, sem disputa de 3º lugar.
 - **Estrutura por quantidade de atletas:**
   - 2 atletas: 1 luta (Final direta)
@@ -203,7 +203,20 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Seed sorting (geração inicial):** Ao gerar a chave, atletas são posicionados por peso (decrescente), idade (decrescente) e ordem alfabética, com bloqueio de equipe (mesma equipe em lados opostos).
 - **Embaralhamento (shuffle):** O botão "Embaralhar" randomiza a ordem dos atletas na chave e mantém a separação de equipes em lados opostos (sem reordenar por peso/idade). Pode ser acionado a qualquer momento enquanto a chave estiver no status `gerada`.
 - **Regeneração:** Permitida apenas se nenhuma luta foi iniciada.
-- **Especificação detalhada:** Ver `spec/geracao-chaves.md` e `spec/shuffle-chave.md`.
+- **Propriedade `emChave`:** Todo atleta possui a propriedade booleana opcional `emChave` indicando se está alocado em alguma chave. É marcada automaticamente ao gerar, randomizar ou importar chaves, e computada dinamicamente no frontend ao carregar os dados.
+- **Atletas Sem Chave:** Atletas sozinhos na categoria (único atleta) são exibidos em seção destacada com cartões individuais contendo:
+  - Nome, equipe e categoria do atleta
+  - Badge "Sem chave"
+  - Botão **"Descer"** — move o atleta para a categoria de peso imediatamente inferior (se disponível)
+  - Botão **"Subir"** — move o atleta para a categoria de peso imediatamente superior (se disponível)
+  - Botão **"W.O."** — placeholder para declarar campeão por W.O.
+- **Indicador de "luta casada":** Os botões de subir/descer peso exibem:
+  - Contagem de atletas na categoria de destino (ex: `↑ 3` ou `↓ 2`)
+  - Botão destacado em amarelo quando a categoria destino possui oponentes
+  - Botão cinza claro quando a categoria destino está vazia
+  - Tooltip com nome da categoria destino e quantidade de atletas
+- **Ordem de pesos IBJJF:** `galo → pluma → pena → leve → medio → meio-pesado → pesado → super-pesado → pesadissimo`
+- **Especificação detalhada:** Ver `spec/geracao-chaves.md`, `spec/shuffle-chave.md` e `spec/emchave-atleta.md`.
 
 ### 3.12. Importação de Chaves
 
@@ -479,6 +492,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
       "pesoKg": 76.5,
       "faixa": "azul",
       "anoNascimento": 1998,
+      "emChave": true,
       "createdAt": "2026-05-31T10:00:00.000Z",
       "updatedAt": "2026-05-31T10:00:00.000Z"
     }
@@ -498,6 +512,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
     "pesoKg": 76.5,
     "faixa": "azul",
     "anoNascimento": 1998,
+    "emChave": true,
     "createdAt": "2026-05-31T10:00:00.000Z",
     "updatedAt": "2026-05-31T10:00:00.000Z"
   }
@@ -528,12 +543,14 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `check-activation` | Renderer → Main → Renderer | Verifica se o software está ativado |
 | `validate-password` | Renderer → Main → Renderer | Valida senha de ativação (hash SHA-256) |
 | `activate-license` | Renderer → Main → Renderer | Gera e salva token HMAC de ativação |
-| `gerar-chave` | Renderer → Main → Renderer | Gera chave para uma categoria (mín. 2, máx. 5 atletas) |
+| `gerar-todas-chaves` | Renderer → Main → Renderer | Gera todas as chaves do torneio, distribui árbitros automaticamente, marca `emChave` nos atletas |
+| `gerar-chave` | Renderer → Main → Renderer | Gera chave para uma categoria (mín. 2, máx. 5 atletas) + marca `emChave` |
 | `load-chaves` | Renderer → Main → Renderer | Carrega todas as chaves do torneio ativo |
 | `load-chave-por-categoria` | Renderer → Main → Renderer | Carrega chave de uma categoria específica |
-| `regenerar-chave` | Renderer → Main → Renderer | Regenera chave de uma categoria |
-| `atualizar-luta` | Renderer → Main → Renderer | Atualiza resultado de uma luta |
-| `editar-chave` | Renderer → Main → Renderer | Salva edição manual de posições da chave |
+| `randomizar-chave` | Renderer → Main → Renderer | Randomiza ordem dos atletas na chave com separação de equipes, mantém `emChave` |
+| `atribuir-arbitro-chave` | Renderer → Main → Renderer | Atribui ou remove árbitro de uma chave |
+| `import-chaves` | Renderer → Main → Renderer | Abre diálogo nativo, importa chaves de arquivo JSON, marca `emChave` |
+| `export-chaves` | Renderer → Main | Exporta chaves para arquivo JSON via diálogo "Salvar como" |
 | `save-arbitro` | Renderer → Main | Adiciona novo árbitro ao torneio ativo |
 | `update-arbitro` | Renderer → Main | Atualiza árbitro existente (match por `id`) |
 | `delete-arbitro` | Renderer → Main | Remove árbitro do torneio ativo pelo `id` |
@@ -827,6 +844,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `spec-correção.md` | Análise da correção do formulário (modo controlled + dependência form removida) |
 | `spec/geracao-chaves.md` | Especificação da geração de chaves de luta (máx. 5 atletas, chave editável) |
 | `spec/cadastro-arbitro.md` | Especificação detalhada do CRUD de árbitros |
+| `spec/emchave-atleta.md` | Especificação da propriedade `emChave` e melhoria da visualização de atletas sem chave |
 | `doc/import-audit.md` | Auditoria de importação: regras de geração automática de ID e timestamps |
 
 ---
@@ -889,6 +907,8 @@ bjj-tournament-manager-setup/
 │   ├── validacao-credential.md ← Spec da ativação do software
 │   ├── ANALISE-CATEGORIA-ATLETA.md ← Análise da obrigatoriedade de categoria/gênero
 │   ├── geracao-chaves.md    ← Spec da geração de chaves de luta (máx. 5 atletas, chave editável)
+│   ├── shuffle-chave.md    ← Spec da correção do embaralhamento de chaves
+│   ├── emchave-atleta.md   ← Spec da propriedade emChave e visualização de atletas sem chave
 │   └── cadastro-arbitro.md  ← Spec detalhado do CRUD de árbitros
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)

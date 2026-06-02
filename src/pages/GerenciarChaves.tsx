@@ -1,6 +1,7 @@
-import { Container, Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select } from '@mantine/core';
+import { Container, Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
+import { IconArrowUp, IconArrowDown, IconAward } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
@@ -12,6 +13,8 @@ const FAIXA_ORDER: Record<string, number> = {
   'branca': 0, 'cinza': 1, 'amarela': 2, 'laranja': 3,
   'verde': 4, 'azul': 5, 'roxa': 6, 'marrom': 7, 'preta': 8,
 };
+
+const PESO_ORDER = ['galo', 'pluma', 'pena', 'leve', 'medio', 'meio-pesado', 'pesado', 'super-pesado', 'pesadissimo'];
 
 const FAIXA_LABEL: Record<string, string> = {
   'branca': 'Branca', 'cinza': 'Cinza', 'amarela': 'Amarela', 'laranja': 'Laranja',
@@ -30,6 +33,26 @@ function extrairPeso(categoriaId: string): string {
   if (genIndex < 0) return categoriaId;
   const pesoKey = parts.slice(genIndex + 1).join('-');
   return PESO_LABEL[pesoKey] || pesoKey;
+}
+
+function getNextCategoriaUp(categoriaId: string): string | null {
+  const parts = categoriaId.split('-');
+  const pesoKey = parts[parts.length - 1];
+  const idx = PESO_ORDER.indexOf(pesoKey);
+  if (idx < 0 || idx >= PESO_ORDER.length - 1) return null;
+  parts[parts.length - 1] = PESO_ORDER[idx + 1];
+  const novaId = parts.join('-');
+  return categoriaLabels[novaId] ? novaId : null;
+}
+
+function getPreviousCategoriaDown(categoriaId: string): string | null {
+  const parts = categoriaId.split('-');
+  const pesoKey = parts[parts.length - 1];
+  const idx = PESO_ORDER.indexOf(pesoKey);
+  if (idx <= 0) return null;
+  parts[parts.length - 1] = PESO_ORDER[idx - 1];
+  const novaId = parts.join('-');
+  return categoriaLabels[novaId] ? novaId : null;
 }
 
 function getChaveTitle(chave: Chave, athletes: Atleta[]): string {
@@ -118,6 +141,14 @@ export function GerenciarChaves() {
     });
   }, [chaves, athletes]);
 
+  const catCount = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const at of athletes) {
+      counts.set(at.categoria, (counts.get(at.categoria) ?? 0) + 1);
+    }
+    return counts;
+  }, [athletes]);
+
   useEffect(() => {
     Promise.all([
       window.electronAPI.loadAthletes(),
@@ -133,13 +164,17 @@ export function GerenciarChaves() {
       setArbitros(arbitrosList);
       setChavesGeradas(chavesList.length > 0);
 
-      // Compute solo athletes: athletes not in any chave whose categoria has only 1 athlete
+      // Mark emChave and compute solo athletes
       const atletasEmChaves = new Set<string>();
       for (const chave of chavesList) {
         for (const id of chave.posicoesAtletas) {
           atletasEmChaves.add(id);
         }
       }
+      for (const at of athletesList) {
+        at.emChave = atletasEmChaves.has(at.id);
+      }
+
       const catCount = new Map<string, number>();
       for (const at of athletesList) {
         catCount.set(at.categoria, (catCount.get(at.categoria) ?? 0) + 1);
@@ -239,6 +274,46 @@ export function GerenciarChaves() {
   const handleViewChave = (chave: Chave) => {
     setViewChave(chave);
     setViewModalOpen(true);
+  };
+
+  const handleMoverCategoriaSuperior = async (atleta: Atleta) => {
+    const novaCategoria = getNextCategoriaUp(atleta.categoria);
+    if (!novaCategoria) {
+      notifications.show({ color: 'orange', title: 'Indisponível', message: `${atleta.nome} já está na categoria mais pesada disponível.` });
+      return;
+    }
+    try {
+      const updated = { ...atleta, categoria: novaCategoria, updatedAt: new Date().toISOString() };
+      await window.electronAPI.updateAthlete(updated);
+      notifications.show({ color: 'green', title: 'Categoria alterada', message: `${atleta.nome} movido para ${categoriaLabels[novaCategoria] || novaCategoria}.` });
+      triggerRefresh();
+    } catch (err: unknown) {
+      notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao alterar categoria' });
+    }
+  };
+
+  const handleMoverCategoriaInferior = async (atleta: Atleta) => {
+    const novaCategoria = getPreviousCategoriaDown(atleta.categoria);
+    if (!novaCategoria) {
+      notifications.show({ color: 'orange', title: 'Indisponível', message: `${atleta.nome} já está na categoria mais leve disponível.` });
+      return;
+    }
+    try {
+      const updated = { ...atleta, categoria: novaCategoria, updatedAt: new Date().toISOString() };
+      await window.electronAPI.updateAthlete(updated);
+      notifications.show({ color: 'green', title: 'Categoria alterada', message: `${atleta.nome} movido para ${categoriaLabels[novaCategoria] || novaCategoria}.` });
+      triggerRefresh();
+    } catch (err: unknown) {
+      notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao alterar categoria' });
+    }
+  };
+
+  const handleDeclararWO = async (atleta: Atleta) => {
+    notifications.show({
+      color: 'blue',
+      title: 'W.O. declarado',
+      message: `${atleta.nome} declarado campeão por W.O. na categoria ${categoriaLabels[atleta.categoria] || atleta.categoria}.`,
+    });
   };
 
   const handleImportarChaves = async () => {
@@ -357,16 +432,95 @@ export function GerenciarChaves() {
             {atletasSemChave.length > 0 && (
               <Paper withBorder shadow="sm" p="md" radius="md" bg="orange.0">
                 <Title order={4} mb="md" c="orange.8">Atletas Sem Chave ({atletasSemChave.length})</Title>
-                <Text size="sm" c="dimmed" mb="sm">
-                  Estes atletas não puderam ser colocados em uma chave por serem os únicos em sua categoria.
+                <Text size="sm" c="dimmed" mb="md">
+                  Estes atletas são os únicos em sua categoria e não puderam ser alocados em uma chave.
+                  Selecione uma ação para cada atleta:
                 </Text>
-                {atletasSemChave.map(at => (
-                  <Text key={at.id} size="sm">
-                    {at.nome.charAt(0).toUpperCase() + at.nome.slice(1)}
-                    {at.equipe ? ` (${at.equipe.charAt(0).toUpperCase() + at.equipe.slice(1)})` : ''}
-                    {' — '}{categoriaLabels[at.categoria] || at.categoria}
-                  </Text>
-                ))}
+                <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="sm">
+                  {atletasSemChave.map(at => {
+                    const nextCat = getNextCategoriaUp(at.categoria);
+                    const prevCat = getPreviousCategoriaDown(at.categoria);
+                    const nextCount = nextCat ? catCount.get(nextCat) ?? 0 : 0;
+                    const prevCount = prevCat ? catCount.get(prevCat) ?? 0 : 0;
+                    return (
+                      <Card key={at.id} withBorder shadow="sm" padding="md" radius="md" bg="white">
+                        <Stack gap="xs">
+                          <Group justify="space-between" wrap="nowrap">
+                            <Text fw={700} size="sm" style={{ textTransform: 'capitalize' }}>{at.nome}</Text>
+                            <Badge size="sm" color="orange" variant="light">Sem chave</Badge>
+                          </Group>
+                          {at.equipe && (
+                            <Text size="xs" c="dimmed" style={{ textTransform: 'capitalize' }}>{at.equipe}</Text>
+                          )}
+                          <Text size="xs" c="dimmed">
+                            {categoriaLabels[at.categoria] || at.categoria}
+                          </Text>
+                          <Group gap="xs" mt="xs">
+                            {prevCat ? (
+                              <Tooltip label={`${categoriaLabels[prevCat] || prevCat} (${prevCount} atleta${prevCount !== 1 ? 's' : ''})`}>
+                                <Button
+                                  size="compact-xs"
+                                  variant={prevCount > 0 ? "filled" : "light"}
+                                  color={prevCount > 0 ? "yellow" : "gray"}
+                                  leftSection={<IconArrowDown size={14} />}
+                                  onClick={() => handleMoverCategoriaInferior(at)}
+                                >
+                                  {prevCount > 0 ? `↓ ${prevCount}` : 'Descer'}
+                                </Button>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip label="Já está na categoria mais leve">
+                                <Button
+                                  size="compact-xs"
+                                  variant="light"
+                                  color="gray"
+                                  leftSection={<IconArrowDown size={14} />}
+                                  disabled
+                                >
+                                  Descer
+                                </Button>
+                              </Tooltip>
+                            )}
+                            {nextCat ? (
+                              <Tooltip label={`${categoriaLabels[nextCat] || nextCat} (${nextCount} atleta${nextCount !== 1 ? 's' : ''})`}>
+                                <Button
+                                  size="compact-xs"
+                                  variant={nextCount > 0 ? "filled" : "light"}
+                                  color={nextCount > 0 ? "yellow" : "gray"}
+                                  leftSection={<IconArrowUp size={14} />}
+                                  onClick={() => handleMoverCategoriaSuperior(at)}
+                                >
+                                  {nextCount > 0 ? `↑ ${nextCount}` : 'Subir'}
+                                </Button>
+                              </Tooltip>
+                            ) : (
+                              <Tooltip label="Já está na categoria mais pesada">
+                                <Button
+                                  size="compact-xs"
+                                  variant="light"
+                                  color="gray"
+                                  leftSection={<IconArrowUp size={14} />}
+                                  disabled
+                                >
+                                  Subir
+                                </Button>
+                              </Tooltip>
+                            )}
+                            <Button
+                              size="compact-xs"
+                              variant="light"
+                              color="green"
+                              leftSection={<IconAward size={14} />}
+                              onClick={() => handleDeclararWO(at)}
+                            >
+                              W.O.
+                            </Button>
+                          </Group>
+                        </Stack>
+                      </Card>
+                    );
+                  })}
+                </SimpleGrid>
               </Paper>
             )}
           </>
