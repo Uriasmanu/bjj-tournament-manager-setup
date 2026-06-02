@@ -1,11 +1,8 @@
-## Feature
-Adicione no dashbord o placar, ao entrar ele vai perguntar qual a are a de luta, ao selecionar ele va mostra as listas de chaves e o arbitro.
-ao clicar na chave ele vai mostrar o layout de chave de luta e mostrar as lutas que podem ser iniciadas (não pode iniar lutas atleta x bye)
-ao clicar em inicar ele vai para a tela de placar, que por enquanto é apenas um texto placar no meio da tela
-implemente o bucar, para encontrar a chave
+## Feature v1
+
 
 ## Problema
-O BracketTree.tsx deve ter o formato fixo de exibir a cahve em formato de piramide deitada (3, 2, 1)
+
 
 # Guia de Spec para Implementação de Features
 

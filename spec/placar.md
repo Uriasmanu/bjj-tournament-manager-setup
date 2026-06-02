@@ -311,4 +311,4 @@ Passo 12: Registrar rotas e atualizar Dashboard
 | 02/06/2026 | 1.5 | Adicionado `getRoundLabel` no lugar do `roundLabels` fixo para melhor legibilidade e segurança |
 | 02/06/2026 | 1.6 | Botão "Iniciar" removido dos `BracketCard` e movido para lista de lutas abaixo do bracket (`PlacarBracket`) |
 | 02/06/2026 | 1.7 | Conector do bracket refeito: substituído `BracketConnector` por `ConnectorRight`/`ConnectorTop`/`ConnectorBottom` aplicados por card, usando divs com posicionamento absoluto (mesma técnica do exemplo HTML de referência) |
-| 02/06/2026 | 1.8 | Bracket agora exibe formato fixo de pirâmide deitada (3, 2, 1) em todas as rodadas. Lógica de padding/truncamento generalizada para todas as colunas (não apenas Rodada 1). Ver `spec/bracket-formato-fixo.md`. |
+| 02/06/2026 | 1.8 | Bracket agora exibe formato fixo de pirâmide deitada (3, 2, 1) em todas as rodadas. Lógica de padding/truncamento generalizada para todas as colunas (não apenas Rodada 1) + limitação de colunas a no máximo 3 via `slice(-3)`. Ver `spec/bracket-formato-fixo.md`. |

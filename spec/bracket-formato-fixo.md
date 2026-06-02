@@ -43,9 +43,10 @@ A correção é isolada ao componente `BracketTree.tsx` (camada de apresentaçã
 
 1. `PlacarBracket` carrega `Chave` com `lutas[]`
 2. `BracketTree` recebe `chave` via props
-3. `groupByRound()` agrupa lutas por rodada → `rounds[][]`
-4. `BracketTree` renderiza cada round como uma coluna flex
-5. **CORREÇÃO:** Cada coluna deve ter um número fixo de cards (3, 2, 1), preenchendo com placeholders ou truncando conforme necessário
+3. `groupByRound()` agrupa lutas por rodada → `allRounds[][]`
+4. Se `allRounds` tiver mais de 3 colunas, faz `slice(-3)` → `rounds[][]` (apenas as 3 últimas rodadas)
+5. `rounds.map()` renderiza cada round como uma coluna flex com número fixo de cards (3, 2, 1)
+6. Coluna "Campeão" lê o vencedor de `allRounds[allRounds.length - 1]` (rodada real final, não a truncada)
 
 ## 7. Arquivos Envolvidos
 
@@ -80,11 +81,17 @@ A correção é isolada ao componente `BracketTree.tsx` (camada de apresentaçã
 ## 10. Plano de Implementação (Passo a Passo)
 
 ```
-Passo 1: Generalizar lógica de padding/truncamento
-  - O que fazer: Substituir o bloco `if (roundNum === 1)` por uma lógica genérica que aplica
-    a todos os rounds usando o array fixo `[3, 2, 1]` indexado por `roundIndex`.
+Passo 1: Limitar colunas a no máximo 3 (slice das últimas 3)
+  - O que fazer: Renomear `rounds` para `allRounds` e criar `rounds = allRounds.length > 3 ? allRounds.slice(-3) : allRounds`.
+    A coluna Campeão usa `allRounds[allRounds.length - 1]` para ler o vencedor real.
   - Arquivo(s): src/components/BracketTree.tsx
-  - Como validar: BracketTree sempre exibe 3-2-1 cards independentemente dos dados de entrada
+  - Como validar: Brackets com 4+ rodadas exibem no máximo 3 colunas de luta
+
+Passo 2: Generalizar lógica de padding/truncamento para todas as colunas
+  - O que fazer: Substituir o bloco `if (roundNum === 1)` por uma lógica genérica usando
+    `expectedCounts[roundIndex]` com fallback, aplicando a todas as rodadas.
+  - Arquivo(s): src/components/BracketTree.tsx
+  - Como validar: Cada coluna exibe exatamente 3, 2, 1 cards respectivamente
 ```
 
 ## 11. Rollout e Observabilidade
