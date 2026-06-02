@@ -1,9 +1,9 @@
-import { Container, Paper, Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal, Checkbox } from '@mantine/core';
+import { Container, Paper, Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal, Checkbox, TextInput } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlayerPlay, IconDownload, IconTrash } from '@tabler/icons-react';
+import { IconPlayerPlay, IconDownload, IconTrash, IconSearch } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import dayjs from 'dayjs';
 import type { Torneio } from '../types/tournament';
 import { PageLayout } from '../components/PageLayout';
@@ -17,6 +17,7 @@ export function ListarTorneios() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [opened, { open, close }] = useDisclosure(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadTorneios = async () => {
     setLoading(true);
@@ -116,11 +117,20 @@ export function ListarTorneios() {
     }
   };
 
+  const filteredTorneios = useMemo(() => {
+    if (!searchQuery.trim()) return torneios;
+    const q = searchQuery.toLowerCase().trim();
+    return torneios.filter(t =>
+      (t.nome && t.nome.toLowerCase().includes(q)) ||
+      t.data.toLowerCase().includes(q)
+    );
+  }, [torneios, searchQuery]);
+
   const formatDate = (isoDate: string) => {
     return dayjs(isoDate).format('DD/MM/YYYY');
   };
 
-  const allSelected = torneios.length > 0 && selectedIds.length === torneios.length;
+  const allSelected = filteredTorneios.length > 0 && selectedIds.length === filteredTorneios.length;
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev =>
@@ -132,7 +142,7 @@ export function ListarTorneios() {
     if (allSelected) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(torneios.map(t => t.id));
+      setSelectedIds(filteredTorneios.map(t => t.id));
     }
   };
 
@@ -161,13 +171,22 @@ export function ListarTorneios() {
 
   return (
     <PageLayout title="Torneios Cadastrados" backRoute="/">
-      {selectedIds.length > 0 && (
-        <Group mb="md">
-          <Button color="red" leftSection={<IconTrash size={16} />} onClick={() => setBulkDeleteOpen(true)}>
-            Excluir Selecionados ({selectedIds.length})
-          </Button>
+      <Group mb="md" justify="space-between">
+        <Group>
+          {selectedIds.length > 0 && (
+            <Button color="red" leftSection={<IconTrash size={16} />} onClick={() => setBulkDeleteOpen(true)}>
+              Excluir Selecionados ({selectedIds.length})
+            </Button>
+          )}
         </Group>
-      )}
+        <TextInput
+          placeholder="Buscar torneio..."
+          leftSection={<IconSearch size={16} />}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.currentTarget.value)}
+          w={250}
+        />
+      </Group>
 
       {torneios.length === 0 ? (
         <Stack align="center" gap="md" py="xl">
@@ -175,6 +194,10 @@ export function ListarTorneios() {
           <Button onClick={() => navigate('/admin/criar-torneio')}>
             Criar primeiro torneio
           </Button>
+        </Stack>
+      ) : filteredTorneios.length === 0 ? (
+        <Stack align="center" gap="md" py="xl">
+          <Text c="dimmed">Nenhum torneio encontrado para a busca "{searchQuery}"</Text>
         </Stack>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -195,7 +218,7 @@ export function ListarTorneios() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {torneios.map((t) => (
+              {filteredTorneios.map((t) => (
                 <Table.Tr key={t.id}>
                   <Table.Td>
                     <Checkbox
