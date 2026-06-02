@@ -1,8 +1,8 @@
-import { Container, Paper, Text, Button, Stack, Group, Loader, Center, Modal, Badge, Table, ActionIcon, Checkbox } from '@mantine/core';
+import { Container, Paper, Text, Button, Stack, Group, Loader, Center, Modal, Badge, Table, ActionIcon, Checkbox, TextInput } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconFileUpload, IconDownload, IconPencil, IconTrash } from '@tabler/icons-react';
+import { IconPlus, IconFileUpload, IconDownload, IconPencil, IconTrash, IconSearch } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import type { Arbitro } from '../types/referee';
 import type { Faixa } from '../types/athlete';
 import { ArbitroForm } from '../components/ArbitroForm';
@@ -25,6 +25,7 @@ export function AdminArbitros() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selectedArbitro, setSelectedArbitro] = useState<Arbitro | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Arbitro | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -44,6 +45,16 @@ export function AdminArbitros() {
       setLoading(false);
     }
   };
+
+  const filteredArbitros = useMemo(() => {
+    if (!searchQuery.trim()) return arbitros;
+    const q = searchQuery.toLowerCase().trim();
+    return arbitros.filter(a =>
+      a.nome.toLowerCase().includes(q) ||
+      (a.equipe && a.equipe.toLowerCase().includes(q)) ||
+      a.faixa.toLowerCase().includes(q)
+    );
+  }, [arbitros, searchQuery]);
 
   useEffect(() => {
     loadArbitros();
@@ -200,11 +211,20 @@ export function AdminArbitros() {
             Cadastrar
           </Button>
         </Group>
-        {selectedIds.length > 0 && (
-          <Button color="red" leftSection={<IconTrash size={16} />} onClick={() => setBulkDeleteOpen(true)}>
-            Excluir Selecionados ({selectedIds.length})
-          </Button>
-        )}
+        <Group>
+          <TextInput
+            placeholder="Buscar árbitro..."
+            leftSection={<IconSearch size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            w={250}
+          />
+          {selectedIds.length > 0 && (
+            <Button color="red" leftSection={<IconTrash size={16} />} onClick={() => setBulkDeleteOpen(true)}>
+              Excluir Selecionados ({selectedIds.length})
+            </Button>
+          )}
+        </Group>
       </Group>
 
       {arbitros.length === 0 ? (
@@ -216,6 +236,10 @@ export function AdminArbitros() {
           >
             Cadastrar primeiro árbitro
           </Button>
+        </Stack>
+      ) : filteredArbitros.length === 0 ? (
+        <Stack align="center" gap="md" py="xl">
+          <Text c="dimmed">Nenhum árbitro encontrado para a busca "{searchQuery}"</Text>
         </Stack>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -238,7 +262,7 @@ export function AdminArbitros() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {arbitros.map((a) => (
+              {filteredArbitros.map((a) => (
                 <Table.Tr key={a.id}>
                   <Table.Td>
                     <Checkbox

@@ -135,6 +135,10 @@ function autoAtribuirArbitros(torneio: Torneio): void {
   const arbitros = torneio.arbitros ?? [];
   if (chaves.length === 0 || arbitros.length === 0) return;
 
+  for (const r of arbitros) {
+    r.chaveIds = [];
+  }
+
   const chaveMaxLevel = chaves.map(chave => {
     const atletas = chave.posicoesAtletas
       .map(id => (torneio.atletas ?? []).find(a => a.id === id))

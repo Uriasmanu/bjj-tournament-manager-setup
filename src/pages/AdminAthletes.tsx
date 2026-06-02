@@ -1,6 +1,6 @@
-import { Container, Paper, Title, Text, Button, Stack, Group, Loader, Center, Modal, Badge } from '@mantine/core';
+import { Container, Paper, Text, Button, Stack, Group, Loader, Center, Modal, Badge, TextInput } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconFileUpload, IconDownload, IconTrash } from '@tabler/icons-react';
+import { IconPlus, IconFileUpload, IconDownload, IconTrash, IconSearch } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState, useMemo } from 'react';
 import type { Atleta, Faixa } from '../types/athlete';
@@ -28,6 +28,7 @@ export function AdminAthletes() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState<Atleta | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<Atleta | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
@@ -47,6 +48,16 @@ export function AdminAthletes() {
       setLoading(false);
     }
   };
+
+  const filteredAthletes = useMemo(() => {
+    if (!searchQuery.trim()) return athletes;
+    const q = searchQuery.toLowerCase().trim();
+    return athletes.filter(a =>
+      a.nome.toLowerCase().includes(q) ||
+      (a.equipe && a.equipe.toLowerCase().includes(q)) ||
+      (categoriaLabels[a.categoria] || a.categoria).toLowerCase().includes(q)
+    );
+  }, [athletes, searchQuery]);
 
   useEffect(() => {
     loadAthletes();
@@ -202,11 +213,20 @@ export function AdminAthletes() {
             Cadastrar
           </Button>
         </Group>
-        {selectedIds.length > 0 && (
-          <Button color="red" leftSection={<IconTrash size={16} />} onClick={() => setBulkDeleteOpen(true)}>
-            Excluir Selecionados ({selectedIds.length})
-          </Button>
-        )}
+        <Group>
+          <TextInput
+            placeholder="Buscar atleta..."
+            leftSection={<IconSearch size={16} />}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.currentTarget.value)}
+            w={250}
+          />
+          {selectedIds.length > 0 && (
+            <Button color="red" leftSection={<IconTrash size={16} />} onClick={() => setBulkDeleteOpen(true)}>
+              Excluir Selecionados ({selectedIds.length})
+            </Button>
+          )}
+        </Group>
       </Group>
 
       {athletes.length > 0 && (
@@ -245,9 +265,13 @@ export function AdminAthletes() {
             Cadastrar primeiro atleta
           </Button>
         </Stack>
+      ) : filteredAthletes.length === 0 && searchQuery.trim() ? (
+        <Stack align="center" gap="md" py="xl">
+          <Text c="dimmed">Nenhum atleta encontrado para a busca "{searchQuery}"</Text>
+        </Stack>
       ) : (
         <AthleteTable
-          athletes={athletes}
+          athletes={filteredAthletes}
           onEdit={handleEdit}
           onDelete={handleDelete}
           selectedIds={selectedIds}

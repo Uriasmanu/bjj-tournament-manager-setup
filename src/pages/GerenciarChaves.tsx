@@ -1,7 +1,7 @@
-import { Container, Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip } from '@mantine/core';
+import { Container, Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowUp, IconArrowDown, IconAward } from '@tabler/icons-react';
+import { IconArrowUp, IconArrowDown, IconAward, IconSearch } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
@@ -125,6 +125,7 @@ export function GerenciarChaves() {
   const [chavesGeradas, setChavesGeradas] = useState(false);
   const [atletasSemChave, setAtletasSemChave] = useState<Atleta[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [viewChave, setViewChave] = useState<Chave | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -140,6 +141,14 @@ export function GerenciarChaves() {
       return titleA.localeCompare(titleB);
     });
   }, [chaves, athletes]);
+
+  const filteredChaves = useMemo(() => {
+    if (!searchQuery.trim()) return sortedChaves;
+    const q = searchQuery.toLowerCase().trim();
+    return sortedChaves.filter(chave =>
+      getChaveTitle(chave, athletes).toLowerCase().includes(q)
+    );
+  }, [sortedChaves, athletes, searchQuery]);
 
   const catCount = useMemo(() => {
     const counts = new Map<string, number>();
@@ -378,15 +387,25 @@ export function GerenciarChaves() {
                 <Button onClick={openConfirmGerar} variant="light">Gerar Novamente</Button>
               </Group>
               <Group>
+                <TextInput
+                  placeholder="Buscar chave..."
+                  leftSection={<IconSearch size={16} />}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.currentTarget.value)}
+                  w={250}
+                />
                 <Button onClick={handleImportarChaves} variant="light">Importar Chaves</Button>
                 <Button onClick={handleExportarChaves} variant="light">Exportar Chaves</Button>
               </Group>
             </Group>
 
             <Paper withBorder shadow="sm" p="md" radius="md">
-              <Title order={4} mb="md">Chaves Geradas ({chaves.length})</Title>
+              <Title order={4} mb="md">Chaves Geradas ({filteredChaves.length})</Title>
+              {filteredChaves.length === 0 ? (
+                <Text c="dimmed" ta="center" py="xl">Nenhuma chave encontrada para a busca "{searchQuery}"</Text>
+              ) : (
               <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
-                {sortedChaves.map(chave => {
+                {filteredChaves.map(chave => {
                   const chaveAtletas = chave.posicoesAtletas
                     .map(id => athletes.find(a => a.id === id))
                     .filter((a): a is Atleta => a !== undefined);
@@ -427,6 +446,7 @@ export function GerenciarChaves() {
                   );
                 })}
               </SimpleGrid>
+              )}
             </Paper>
 
             {atletasSemChave.length > 0 && (
