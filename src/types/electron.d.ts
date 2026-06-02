@@ -1,3 +1,4 @@
+import type { AreaLuta } from './area';
 import type { Torneio, CreateTorneioInput } from './tournament';
 import type { Atleta } from './athlete';
 import type { Arbitro } from './referee';
@@ -43,6 +44,11 @@ interface ElectronAPI {
   atribuirArbitroChave: (data: { chaveId: string; arbitroId: string | null }) => Promise<Chave>;
   importChaves: () => Promise<{ imported: number }>;
   exportChaves: () => Promise<void>;
+  loadAreas: () => Promise<AreaLuta[]>;
+  saveArea: (data: { nome: string; arbitroIds: string[] }) => Promise<AreaLuta>;
+  updateArea: (data: AreaLuta) => Promise<AreaLuta>;
+  deleteArea: (areaId: string) => Promise<void>;
+  deleteAreas: (areaIds: string[]) => Promise<void>;
 }
 
 interface ActivationAPI {

@@ -1,5 +1,6 @@
 import { ipcRenderer, contextBridge } from 'electron'
 import type { Torneio } from '../src/types/tournament'
+import type { AreaLuta } from '../src/types/area'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   createTournament: (data: { nome: string; data: string }) =>
@@ -66,6 +67,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('import-chaves'),
   exportChaves: () =>
     ipcRenderer.invoke('export-chaves'),
+  loadAreas: () =>
+    ipcRenderer.invoke('load-areas'),
+  saveArea: (data: { nome: string; arbitroIds: string[] }) =>
+    ipcRenderer.invoke('save-area', data),
+  updateArea: (data: AreaLuta) =>
+    ipcRenderer.invoke('update-area', data),
+  deleteArea: (areaId: string) =>
+    ipcRenderer.invoke('delete-area', areaId),
+  deleteAreas: (areaIds: string[]) =>
+    ipcRenderer.invoke('delete-areas', areaIds),
 })
 
 contextBridge.exposeInMainWorld('activation', {

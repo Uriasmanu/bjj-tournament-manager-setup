@@ -4,8 +4,10 @@ import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
 import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
 import { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
+import { loadAreas, saveArea, updateArea, deleteArea, deleteAreas } from './areas'
 import { registerBracketHandlers } from './brackets'
 import { checkActivation, validatePassword, activateLicense } from './activation'
+import type { AreaLuta } from '../src/types/area'
 import type { Atleta } from '../src/types/athlete'
 import type { Arbitro } from '../src/types/referee'
 
@@ -164,6 +166,38 @@ function registerRefereeHandlers(): void {
   })
 }
 
+function registerAreaHandlers(): void {
+  ipcMain.handle('load-areas', (): AreaLuta[] => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadAreas(torneioId)
+  })
+
+  ipcMain.handle('save-area', (_event, data: { nome: string; arbitroIds: string[] }): AreaLuta => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return saveArea(torneioId, data)
+  })
+
+  ipcMain.handle('update-area', (_event, data: AreaLuta): AreaLuta => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return updateArea(torneioId, data)
+  })
+
+  ipcMain.handle('delete-area', (_event, areaId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return deleteArea(torneioId, areaId)
+  })
+
+  ipcMain.handle('delete-areas', (_event, areaIds: string[]): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return deleteAreas(torneioId, areaIds)
+  })
+}
+
 function registerActivationHandlers(): void {
   ipcMain.handle('check-activation', (): boolean => {
     return checkActivation()
@@ -183,6 +217,7 @@ app.whenReady().then(() => {
   registerAthleteHandlers()
   registerRefereeHandlers()
   registerBracketHandlers()
+  registerAreaHandlers()
   registerActivationHandlers()
   createWindow()
 })

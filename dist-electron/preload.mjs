@@ -32,7 +32,12 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   randomizarChave: (data) => electron.ipcRenderer.invoke("randomizar-chave", data),
   atribuirArbitroChave: (data) => electron.ipcRenderer.invoke("atribuir-arbitro-chave", data),
   importChaves: () => electron.ipcRenderer.invoke("import-chaves"),
-  exportChaves: () => electron.ipcRenderer.invoke("export-chaves")
+  exportChaves: () => electron.ipcRenderer.invoke("export-chaves"),
+  loadAreas: () => electron.ipcRenderer.invoke("load-areas"),
+  saveArea: (data) => electron.ipcRenderer.invoke("save-area", data),
+  updateArea: (data) => electron.ipcRenderer.invoke("update-area", data),
+  deleteArea: (areaId) => electron.ipcRenderer.invoke("delete-area", areaId),
+  deleteAreas: (areaIds) => electron.ipcRenderer.invoke("delete-areas", areaIds)
 });
 electron.contextBridge.exposeInMainWorld("activation", {
   check: () => electron.ipcRenderer.invoke("check-activation"),

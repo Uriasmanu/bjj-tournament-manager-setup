@@ -1,3 +1,5 @@
+## Feature
+
 # Guia de Spec para Implementação de Features
 
 > Este documento define o padrão de especificação que deve ser seguido antes de implementar qualquer feature. Ao iniciar uma tarefa, analise este guia e aplique cada seção ao contexto da feature solicitada.

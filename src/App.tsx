@@ -17,6 +17,8 @@ import { ArbitrosMenu } from './pages/ArbitrosMenu';
 import { AdminArbitros } from './pages/AdminArbitros';
 import { Equipes } from './pages/Equipes';
 import { GerenciarChaves } from './pages/GerenciarChaves';
+import { AreasMenu } from './pages/AreasMenu';
+import { AdminAreas } from './pages/AdminAreas';
 import { ActivationScreen } from './components/ActivationScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -36,6 +38,8 @@ function MainApp() {
           <Route path="/admin/arbitros/lista" element={<AdminArbitros />} />
           <Route path="/admin/equipes" element={<Equipes />} />
           <Route path="/admin/categorias/chaves" element={<GerenciarChaves />} />
+          <Route path="/admin/areas" element={<AreasMenu />} />
+          <Route path="/admin/areas/lista" element={<AdminAreas />} />
         </Routes>
       </ErrorBoundary>
     </HashRouter>
