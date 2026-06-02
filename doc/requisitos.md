@@ -26,7 +26,13 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente. Validação de `genero` e `categoria` como obrigatórios, com verificação contra lista de categorias IBJJF. |
 | Dashboard Administrativo | ✅ Completo | Tela com cards em grid (1-4 colunas responsivas), funcionalidades implementadas × planejadas |
 | Resumo de Equipes | ✅ Completo | Tela que consulta a lista de atletas e exibe nome das equipes com contagem de atletas por equipe |
-| Cadastro de Árbitros | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação, duplicata por nome. Faixas permitidas: roxa, marrom, preta. Importação/exportação JSON. |
+| Cadastro de Árbitros | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação, duplicata por nome. Faixas permitidas: roxa, marrom, preta. Importação/exportação JSON. Campo de busca por nome, equipe e faixa. |
+| Busca em Atletas | ✅ Completo | Campo de busca na tela de listagem que filtra por nome, equipe e categoria |
+| Busca em Árbitros | ✅ Completo | Campo de busca na tela de listagem que filtra por nome, equipe e faixa |
+| Busca em Equipes | ✅ Completo | Campo de busca na tela de equipes que filtra por nome da equipe |
+| Busca em Chaves | ✅ Completo | Campo de busca na tela de chaves que filtra por título (faixa, peso, atletas) |
+| Busca em Torneios | ✅ Completo | Campo de busca na tela de listagem de torneios que filtra por nome e data |
+| Correção chaveIds | ✅ Completo | Ao regenerar chaves, `chaveIds` dos árbitros é limpo antes da reatribuição automática, eliminando acúmulo de IDs antigos |
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
 | Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
 | PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
@@ -91,6 +97,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 - Define o torneio como ativo escrevendo seu `id` em `{userData}/data/torneio-ativo.json`.
 - Após iniciar, redireciona para o Dashboard Administrativo (`/admin/dashboard`).
+- **Busca na listagem:** campo de busca textual que filtra os torneios por nome ou data em tempo real. Exibe mensagem "Nenhum torneio encontrado para a busca {termo}" quando não há resultados.
 - Apenas um torneio pode estar ativo por vez (iniciar um novo substitui o anterior no arquivo).
 - Registra o timestamp `startedAt` no JSON do torneio no momento do Play (`new Date().toISOString()`).
 - O badge "Iniciado {data}" é exibido no Dashboard para torneios com `startedAt` preenchido.
@@ -123,9 +130,11 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - **Importar Atletas** — Dispara o diálogo nativo de seleção de arquivo JSON via IPC `import-athletes`.
 - **Tela de listagem (`/admin/atletas/lista`):** Exibe `AdminAthletes` com:
   - Botões "Importar" e "Cadastrar" no topo.
+  - Campo de busca textual que filtra a tabela por nome, equipe ou categoria em tempo real.
   - Tabela com colunas: Nome, Equipe, Gênero, Faixa, Categoria, Idade, Ações (editar/excluir). Ordenada alfabeticamente por nome do atleta.
   - Badges de resumo de faixas e categorias no topo da tabela (top 10 categorias por quantidade).
   - Empty state com "Nenhum atleta cadastrado" + botão "Cadastrar primeiro atleta".
+  - Empty state de busca: "Nenhum atleta encontrado para a busca {termo}" quando filtro não retorna resultados.
   - Ações por linha: lápis (editar) e lixeira (excluir).
   - Botão "Voltar" retorna para `/admin/atletas` (menu), não para o Dashboard.
 - **Modal de formulário:** `AthleteForm.tsx` usa `@mantine/form` com **modo controlado** (`mode: 'controlled'`). Cada campo recebe os props diretamente de `form.getInputProps(path)`. O `useEffect` de inicialização do formulário depende apenas de `opened` e `athlete` (não de `form`) para evitar loop de re-renderização.
@@ -150,6 +159,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Fonte dos dados:** os dados são obtidos exclusivamente do campo `equipe` de cada atleta no JSON do torneio ativo (`torneio.atletas[].equipe`).
 - **Agrupamento:** o sistema percorre a lista de atletas e agrupa por `equipe`, contando quantos atletas pertencem a cada equipe.
 - **Ordenação:** as equipes são exibidas em ordem alfabética crescente pelo nome da equipe.
+- **Busca:** campo de busca textual no topo da tela que filtra as equipes por nome em tempo real. Exibe mensagem "Nenhuma equipe encontrada para a busca {termo}" quando não há resultados.
 - **Normalização:** O campo `equipe` é armazenado em lowercase (ex.: `"gracie barra"`). Na exibição, o nome da equipe é apresentado com capitalização (`text-transform: capitalize`).
 - **Cards de resumo:** exibe dois badges no topo: total de atletas e total de equipes distintas.
 - **Empty state:** se não houver atletas cadastrados, exibe ícone, mensagem "Nenhum atleta cadastrado" e botão para navegar ao cadastro de atletas.
@@ -216,7 +226,9 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - Botão cinza claro quando a categoria destino está vazia
   - Tooltip com nome da categoria destino e quantidade de atletas
 - **Ordem de pesos IBJJF:** `galo → pluma → pena → leve → medio → meio-pesado → pesado → super-pesado → pesadissimo`
-- **Especificação detalhada:** Ver `spec/geracao-chaves.md`, `spec/shuffle-chave.md` e `spec/emchave-atleta.md`.
+- **Busca na listagem:** campo de busca textual que filtra as chaves exibidas por título (faixa, peso, quantidade de atletas) em tempo real. Exibe mensagem "Nenhuma chave encontrada para a busca {termo}" quando não há resultados.
+- **Correção de acúmulo de chaveIds:** Ao regenerar chaves ("Gerar Novamente"), os `chaveIds` de todos os árbitros são limpos antes da reatribuição automática, eliminando o acúmulo de IDs de chaves antigas. Isso garante que a contagem exibida na coluna "Chaves Atribuídas" da tela de árbitros reflita sempre o número real de chaves atuais.
+- **Especificação detalhada:** Ver `spec/geracao-chaves.md`, `spec/shuffle-chave.md`, `spec/emchave-atleta.md` e `spec/busca-chaves-atletas-arbitros-equipes.md`.
 
 ### 3.12. Importação de Chaves
 
@@ -378,9 +390,11 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
   - **Importar Árbitros** — Dispara o diálogo nativo de seleção de arquivo JSON via IPC `import-arbitros`.
 - **Tela de listagem (`/admin/arbitros/lista`):** Exibe `AdminArbitros` com:
   - Botões "Importar", "Exportar" e "Cadastrar" no topo.
+  - Campo de busca textual que filtra a tabela por nome, equipe ou faixa em tempo real.
   - Tabela com colunas: Nome, Equipe, Faixa, Chaves Atribuídas, Ações (editar/excluir). Ordenada alfabeticamente por nome do árbitro.
   - Badge com contagem de chaves atribuídas por árbitro.
   - Empty state com "Nenhum árbitro cadastrado" + botão "Cadastrar primeiro árbitro".
+  - Empty state de busca: "Nenhum árbitro encontrado para a busca {termo}" quando filtro não retorna resultados.
   - Ações por linha: lápis (editar) e lixeira (excluir).
   - Botão "Voltar" retorna para `/admin/arbitros` (menu).
 - **Modal de formulário:** `ArbitroForm.tsx` usa `@mantine/form` com modo controlado. Campos: Nome (obrigatório, min 2 caracteres), Equipe (opcional) e Faixa (obrigatório).
@@ -845,6 +859,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `spec/geracao-chaves.md` | Especificação da geração de chaves de luta (máx. 5 atletas, chave editável) |
 | `spec/cadastro-arbitro.md` | Especificação detalhada do CRUD de árbitros |
 | `spec/emchave-atleta.md` | Especificação da propriedade `emChave` e melhoria da visualização de atletas sem chave |
+| `spec/busca-chaves-atletas-arbitros-equipes.md` | Especificação da busca textual em todas as telas e correção do acúmulo de `chaveIds` |
 | `doc/import-audit.md` | Auditoria de importação: regras de geração automática de ID e timestamps |
 
 ---
@@ -909,6 +924,7 @@ bjj-tournament-manager-setup/
 │   ├── geracao-chaves.md    ← Spec da geração de chaves de luta (máx. 5 atletas, chave editável)
 │   ├── shuffle-chave.md    ← Spec da correção do embaralhamento de chaves
 │   ├── emchave-atleta.md   ← Spec da propriedade emChave e visualização de atletas sem chave
+│   ├── busca-chaves-atletas-arbitros-equipes.md ← Spec da busca textual nas telas e correção do acúmulo de chaveIds
 │   └── cadastro-arbitro.md  ← Spec detalhado do CRUD de árbitros
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)
