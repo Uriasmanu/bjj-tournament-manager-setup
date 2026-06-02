@@ -35,7 +35,7 @@ interface ElectronAPI {
   loadArbitros: () => Promise<Arbitro[]>;
   importArbitros: () => Promise<{ imported: number; skipped: number }>;
   exportArbitros: () => Promise<void>;
-  gerarTodasChaves: () => Promise<{ chaves: Chave[]; metadados: unknown[] }>;
+  gerarTodasChaves: () => Promise<{ chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] }>;
   gerarChave: (data: { categoriaId: string }) => Promise<Chave>;
   loadChaves: () => Promise<Chave[]>;
   loadChavePorCategoria: (categoriaId: string) => Promise<Chave | null>;

@@ -615,7 +615,10 @@ function gerarLutasDois(posicoes) {
   return [criarLuta(1, posicoes[0].id, posicoes[1].id)];
 }
 function gerarLutasTres(posicoes) {
-  return [criarLuta(1, posicoes[1].id, posicoes[2].id)];
+  return [
+    criarLuta(1, posicoes[0].id, posicoes[1].id),
+    criarLuta(2, posicoes[2].id, "bye")
+  ];
 }
 function gerarLutasQuatro(posicoes) {
   return [
@@ -624,12 +627,14 @@ function gerarLutasQuatro(posicoes) {
   ];
 }
 function gerarLutasCinco(posicoes) {
-  return [criarLuta(1, posicoes[3].id, posicoes[4].id)];
+  return [
+    criarLuta(1, posicoes[0].id, posicoes[1].id),
+    criarLuta(2, posicoes[2].id, posicoes[3].id),
+    criarLuta(3, posicoes[4].id, "bye")
+  ];
 }
 function gerarLutas(posicoes) {
   switch (posicoes.length) {
-    case 1:
-      return [criarLuta(1, posicoes[0].id, "bye")];
     case 2:
       return gerarLutasDois(posicoes);
     case 3:
@@ -655,8 +660,8 @@ const FAIXA_ORDER = {
 };
 const MAX_ATLETAS_POR_CHAVE = 5;
 function gerarChave(categoriaId, atletas) {
-  if (atletas.length < 1 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
-    throw new Error("A categoria precisa ter entre 1 e 5 atletas para gerar uma chave.");
+  if (atletas.length < 2 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
+    throw new Error("A categoria precisa ter entre 2 e 5 atletas para gerar uma chave.");
   }
   const posicoes = aplicarSeedSorting(atletas);
   const lutas = gerarLutas(posicoes);
@@ -716,12 +721,27 @@ function gerarTodasChavesHandler(torneioId) {
     grupos.set(a.categoria, g);
   }
   const novasChaves = [];
+  const atletasSemChave = [];
   const metadados = [];
   for (const [categoriaId, grupo] of grupos) {
     if (grupo.length === 0) continue;
+    if (grupo.length === 1) {
+      atletasSemChave.push(grupo[0]);
+      metadados.push({
+        categoriaId,
+        totalAtletas: 1,
+        chavesGeradas: 0,
+        atletasIgnorados: [...atletasIgnorados]
+      });
+      continue;
+    }
     const subgrupos = grupo.length > MAX_ATLETAS_POR_CHAVE ? splitGrupo(grupo) : [grupo];
     let chavesGeradas = 0;
     for (const sub of subgrupos) {
+      if (sub.length === 1) {
+        atletasSemChave.push(sub[0]);
+        continue;
+      }
       novasChaves.push(gerarChave(categoriaId, sub));
       chavesGeradas++;
     }
@@ -736,7 +756,32 @@ function gerarTodasChavesHandler(torneioId) {
   autoAtribuirArbitros(torneio);
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   saveTorneio(torneio);
-  return { chaves: novasChaves, metadados };
+  return { chaves: novasChaves, metadados, atletasSemChave };
+}
+function separarEquipes(atletas) {
+  var _a, _b, _c;
+  const n = atletas.length;
+  if (n < 4) return;
+  const sideA = n === 4 ? [0, 3] : [0, 1];
+  const sideB = n === 4 ? [1, 2] : [2, 3, 4];
+  for (const side of [sideA, sideB]) {
+    const seenTeams = /* @__PURE__ */ new Set();
+    for (const idx of side) {
+      const team = (_a = atletas[idx]) == null ? void 0 : _a.equipe;
+      if (!team) continue;
+      if (seenTeams.has(team)) {
+        const otherSide = side === sideA ? sideB : sideA;
+        for (const oi of otherSide) {
+          const otherTeam = (_b = atletas[oi]) == null ? void 0 : _b.equipe;
+          if (otherTeam !== team) {
+            [atletas[idx], atletas[oi]] = [atletas[oi], atletas[idx]];
+            break;
+          }
+        }
+      }
+      if ((_c = atletas[idx]) == null ? void 0 : _c.equipe) seenTeams.add(atletas[idx].equipe);
+    }
+  }
 }
 function randomizarChaveHandler(torneioId, data) {
   const torneio = loadTorneio(torneioId);
@@ -750,9 +795,9 @@ function randomizarChaveHandler(torneioId, data) {
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   const atletas = shuffled.map((id) => (torneio.atletas ?? []).find((a) => a.id === id)).filter((a) => a !== void 0);
-  const sorted = aplicarSeedSorting(atletas);
-  chave.posicoesAtletas = sorted.map((a) => a.id);
-  chave.lutas = gerarLutas(sorted);
+  separarEquipes(atletas);
+  chave.posicoesAtletas = atletas.map((a) => a.id);
+  chave.lutas = gerarLutas(atletas);
   chaves[index] = chave;
   torneio.chaves = chaves;
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -837,8 +882,8 @@ function registerBracketHandlers() {
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     const torneio = loadTorneio(torneioId);
     const atletas = (torneio.atletas ?? []).filter((a) => a.categoria === data.categoriaId);
-    if (atletas.length < 1 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
-      throw new Error("A categoria precisa ter entre 1 e 5 atletas para gerar uma chave.");
+    if (atletas.length < 2 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
+      throw new Error("A categoria precisa ter entre 2 e 5 atletas para gerar uma chave.");
     }
     const chaves = torneio.chaves ?? [];
     if (chaves.some((c) => c.categoriaId === data.categoriaId)) {

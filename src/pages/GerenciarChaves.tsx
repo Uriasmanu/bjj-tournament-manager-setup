@@ -100,6 +100,7 @@ export function GerenciarChaves() {
   const [arbitros, setArbitros] = useState<Arbitro[]>([]);
   const [loading, setLoading] = useState(true);
   const [chavesGeradas, setChavesGeradas] = useState(false);
+  const [atletasSemChave, setAtletasSemChave] = useState<Atleta[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [viewChave, setViewChave] = useState<Chave | null>(null);
@@ -124,12 +125,33 @@ export function GerenciarChaves() {
       window.electronAPI.loadArbitros(),
     ]).then(([a, c, r]) => {
       const chavesList = c as Chave[];
-      setAthletes(a as Atleta[]);
+      const athletesList = a as Atleta[];
+      setAthletes(athletesList);
       setChaves(chavesList);
       const arbitrosList = r as Arbitro[];
       arbitrosList.sort((a, b) => a.nome.localeCompare(b.nome));
       setArbitros(arbitrosList);
       setChavesGeradas(chavesList.length > 0);
+
+      // Compute solo athletes: athletes not in any chave whose categoria has only 1 athlete
+      const atletasEmChaves = new Set<string>();
+      for (const chave of chavesList) {
+        for (const id of chave.posicoesAtletas) {
+          atletasEmChaves.add(id);
+        }
+      }
+      const catCount = new Map<string, number>();
+      for (const at of athletesList) {
+        catCount.set(at.categoria, (catCount.get(at.categoria) ?? 0) + 1);
+      }
+      const solo: Atleta[] = [];
+      for (const at of athletesList) {
+        if (!atletasEmChaves.has(at.id) && (catCount.get(at.categoria) ?? 0) === 1) {
+          solo.push(at);
+        }
+      }
+      setAtletasSemChave(solo);
+
       setLoading(false);
     }).catch(() => {
       setLoading(false);
@@ -155,15 +177,16 @@ export function GerenciarChaves() {
 
   const handleGerarTodas = async () => {
     try {
-      const result = await window.electronAPI.gerarTodasChaves() as { chaves: Chave[]; metadados: unknown[] };
+      const result = await window.electronAPI.gerarTodasChaves() as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
       setChaves(result.chaves);
+      setAtletasSemChave(result.atletasSemChave ?? []);
       setChavesGeradas(true);
       const qtd = result.chaves.length;
-      notifications.show({
-        color: 'green',
-        title: 'Sucesso',
-        message: `${qtd} chave(s) gerada(s) com árbitro(s) atribuído(s) automaticamente.`,
-      });
+      const solos = (result.atletasSemChave ?? []).length;
+      const msg = solos > 0
+        ? `${qtd} chave(s) gerada(s). ${solos} atleta(s) sem oponente na categoria.`
+        : `${qtd} chave(s) gerada(s) com árbitro(s) atribuído(s) automaticamente.`;
+      notifications.show({ color: solos > 0 ? 'yellow' : 'green', title: 'Sucesso', message: msg });
     } catch (err: unknown) {
       notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao gerar chaves' });
     }
@@ -172,14 +195,15 @@ export function GerenciarChaves() {
   const handleGerarNovamente = async () => {
     closeConfirmGerar();
     try {
-      const result = await window.electronAPI.gerarTodasChaves() as { chaves: Chave[]; metadados: unknown[] };
+      const result = await window.electronAPI.gerarTodasChaves() as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
       setChaves(result.chaves);
+      setAtletasSemChave(result.atletasSemChave ?? []);
       const qtd = result.chaves.length;
-      notifications.show({
-        color: 'green',
-        title: 'Sucesso',
-        message: `${qtd} chave(s) regenerada(s) com árbitro(s) reatribuído(s).`,
-      });
+      const solos = (result.atletasSemChave ?? []).length;
+      const msg = solos > 0
+        ? `${qtd} chave(s) regenerada(s). ${solos} atleta(s) sem oponente na categoria.`
+        : `${qtd} chave(s) regenerada(s) com árbitro(s) reatribuído(s).`;
+      notifications.show({ color: solos > 0 ? 'yellow' : 'green', title: 'Sucesso', message: msg });
     } catch (err: unknown) {
       notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao regenerar chaves' });
     }
@@ -189,6 +213,7 @@ export function GerenciarChaves() {
     try {
       const updated = await window.electronAPI.randomizarChave({ chaveId });
       setChaves(prev => prev.map(c => c.id === chaveId ? updated : c));
+      setViewChave(prev => prev?.id === chaveId ? updated : prev);
       notifications.show({ color: 'green', title: 'Sucesso', message: 'Chave embaralhada com separação de equipes.' });
     } catch (err: unknown) {
       notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao embaralhar chave' });
@@ -328,6 +353,22 @@ export function GerenciarChaves() {
                 })}
               </SimpleGrid>
             </Paper>
+
+            {atletasSemChave.length > 0 && (
+              <Paper withBorder shadow="sm" p="md" radius="md" bg="orange.0">
+                <Title order={4} mb="md" c="orange.8">Atletas Sem Chave ({atletasSemChave.length})</Title>
+                <Text size="sm" c="dimmed" mb="sm">
+                  Estes atletas não puderam ser colocados em uma chave por serem os únicos em sua categoria.
+                </Text>
+                {atletasSemChave.map(at => (
+                  <Text key={at.id} size="sm">
+                    {at.nome.charAt(0).toUpperCase() + at.nome.slice(1)}
+                    {at.equipe ? ` (${at.equipe.charAt(0).toUpperCase() + at.equipe.slice(1)})` : ''}
+                    {' — '}{categoriaLabels[at.categoria] || at.categoria}
+                  </Text>
+                ))}
+              </Paper>
+            )}
           </>
         )}
       </Stack>

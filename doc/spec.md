@@ -188,3 +188,5 @@ A feature só está pronta quando:
 - [ ] Sinalizei todas as incertezas explicitamente
 
 > ⚠️ Se qualquer item do checklist estiver pendente, resolva antes de escrever código.
+
+ANTES DE IMPLEMENTAR, SEMPRE CRIE UM DOC .MD EXPLICANDO TODOS OS PONTOS DA IMPLEMENTAÇÃO CONFORME ORIENTADO NESSE DOCUMENTO. SALVE ESSE DOCUMENTO NA PASTA SPEC
