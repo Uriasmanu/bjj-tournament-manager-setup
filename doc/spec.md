@@ -1,5 +1,20 @@
 ## Feature v1
+A exibição dachave de luta tem que sempre exibir os cards, 
 
+Estrutura visual da chave:
+
+Primeira rodada:        Segunda rodada:          Final:
+A ──┐
+    ├── V1 ──┐
+B ──┘        │
+             ├── V3 ──┐
+E ───────────┘        │
+                      ├── Campeão
+C ──┐                 │
+    ├── V2 ──┐        │
+D ──┘        │        │
+             ├── V4 ──┘
+F ───────────┘
 
 ## Problema
 

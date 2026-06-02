@@ -1,5 +1,5 @@
+import { useState, useEffect, useRef, useMemo } from 'react';
 import type { Chave, Luta } from '../types/bracket';
-import { BracketCard } from './BracketCard';
 
 interface BracketTreeProps {
   chave: Chave;
@@ -7,281 +7,216 @@ interface BracketTreeProps {
   onSelectWinner?: (luta: Luta, vencedorId: string) => void;
 }
 
-const LINE_COLOR = '#94a3b8';
+const IconTrophy = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 21h8m-4-6l-3 3m6 0l-3-3M6 3h12a2 2 0 0 1 2 2v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V5a2 2 0 0 1 2-2z" />
+  </svg>
+);
 
-function getRoundLabel(roundNum: number, totalRodadas: number): string {
-  const deTrasParaFrente = totalRodadas - roundNum + 1;
+function isPlaceholder(id: string | null | undefined): boolean {
+  return !id || id === 'tbd' || id === 'bye';
+}
 
-  if (deTrasParaFrente === 1) return 'Grande Final';
-  if (deTrasParaFrente === 2) return 'Semifinal';
-  if (deTrasParaFrente === 3) return 'Quartas de Final';
-  if (deTrasParaFrente === 4) return 'Oitavas de Final';
+function buildConnections(chave: Chave): { from: string; to: string }[] {
+  const sorted = [...chave.lutas].sort((a, b) => a.rodada - b.rodada || a.ordem - b.ordem);
+  const winnerToLuta = new Map<string, Luta>();
+  for (const l of sorted) {
+    if (l.vencedorId) winnerToLuta.set(l.vencedorId, l);
+  }
 
-  return `Rodada ${roundNum}`;
+  const queue: Luta[] = [];
+  const connections: { from: string; to: string }[] = [];
+
+  for (const luta of sorted) {
+    if (luta.rodada === 1) {
+      queue.push(luta);
+      continue;
+    }
+
+    let sourceSlots = 0;
+    for (const slot of [luta.atletaAId, luta.atletaBId]) {
+      if (slot === 'tbd' || slot === '') {
+        sourceSlots++;
+      } else if (slot) {
+        const sourceLuta = winnerToLuta.get(slot);
+        if (sourceLuta && sourceLuta.rodada < luta.rodada) sourceSlots++;
+      }
+    }
+
+    for (let i = 0; i < sourceSlots; i++) {
+      const sourceIdx = queue.findIndex(s => s.rodada < luta.rodada);
+      if (sourceIdx < 0) break;
+      const source = queue.splice(sourceIdx, 1)[0];
+      connections.push({ from: `m${source.id}`, to: `m${luta.id}` });
+    }
+    queue.push(luta);
+  }
+
+  return connections;
 }
 
 export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTreeProps) {
-  const totalRodadas = chave.totalRodadas || 1;
-  const rounds = groupByRound(chave.lutas);
+  const [paths, setPaths] = useState<string[]>([]);
+  const bracketRef = useRef<HTMLDivElement>(null);
 
-  // Calcula dinamicamente o número esperado de cards por rodada
-  // Se a primeira rodada tiver 4 cards, o array será [4, 2, 1]
-  const firstRoundCount = rounds[0]?.length || 0;
-  const expectedCounts = Array.from({ length: totalRodadas }, (_, i) => 
-    Math.max(1, Math.ceil(firstRoundCount / Math.pow(2, i)))
-  );
+  const columns = useMemo(() => {
+    const byRodada = new Map<number, Luta[]>();
+    for (const l of chave.lutas) {
+      if (!byRodada.has(l.rodada)) byRodada.set(l.rodada, []);
+      byRodada.get(l.rodada)!.push(l);
+    }
+    const rodadas = Array.from(byRodada.keys()).sort((a, b) => a - b);
+    return rodadas.map(r => byRodada.get(r)!.sort((a, b) => a.ordem - b.ordem));
+  }, [chave.lutas]);
+
+  const connections = useMemo(() => buildConnections(chave), [chave]);
+
+  useEffect(() => {
+    const drawConnections = () => {
+      if (!bracketRef.current) return;
+      const newPaths: string[] = [];
+      const container = bracketRef.current.getBoundingClientRect();
+
+      connections.forEach(({ from, to }) => {
+        const el1 = document.getElementById(from);
+        const el2 = document.getElementById(to);
+        if (el1 && el2) {
+          const rect1 = el1.getBoundingClientRect();
+          const rect2 = el2.getBoundingClientRect();
+
+          const x1 = rect1.right - container.left;
+          const y1 = rect1.top + rect1.height / 2 - container.top;
+          const x2 = rect2.left - container.left;
+          const y2 = rect2.top + rect2.height / 2 - container.top;
+
+          newPaths.push(`M ${x1} ${y1} C ${x1 + 40} ${y1}, ${x2 - 40} ${y2}, ${x2} ${y2}`);
+        }
+      });
+      setPaths(newPaths);
+    };
+
+    drawConnections();
+    window.addEventListener('resize', drawConnections);
+    return () => window.removeEventListener('resize', drawConnections);
+  }, [connections, chave]);
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'stretch',
-        gap: 64,
-        minWidth: 800,
-        overflowX: 'auto',
-        padding: '32px 16px',
-        userSelect: 'none',
-        backgroundColor: '#ffffff',
-      }}
-    >
-      {rounds.map((roundLutas, roundIndex) => {
-        const roundNum = roundIndex + 1;
-        const isLast = roundIndex === rounds.length - 1;
+    <div style={{ minHeight: '100%', backgroundColor: '#020617', padding: 24, color: '#f1f5f9', borderRadius: 8 }}>
+      <div
+        ref={bracketRef}
+        style={{
+          position: 'relative',
+          display: 'flex',
+          gap: 48,
+          justifyContent: 'center',
+          alignItems: 'stretch',
+          minHeight: 320,
+        }}
+      >
+        <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          {paths.map((path, i) => (
+            <path key={i} d={path} stroke="#475569" strokeWidth={2} fill="none" />
+          ))}
+        </svg>
 
-        let lutasParaExibir = [...roundLutas];
-        const expected = expectedCounts[roundIndex] ?? lutasParaExibir.length;
-        
-        if (lutasParaExibir.length > expected) {
-          lutasParaExibir = lutasParaExibir.slice(0, expected);
-        } else if (lutasParaExibir.length < expected) {
-          const lacuna = expected - lutasParaExibir.length;
-          for (let i = 0; i < lacuna; i++) {
-            lutasParaExibir.push({
-              id: `placeholder-r${roundNum}-${i}`,
-              rodada: roundNum,
-              atletaAId: null,
-              atletaBId: null,
-              vencedorId: null,
-            } as unknown as Luta);
-          }
-        }
-
-        return (
+        {columns.map((columnLutas, colIdx) => (
           <div
-            key={roundNum}
+            key={colIdx}
             style={{
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'space-around',
-              height: '100%',
-              gap: 32,
-              position: 'relative',
-              paddingTop: 16,
-              paddingBottom: 16,
+              justifyContent: columnLutas.length === 1 ? 'center' : 'space-around',
+              gap: colIdx === 0 ? 24 : undefined,
             }}
           >
-            <div
-              style={{
-                textAlign: 'center',
-                fontWeight: 700,
-                fontSize: 11,
-                letterSpacing: '0.05em',
-                textTransform: 'uppercase',
-                color: '#475569',
-                position: 'absolute',
-                top: -8,
-                left: 0,
-                right: 0,
-              }}
-            >
-              {getRoundLabel(roundNum, totalRodadas)}
-            </div>
-
-            {lutasParaExibir.map((luta, lutaIdx) => {
-              const isEven = lutaIdx % 2 === 0;
-              return (
-                <div key={luta.id} style={{ position: 'relative', margin: '8px 0' }}>
-                  {/* Conexão para a direita */}
-                  {!isLast && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        right: -24,
-                        top: '50%',
-                        width: 24,
-                        height: 2,
-                        backgroundColor: LINE_COLOR,
-                        zIndex: 10,
-                      }}
-                    />
-                  )}
-
-                  {/* Conexão para a esquerda */}
-                  {roundIndex > 0 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: -24,
-                        width: 24,
-                        zIndex: 10,
-                        ...(isEven
-                          ? {
-                              top: '25%',
-                              height: 'calc(50% + 2px)',
-                              borderLeft: `2px solid ${LINE_COLOR}`,
-                              borderTop: `2px solid ${LINE_COLOR}`,
-                            }
-                          : {
-                              bottom: '25%',
-                              height: 'calc(50% + 2px)',
-                              borderLeft: `2px solid ${LINE_COLOR}`,
-                              borderBottom: `2px solid ${LINE_COLOR}`,
-                            }),
-                      }}
-                    />
-                  )}
-
-                  <BracketCard
-                    luta={luta}
-                    atletaANome={getAtletaNome(luta.atletaAId)}
-                    atletaBNome={getAtletaNome(luta.atletaBId)}
-                    onSelectWinner={onSelectWinner}
-                  />
-                </div>
-              );
-            })}
+            {columnLutas.map(luta => (
+              <Card
+                key={luta.id}
+                luta={luta}
+                id={`m${luta.id}`}
+                getAtletaNome={getAtletaNome}
+                onSelectWinner={onSelectWinner}
+              />
+            ))}
           </div>
-        );
-      })}
-
-      {/* Champion Column */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          height: '100%',
-          position: 'relative',
-          paddingTop: 16,
-          paddingBottom: 16,
-          paddingLeft: 16,
-        }}
-      >
-        <div
-          style={{
-            textAlign: 'center',
-            fontWeight: 700,
-            fontSize: 11,
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            color: '#d97706',
-            position: 'absolute',
-            top: -8,
-            left: 0,
-            right: 0,
-          }}
-        >
-          Campeão
-        </div>
-        {(() => {
-          const finalRound = rounds[rounds.length - 1];
-          const finalMatch = finalRound?.[0];
-          const winner = finalMatch?.vencedorId ? getAtletaNome(finalMatch.vencedorId) : null;
-          return winner ? (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(to bottom right, rgba(251,191,36,0.1), rgba(245,158,11,0.1))',
-                border: '2px solid #f59e0b',
-                borderRadius: 12,
-                padding: 20,
-                width: 224,
-                boxShadow: '0 10px 15px -3px rgba(245,158,11,0.05)',
-                textAlign: 'center',
-                animation: 'bounce 1s ease-in-out 2',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 11,
-                  textTransform: 'uppercase',
-                  fontWeight: 800,
-                  color: '#b45309',
-                  letterSpacing: '0.1em',
-                  marginBottom: 4,
-                }}
-              >
-                VENCEDOR
-              </span>
-              <span
-                style={{
-                  fontSize: 16,
-                  fontWeight: 900,
-                  color: '#1e293b',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  width: '100%',
-                }}
-              >
-                {winner}
-              </span>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: '#f8fafc',
-                border: '1px dashed #cbd5e1',
-                borderRadius: 12,
-                padding: 20,
-                width: 224,
-                textAlign: 'center',
-                color: '#64748b',
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.1em',
-                }}
-              >
-                A Definir
-              </span>
-            </div>
-          );
-        })()}
+        ))}
       </div>
-
-      <style>{`
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-      `}</style>
     </div>
   );
 }
 
-function groupByRound(lutas: Luta[]): Luta[][] {
-  if (!lutas || lutas.length === 0) return [];
-  const rodadas = lutas.map(l => l.rodada).filter((r): r is number => typeof r === 'number' && r > 0);
-  if (rodadas.length === 0) return [lutas];
-  const maxRodada = Math.max(...rodadas);
-  const rounds: Luta[][] = Array.from({ length: maxRodada }, () => []);
-  for (const luta of lutas) {
-    const r = luta.rodada && luta.rodada > 0 ? luta.rodada - 1 : 0;
-    if (rounds[r]) {
-      rounds[r].push(luta);
-    }
-  }
-  return rounds;
+interface CardProps {
+  luta: Luta;
+  id: string;
+  getAtletaNome: (id: string | null) => string;
+  onSelectWinner?: (luta: Luta, vencedorId: string) => void;
+}
+
+function Card({ luta, id, getAtletaNome, onSelectWinner }: CardProps) {
+  return (
+    <div
+      id={id}
+      style={{
+        width: 256,
+        backgroundColor: '#0f172a',
+        border: '1px solid #1e293b',
+        borderRadius: 8,
+        padding: 12,
+        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.4), 0 10px 10px -5px rgba(0,0,0,0.2)',
+        position: 'relative',
+        zIndex: 10,
+      }}
+    >
+      <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, marginBottom: 8, letterSpacing: 0.5 }}>
+        LUTA #{luta.ordem}
+      </div>
+      {([1, 2] as const).map(slot => {
+        const slotId = slot === 1 ? luta.atletaAId : luta.atletaBId;
+        const placeholder = isPlaceholder(slotId);
+        const isWinner = !!luta.vencedorId && slotId === luta.vencedorId;
+        const nome = placeholder ? 'A definir...' : getAtletaNome(slotId);
+        return (
+          <div
+            key={slot}
+            style={{
+              padding: 8,
+              borderRadius: 4,
+              marginBottom: slot === 1 ? 4 : 0,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: isWinner ? '#064e3b' : '#020617',
+            }}
+          >
+            <div style={{ overflow: 'hidden', minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {nome}
+              </div>
+            </div>
+            {!placeholder && slotId && onSelectWinner && (
+              <button
+                onClick={() => onSelectWinner(luta, slotId)}
+                style={{
+                  padding: 4,
+                  background: 'transparent',
+                  border: 'none',
+                  borderRadius: 4,
+                  cursor: 'pointer',
+                  color: '#f1f5f9',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1e293b')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                aria-label="Marcar vencedor"
+              >
+                <IconTrophy />
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
