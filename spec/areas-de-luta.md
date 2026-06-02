@@ -37,6 +37,7 @@ para que eu possa organizar quais áreas serão usadas e qual árbitro responsá
 - [x] RF-06: O sistema deve permitir buscar áreas por nome
 - [x] RF-07: O sistema deve exibir o(s) nome(s) do(s) árbitro(s) responsável(is) na listagem (não apenas o ID)
 - [x] RF-08: O sistema deve impedir que um mesmo árbitro seja atribuído a duas áreas diferentes
+- [x] RF-09: O sistema deve migrar automaticamente dados legados (áreas salvas com `arbitroId` singular) para o formato novo (`arbitroIds` array) ao carregar
 
 ## 5. Requisitos Não-Funcionais
 
@@ -121,6 +122,7 @@ Nenhum impedimento identificado. O padrão já está bem estabelecido por `arbit
 - [x] CA-06: Dado a busca textual, quando digito um nome, então a lista filtra apenas áreas correspondentes
 - [x] CA-07: Dado a lista de áreas, quando visualizo, então os nomes dos árbitros responsáveis são exibidos (não os IDs)
 - [x] CA-08: Dado um árbitro já atribuído a uma área, quando tento salvar outra área com o mesmo árbitro, o sistema exibe erro e impede o salvamento
+- [x] CA-09: Dado áreas salvas com o formato antigo (`arbitroId`), quando carrego a listagem, o sistema exibe corretamente os árbitros sem lançar erro
 
 ## 10. Plano de Implementação (Passo a Passo)
 

@@ -36,6 +36,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
 | Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
 | PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
+| Áreas de Luta | ✅ Completo | CRUD com nome + múltiplos árbitros por área. Validação de unicidade de árbitro entre áreas. Migração retroativa de dados legados. Menu com Cadastrar/Listar, tabela com busca, exclusão individual/em lote. |
 
 ### 2.2. Não Implementado (Planejado)
 
@@ -46,7 +47,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Controle de Inscrições | ❌ Pendente |
 | Controle de Pesagem | ❌ Pendente |
 | Geração de Chaves | ✅ Completo | Máximo de 5 atletas por chave, chave editável manualmente, shuffle com separação de equipes, import/export JSON. Atletas sem oponente exibidos em cartões com opções de remanejamento (subir/descer peso) e indicador de "luta casada". |
-| Áreas de Luta | ❌ Pendente |
+| Áreas de Luta | ✅ Completo | CRUD completo, múltiplos árbitros por área, unicidade de árbitro |
 | Chamadas / Placar / Resultados | ❌ Pendente |
 | Ranking / Medalhistas | ❌ Pendente |
 | Relatórios | ❌ Pendente |
@@ -420,6 +421,31 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
   - **Preta** arbitra chaves com qualquer faixa.
   - A distribuição automática respeita esta hierarquia. Na edição manual, o sistema avisa se a regra for violada, mas **não bloqueia**.
 
+### 3.17. Áreas de Luta (Implementado)
+
+- **Menu intermediário:** Ao clicar no card "Áreas de Luta" no Dashboard, navega para `/admin/areas` que renderiza `AreasMenu` — um menu com 2 cartões:
+  - **Cadastrar Área de Luta** — Abre o modal `AreaForm` diretamente na mesma página.
+  - **Listar Áreas de Luta** — Navega para `/admin/areas/lista` (tela `AdminAreas` com tabela CRUD).
+- **Tela de listagem (`/admin/areas/lista`):** Exibe `AdminAreas` com:
+  - Botão "Cadastrar" no topo.
+  - Campo de busca textual que filtra a tabela por nome em tempo real.
+  - Tabela com colunas: Nome, Árbitros Responsáveis, Ações (editar/excluir). Ordenada alfabeticamente por nome.
+  - Múltiplos badges de árbitros por área (um badge por árbitro).
+  - Empty state com "Nenhuma área de luta cadastrada" + botão "Cadastrar primeira área".
+  - Empty state de busca: "Nenhuma área encontrada para a busca {termo}".
+  - Ações por linha: lápis (editar) e lixeira (excluir).
+  - Botão "Voltar" retorna para `/admin/areas` (menu).
+- **Modal de formulário:** `AreaForm.tsx` usa `@mantine/form` com modo controlado. Campos:
+  - **Nome** (obrigatório, min 2 caracteres) — TextInput.
+  - **Árbitros Responsáveis** (opcional, múltiplos) — MultiSelect com busca, populado com lista de árbitros cadastrados.
+- **Armazenamento por torneio:** Áreas são armazenadas dentro do JSON do torneio (campo `areas: AreaLuta[]`), seguindo o mesmo padrão das demais entidades.
+- **Torneio ativo obrigatório:** Para cadastrar, editar ou excluir áreas, é necessário que haja um torneio ativo.
+- **Sincronia imediata:** Qualquer operação CRUD lê e escreve diretamente no arquivo JSON do torneio ativo.
+- **Múltiplos árbitros por área:** Cada área pode ter zero, um ou vários árbitros responsáveis (campo `arbitroIds: string[]`).
+- **Unicidade de árbitro:** Um árbitro não pode estar atribuído a mais de uma área simultaneamente. A validação ocorre no backend (`electron/areas.ts:checkRefereeNotInUse`) e a mensagem de erro é exibida como notificação vermelha no frontend.
+- **Migração retroativa:** O campo `normalizeArea()` no backend converte automaticamente dados legados do formato `arbitroId` (string) para `arbitroIds` (array) ao carregar as áreas do JSON.
+- **Exclusão em lote:** Na tela de listagem, cada linha possui um checkbox. O cabeçalho possui um checkbox "Selecionar todas" com estado indeterminado. Com uma ou mais áreas selecionadas, um botão "Excluir Selecionados (N)" aparece. A exclusão em lote é feita via IPC `delete-areas`.
+
 ---
 
 ## 4. Plataforma
@@ -571,6 +597,11 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `load-arbitros` | Renderer → Main → Renderer | Carrega todos os árbitros do torneio ativo |
 | `import-arbitros` | Renderer → Main → Renderer | Abre diálogo nativo, lê JSON, mescla com lista do torneio ativo |
 | `export-arbitros` | Renderer → Main | Abre diálogo "Salvar como" e exporta JSON dos árbitros |
+| `load-areas` | Renderer → Main → Renderer | Carrega todas as áreas de luta do torneio ativo |
+| `save-area` | Renderer → Main | Adiciona nova área de luta ao torneio ativo |
+| `update-area` | Renderer → Main | Atualiza área de luta existente (match por `id`) |
+| `delete-area` | Renderer → Main | Remove área de luta do torneio ativo pelo `id` |
+| `delete-areas` | Renderer → Main | Remove múltiplas áreas de luta do torneio ativo |
 
 ---
 
@@ -589,6 +620,8 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `/admin/arbitros` | `ArbitrosMenu` | Menu intermediário de árbitros (3 cartões) |
 | `/admin/arbitros/lista` | `AdminArbitros` | Gerenciamento de árbitros (tabela CRUD + botões) |
 | `/admin/categorias/chaves` | `GerenciarChaves` | Geração, edição e visualização de chaves de luta (máx. 5 atletas) |
+| `/admin/areas` | `AreasMenu` | Menu de áreas de luta com 2 cartões (Cadastrar, Listar) |
+| `/admin/areas/lista` | `AdminAreas` | Gerenciamento de áreas de luta (tabela CRUD + busca) |
 
 > O roteamento utiliza `HashRouter` (não `BrowserRouter`) para compatibilidade com o protocolo `file://` no Electron em produção.
 
@@ -621,7 +654,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
     ├── Inscrições  → (Em breve)
     ├── Pesagem     → (Em breve)
     ├── Chaves      → /admin/categorias/chaves (GerenciarChaves, geração/edição)
-    ├── Áreas       → (Em breve)
+    ├── Áreas       → /admin/areas (AreasMenu)
     ├── Árbitros    → /admin/arbitros (ArbitrosMenu)
     ├── Placar      → (Em breve)
     ├── Resultados  → (Em breve)
