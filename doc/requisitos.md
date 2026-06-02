@@ -200,9 +200,10 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
 - **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.
 - **Bloqueio de edição:** Após a primeira luta ser iniciada, a edição é bloqueada.
-- **Seed sorting:** Atletas posicionados por bloqueio de equipe (lados opostos), peso, idade e ordem alfabética.
+- **Seed sorting (geração inicial):** Ao gerar a chave, atletas são posicionados por peso (decrescente), idade (decrescente) e ordem alfabética, com bloqueio de equipe (mesma equipe em lados opostos).
+- **Embaralhamento (shuffle):** O botão "Embaralhar" randomiza a ordem dos atletas na chave e mantém a separação de equipes em lados opostos (sem reordenar por peso/idade). Pode ser acionado a qualquer momento enquanto a chave estiver no status `gerada`.
 - **Regeneração:** Permitida apenas se nenhuma luta foi iniciada.
-- **Especificação detalhada:** Ver `spec/geracao-chaves.md`.
+- **Especificação detalhada:** Ver `spec/geracao-chaves.md` e `spec/shuffle-chave.md`.
 
 ### 3.12. Importação de Chaves
 
