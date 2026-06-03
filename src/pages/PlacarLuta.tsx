@@ -273,7 +273,7 @@ function AtletaPanel({
 
 export function PlacarLuta() {
   const navigate = useNavigate();
-  const { chaveId, lutaId } = useParams<{ chaveId: string; lutaId: string }>();
+  const { areaId, chaveId, lutaId } = useParams<{ areaId: string; chaveId: string; lutaId: string }>();
   const [chave, setChave] = useState<Chave | null>(null);
   const [luta, setLuta] = useState<Luta | null>(null);
   const [athletes, setAthletes] = useState<Atleta[]>([]);
@@ -417,7 +417,7 @@ export function PlacarLuta() {
       const updatedLuta = updatedChave.lutas.find(l => l.id === luta.id) ?? null;
       setLuta(updatedLuta);
       closeFinalizar();
-      navigate(`/admin/placar/chave/${chaveId}`);
+      navigate(`/admin/placar/chave/${areaId}/${chaveId}`);
     } catch (err) {
       console.error('Erro ao registrar resultado:', err);
     } finally {
@@ -448,7 +448,7 @@ export function PlacarLuta() {
   return (
     <PageLayout
       title={`Placar · Luta ${luta.ordem} · Rodada ${luta.rodada}`}
-      backRoute={`/admin/placar/chave/${chaveId}`}
+      backRoute={`/admin/placar/chave/${areaId}/${chaveId}`}
     >
       <Stack gap="md">
         {lutaInvalida && (
@@ -587,7 +587,7 @@ export function PlacarLuta() {
             size="lg"
             variant="default"
             leftSection={<IconArrowBack size={18} />}
-            onClick={() => navigate(`/admin/placar/chave/${chaveId}`)}
+            onClick={() => navigate(`/admin/placar/chave/${areaId}/${chaveId}`)}
           >
             Voltar sem finalizar
           </Button>

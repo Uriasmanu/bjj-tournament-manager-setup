@@ -69,7 +69,7 @@ export function PlacarBracket() {
   }, [chave]);
 
   const handleIniciar = (luta: Luta) => {
-    navigate(`/admin/placar/luta/${chaveId}/${luta.id}`);
+    navigate(`/admin/placar/luta/${areaId}/${chaveId}/${luta.id}`);
   };
 
   const handleSelectWinner = (luta: Luta, vencedorId: string) => {

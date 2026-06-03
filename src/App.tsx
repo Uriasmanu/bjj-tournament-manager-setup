@@ -47,7 +47,7 @@ function MainApp() {
           <Route path="/admin/placar" element={<PlacarMenu />} />
           <Route path="/admin/placar/chaves/:areaId" element={<PlacarChaves />} />
           <Route path="/admin/placar/chave/:areaId/:chaveId" element={<PlacarBracket />} />
-          <Route path="/admin/placar/luta/:chaveId/:lutaId" element={<PlacarLuta />} />
+          <Route path="/admin/placar/luta/:areaId/:chaveId/:lutaId" element={<PlacarLuta />} />
         </Routes>
       </ErrorBoundary>
     </HashRouter>
