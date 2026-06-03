@@ -439,6 +439,11 @@ function normalizeLuta(luta: Record<string, unknown>): Luta {
     atletaBId: (luta.atletaBId as string) ?? '',
     status: (luta.status as Luta['status']) ?? 'pending',
     vencedorId: (luta.vencedorId as string | null) ?? null,
+    placarA: (luta.placarA as Luta['placarA']) ?? undefined,
+    placarB: (luta.placarB as Luta['placarB']) ?? undefined,
+    finalizacao: (luta.finalizacao as boolean) ?? undefined,
+    desclassificacao: (luta.desclassificacao as boolean) ?? undefined,
+    desempateArbitro: (luta.desempateArbitro as boolean) ?? undefined,
   };
 }
 
@@ -519,7 +524,17 @@ function advanceWinnerInChave(chave: Chave, luta: Luta): void {
 
 function registrarResultadoHandler(
   torneioId: string,
-  data: { chaveId: string; lutaId: string; vencedorId: string; status: string }
+  data: {
+    chaveId: string;
+    lutaId: string;
+    vencedorId: string;
+    status: string;
+    placarA?: Luta['placarA'];
+    placarB?: Luta['placarB'];
+    finalizacao?: boolean;
+    desclassificacao?: boolean;
+    desempateArbitro?: boolean;
+  }
 ): Chave {
   const torneio = loadTorneio(torneioId);
   const chaves = [...(torneio.chaves ?? [])];
@@ -537,6 +552,11 @@ function registrarResultadoHandler(
 
   luta.vencedorId = data.vencedorId;
   luta.status = data.status === 'wo' ? 'wo' : 'completed';
+  luta.placarA = data.placarA;
+  luta.placarB = data.placarB;
+  luta.finalizacao = data.finalizacao ?? false;
+  luta.desclassificacao = data.desclassificacao ?? false;
+  luta.desempateArbitro = data.desempateArbitro ?? false;
 
   advanceWinnerInChave(chave, luta);
 
@@ -630,7 +650,17 @@ export function registerBracketHandlers(): void {
     return loadChavesPorAreaHandler(torneioId, areaId);
   });
 
-  ipcMain.handle('registrar-resultado', (_event, data: { chaveId: string; lutaId: string; vencedorId: string; status: string }): Chave => {
+  ipcMain.handle('registrar-resultado', (_event, data: {
+    chaveId: string;
+    lutaId: string;
+    vencedorId: string;
+    status: string;
+    placarA?: Luta['placarA'];
+    placarB?: Luta['placarB'];
+    finalizacao?: boolean;
+    desclassificacao?: boolean;
+    desempateArbitro?: boolean;
+  }): Chave => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error('Nenhum torneio ativo');
     return registrarResultadoHandler(torneioId, data);

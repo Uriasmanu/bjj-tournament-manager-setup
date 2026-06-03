@@ -2,7 +2,7 @@ import type { AreaLuta } from './area';
 import type { Torneio, CreateTorneioInput } from './tournament';
 import type { Atleta } from './athlete';
 import type { Arbitro } from './referee';
-import type { Chave } from './bracket';
+import type { Chave, PlacarLuta } from './bracket';
 
 declare global {
   interface Window {
@@ -50,7 +50,17 @@ interface ElectronAPI {
   deleteArea: (areaId: string) => Promise<void>;
   deleteAreas: (areaIds: string[]) => Promise<void>;
   loadChavesPorArea: (areaId: string) => Promise<Chave[]>;
-  registrarResultado: (data: { chaveId: string; lutaId: string; vencedorId: string; status: string }) => Promise<Chave>;
+  registrarResultado: (data: {
+    chaveId: string;
+    lutaId: string;
+    vencedorId: string;
+    status: string;
+    placarA?: PlacarLuta;
+    placarB?: PlacarLuta;
+    finalizacao?: boolean;
+    desclassificacao?: boolean;
+    desempateArbitro?: boolean;
+  }) => Promise<Chave>;
 }
 
 interface ActivationAPI {

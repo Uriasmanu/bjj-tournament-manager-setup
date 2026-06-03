@@ -1,6 +1,7 @@
 import { ipcRenderer, contextBridge } from 'electron'
 import type { Torneio } from '../src/types/tournament'
 import type { AreaLuta } from '../src/types/area'
+import type { PlacarLuta } from '../src/types/bracket'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   createTournament: (data: { nome: string; data: string }) =>
@@ -79,8 +80,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('delete-areas', areaIds),
   loadChavesPorArea: (areaId: string) =>
     ipcRenderer.invoke('load-chaves-por-area', areaId),
-  registrarResultado: (data: { chaveId: string; lutaId: string; vencedorId: string; status: string }) =>
-    ipcRenderer.invoke('registrar-resultado', data),
+  registrarResultado: (data: {
+    chaveId: string;
+    lutaId: string;
+    vencedorId: string;
+    status: string;
+    placarA?: PlacarLuta;
+    placarB?: PlacarLuta;
+    finalizacao?: boolean;
+    desclassificacao?: boolean;
+    desempateArbitro?: boolean;
+  }) => ipcRenderer.invoke('registrar-resultado', data),
 })
 
 contextBridge.exposeInMainWorld('activation', {

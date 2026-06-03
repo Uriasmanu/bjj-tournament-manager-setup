@@ -1007,7 +1007,12 @@ function normalizeLuta(luta) {
     atletaAId: luta.atletaAId ?? "",
     atletaBId: luta.atletaBId ?? "",
     status: luta.status ?? "pending",
-    vencedorId: luta.vencedorId ?? null
+    vencedorId: luta.vencedorId ?? null,
+    placarA: luta.placarA ?? void 0,
+    placarB: luta.placarB ?? void 0,
+    finalizacao: luta.finalizacao ?? void 0,
+    desclassificacao: luta.desclassificacao ?? void 0,
+    desempateArbitro: luta.desempateArbitro ?? void 0
   };
 }
 function normalizeChave(chave) {
@@ -1088,6 +1093,11 @@ function registrarResultadoHandler(torneioId, data) {
   }
   luta.vencedorId = data.vencedorId;
   luta.status = data.status === "wo" ? "wo" : "completed";
+  luta.placarA = data.placarA;
+  luta.placarB = data.placarB;
+  luta.finalizacao = data.finalizacao ?? false;
+  luta.desclassificacao = data.desclassificacao ?? false;
+  luta.desempateArbitro = data.desempateArbitro ?? false;
   advanceWinnerInChave(chave, luta);
   chaves[chaveIndex] = chave;
   torneio.chaves = chaves;

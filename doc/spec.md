@@ -1,23 +1,31 @@
 ## Feature v1
-A exibição dachave de luta tem que sempre exibir os cards, 
+ crie o placar de jiu jitsu
+pontos por posição 2,3 e 4, pontos acumulados, vantage, punição, tempo decrecente editavel sem som de apito final
+cor azul anil e branco, exibir nome dos atletas de acordo coma luta que foi selecionadaa para iniciar
+salvar no JSON do torneio o resultado final
+quem ganhou
+quem perdeu
+quais pontos fez
+pontos totais
+punições, vantagens
+se teve desclassificação
+se teve finalização ou venceu por ponto
+se identificar empate, quem for selecionado vencedor fica com uma flag de descizão do arbitro
 
-Estrutura visual da chave:
+## Problema v2
+Não gostei do formato do placar, o tempo tem que ficar no centro da tela
+Mude tambem como os pontos são exibidos, tem que ser grande
+Os pontos devem ser na horizontal
+Punição e vantagem estão muto grandes o valor do ponto
 
-Primeira rodada:        Segunda rodada:          Final:
-A ──┐
-    ├── V1 ──┐
-B ──┘        │
-             ├── V3 ──┐
-E ───────────┘        │
-                      ├── Campeão
-C ──┐                 │
-    ├── V2 ──┐        │
-D ──┘        │        │
-             ├── V4 ──┘
-F ───────────┘
+Não precisa desse aviso: O vencedor será marcado com a flag finalizacao no JSON.
+Quando confirma o vencedor, tem que voltar para a tela da area
+As chaves tem que ter um indicador que mostra se esta em progresso
+As chaves na area não devem ser cards, deve ser em formato de lista
+Ccrie um botão chamado iniciar area de luta, ele tem que ficar bem visivel, para que a area tenha o status de em progresso
+quando a area tem o status de em progresso, as chaves criam automaticamente as lutas a seguir ex: chave de 3 vai ter atleta x atleta e atleta x bye, quando a area estive em progresso a chve vai receber os cards sreferentes a semi final e final
 
-## Problema
-
+BracketTree.tsx não esta seguindo os estilos definidos em requisitos
 
 # Guia de Spec para Implementação de Features
 

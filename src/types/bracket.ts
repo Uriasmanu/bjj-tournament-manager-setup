@@ -1,11 +1,25 @@
+export interface PlacarLuta {
+  pontos2: number;
+  pontos3: number;
+  pontos4: number;
+  vantagens: number;
+  punicoes: number;
+  total: number;
+}
+
 export interface Luta {
   id: string;
   ordem: number;
   rodada: number;
-  atletaAId: string;   // ID do atleta ou "bye"
-  atletaBId: string;   // ID do atleta ou "bye"
+  atletaAId: string;
+  atletaBId: string;
   status: 'pending' | 'scheduled' | 'in_progress' | 'completed' | 'wo';
   vencedorId?: string | null;
+  placarA?: PlacarLuta;
+  placarB?: PlacarLuta;
+  finalizacao?: boolean;
+  desclassificacao?: boolean;
+  desempateArbitro?: boolean;
 }
 
 export interface Chave {
