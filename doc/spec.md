@@ -1,7 +1,9 @@
 ## Problema 
+em chaves com 4 atletas o vencedor da 2° luta não esta indo para o card das quartas de final
+Não esta sendo gerada a luda das quartas de final para ser iniciada
 
 ## Feature 
-Se o tempo acaba, maioria das vezes a vitoria é por pontos, então se for marca que é vitoria por pontos o sistema deve olha quem tem mais pontos e mais vantagem, e caso seja escolhido errado ele aparece uma mensagem em vermelho perguntando se tem certeza se esse é o campeão
+
 
 
 # Guia de Spec para Implementação de Features

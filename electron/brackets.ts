@@ -562,19 +562,18 @@ function advanceWinnerInChave(chave: Chave, luta: Luta): void {
     const nextRoundLutas = chave.lutas.filter(l => l.rodada === targetRodada);
     if (nextRoundLutas.length === 0) return;
 
-    const pairsPerMatch = Math.pow(2, targetRodada - luta.rodada - 1);
-    const nextMatchIndex = Math.floor(matchIndex / pairsPerMatch);
+    const fightsPerNextMatch = currentRoundLutas.length / nextRoundLutas.length;
+    const nextMatchIndex = Math.floor(matchIndex / fightsPerNextMatch);
     if (nextMatchIndex >= nextRoundLutas.length) return;
 
     const nextLuta = nextRoundLutas[nextMatchIndex];
-    const slotIndex = matchIndex % Math.pow(2, targetRodada - luta.rodada);
-    const firstSlotAt = Math.floor(slotIndex / pairsPerMatch);
+    const slotInNextMatch = matchIndex % fightsPerNextMatch;
 
-    if (firstSlotAt === 0 && (nextLuta.atletaAId === 'tbd' || nextLuta.atletaAId === '')) {
+    if (slotInNextMatch === 0 && (nextLuta.atletaAId === 'tbd' || nextLuta.atletaAId === '')) {
       nextLuta.atletaAId = luta.vencedorId!;
       return;
     }
-    if (firstSlotAt === 1 && (nextLuta.atletaBId === 'tbd' || nextLuta.atletaBId === '')) {
+    if (slotInNextMatch === 1 && (nextLuta.atletaBId === 'tbd' || nextLuta.atletaBId === '')) {
       nextLuta.atletaBId = luta.vencedorId!;
       return;
     }

@@ -19,6 +19,23 @@ const ROUND_LABELS: Record<number, string> = {
   4: 'FINAL',
 };
 
+function getRoundLabel(rodada: number, totalRodadas: number): string | undefined {
+  const offset = Math.max(0, 4 - totalRodadas);
+  return ROUND_LABELS[rodada + offset];
+}
+
+function getLutasByRound(chave: Chave): Map<number, Luta[]> {
+  const byRodada = new Map<number, Luta[]>();
+  for (const l of chave.lutas) {
+    if (!byRodada.has(l.rodada)) byRodada.set(l.rodada, []);
+    byRodada.get(l.rodada)!.push(l);
+  }
+  for (const [, lutas] of byRodada) {
+    lutas.sort((a, b) => a.ordem - b.ordem);
+  }
+  return byRodada;
+}
+
 function buildConnections(chave: Chave, athleteIds?: string[]): { from: string; to: string }[] {
   if (chave.totalAtletas === 3) {
     const r1 = chave.lutas.find(l => l.rodada === 1);
@@ -36,43 +53,28 @@ function buildConnections(chave: Chave, athleteIds?: string[]): { from: string; 
     return buildConnections16(chave, athleteIds);
   }
 
-  const sorted = [...chave.lutas].sort((a, b) => a.rodada - b.rodada || a.ordem - b.ordem);
-  const winnerToLuta = new Map<string, Luta>();
-  for (const l of sorted) {
-    if (l.vencedorId) winnerToLuta.set(l.vencedorId, l);
-  }
-
-  const queue: Luta[] = [];
+  const byRodada = getLutasByRound(chave);
+  const rodadas = Array.from(byRodada.keys()).sort((a, b) => a - b);
   const conns: { from: string; to: string }[] = [];
 
-  for (const luta of sorted) {
-    if (luta.rodada === 1) {
-      queue.push(luta);
-      continue;
-    }
+  for (let r = 0; r < rodadas.length - 1; r++) {
+    const currentRound = byRodada.get(rodadas[r])!;
+    const nextRound = byRodada.get(rodadas[r + 1])!;
+    const fightsPerNext = currentRound.length / nextRound.length;
 
-    let sourceSlots = 0;
-    for (const slot of [luta.atletaAId, luta.atletaBId]) {
-      if (slot === 'tbd' || slot === '') {
-        sourceSlots++;
-      } else if (slot) {
-        const sourceLuta = winnerToLuta.get(slot);
-        if (sourceLuta && sourceLuta.rodada < luta.rodada) sourceSlots++;
-      }
+    for (let i = 0; i < currentRound.length; i++) {
+      conns.push({ from: `m${currentRound[i].id}`, to: `m${nextRound[Math.floor(i / fightsPerNext)].id}` });
     }
-
-    for (let i = 0; i < sourceSlots; i++) {
-      const sourceIdx = queue.findIndex(s => s.rodada < luta.rodada);
-      if (sourceIdx < 0) break;
-      const source = queue.splice(sourceIdx, 1)[0];
-      conns.push({ from: `m${source.id}`, to: `m${luta.id}` });
-    }
-    queue.push(luta);
   }
 
-  const lastGen = sorted[sorted.length - 1];
-  if (lastGen?.vencedorId && lastGen.vencedorId !== 'tbd') {
-    conns.push({ from: `m${lastGen.id}`, to: 'champion-card' });
+  const lastRound = rodadas[rodadas.length - 1];
+  if (lastRound) {
+    const lastLutas = byRodada.get(lastRound)!;
+    for (const l of lastLutas) {
+      if (l.vencedorId && l.vencedorId !== 'tbd') {
+        conns.push({ from: `m${l.id}`, to: 'champion-card' });
+      }
+    }
   }
 
   return conns;
@@ -232,7 +234,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
         {columns.map((columnLutas, colIdx) => {
           const firstLuta = columnLutas.find((item): item is Luta => item !== 'bye' && item !== 'champion');
           const rodada = firstLuta?.rodada;
-          const label = rodada ? ROUND_LABELS[rodada] : undefined;
+          const label = rodada ? getRoundLabel(rodada, chave.totalRodadas) : undefined;
 
           return (
             <div
