@@ -2,15 +2,9 @@
 
 
 ## Feature 
-regra de 6 atletas no tatal na chave
 
-A X B -> G - J
-C X D -> H
-E X F -> I
-
-H X I -> K
-
-J X K
+Quando uma chave tem um vencedor ele recebe uma tag no card em Placar - Area 1
+tire a cor roxa, siga o que requisitos manda
 
 
 # Guia de Spec para Implementação de Features
