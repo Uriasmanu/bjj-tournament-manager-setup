@@ -560,6 +560,20 @@ function registrarResultadoHandler(
 
   advanceWinnerInChave(chave, luta);
 
+  if (chave.totalAtletas === 3 && luta.rodada === 1) {
+    const loserId = luta.vencedorId === luta.atletaAId ? luta.atletaBId : luta.atletaAId;
+    const nextRound = chave.lutas.find(l => l.rodada === 2);
+    if (nextRound) {
+      if (nextRound.atletaAId === luta.vencedorId) nextRound.atletaAId = 'tbd';
+      if (nextRound.atletaBId === luta.vencedorId) nextRound.atletaBId = 'tbd';
+      if (nextRound.atletaAId === 'tbd') {
+        nextRound.atletaAId = loserId;
+      } else if (nextRound.atletaBId === 'tbd') {
+        nextRound.atletaBId = loserId;
+      }
+    }
+  }
+
   chaves[chaveIndex] = chave;
   torneio.chaves = chaves;
   torneio.updatedAt = new Date().toISOString();

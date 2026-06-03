@@ -1,7 +1,20 @@
 ## Feature 
 
 ## Problema 
-Regra exclusiva para chaves com o total de 3 atletas, quando acabar a primeira luta, deve ser geradad a luta seguinte que é atleta perdedor x atleta que tava na chave com bye
+regras exclusivas para chave com o total de 3 atletas
+vai funcionar da seguinte forma
+
+1° rodada atlta 1 x atleta2
+1° rodada atleta 3 x bye
+
+2° rodada perdedor x atleta 3
+
+3° rodada vencedor 2° rodada x vencedor da 1° rodada
+
+card de campeão
+
+cada atleta ocupa o seu proprio card
+ os cards se organizam em piramide deitada conectado por linhas
 
 # Guia de Spec para Implementação de Features
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { useMantineTheme } from '@mantine/core';
 import type { Chave, Luta } from '../types/bracket';
 
 interface BracketTreeProps {
@@ -56,6 +57,7 @@ function buildConnections(chave: Chave): { from: string; to: string }[] {
 }
 
 export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTreeProps) {
+  const theme = useMantineTheme();
   const [paths, setPaths] = useState<string[]>([]);
   const bracketRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +103,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
   }, [connections, chave]);
 
   return (
-    <div style={{ minHeight: '100%', backgroundColor: '#020617', padding: 24, color: '#f1f5f9', borderRadius: 8 }}>
+    <div style={{ minHeight: '100%', backgroundColor: theme.colors.gray[0], padding: 24, color: theme.black, borderRadius: 8 }}>
       <div
         ref={bracketRef}
         style={{
@@ -115,7 +117,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
       >
         <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
           {paths.map((path, i) => (
-            <path key={i} d={path} stroke="#475569" strokeWidth={2} fill="none" />
+            <path key={i} d={path} stroke={theme.colors.gray[4]} strokeWidth={2} fill="none" />
           ))}
         </svg>
 
@@ -136,6 +138,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
                 id={`m${luta.id}`}
                 getAtletaNome={getAtletaNome}
                 onSelectWinner={onSelectWinner}
+                theme={theme}
               />
             ))}
           </div>
@@ -150,24 +153,25 @@ interface CardProps {
   id: string;
   getAtletaNome: (id: string | null) => string;
   onSelectWinner?: (luta: Luta, vencedorId: string) => void;
+  theme: ReturnType<typeof useMantineTheme>;
 }
 
-function Card({ luta, id, getAtletaNome, onSelectWinner }: CardProps) {
+function Card({ luta, id, getAtletaNome, onSelectWinner, theme }: CardProps) {
   return (
     <div
       id={id}
       style={{
         width: 256,
-        backgroundColor: '#0f172a',
-        border: '1px solid #1e293b',
+        backgroundColor: theme.white,
+        border: `1px solid ${theme.colors.gray[3]}`,
         borderRadius: 8,
         padding: 12,
-        boxShadow: '0 20px 25px -5px rgba(0,0,0,0.4), 0 10px 10px -5px rgba(0,0,0,0.2)',
+        boxShadow: theme.shadows.sm,
         position: 'relative',
         zIndex: 10,
       }}
     >
-      <div style={{ fontSize: 10, color: '#64748b', fontWeight: 700, marginBottom: 8, letterSpacing: 0.5 }}>
+      <div style={{ fontSize: 10, color: theme.colors.gray[5], fontWeight: 700, marginBottom: 8, letterSpacing: 0.5 }}>
         LUTA #{luta.ordem}
       </div>
       {([1, 2] as const).map(slot => {
@@ -185,11 +189,11 @@ function Card({ luta, id, getAtletaNome, onSelectWinner }: CardProps) {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              backgroundColor: isWinner ? '#064e3b' : '#020617',
+              backgroundColor: isWinner ? theme.colors.green[1] : theme.colors.gray[0],
             }}
           >
             <div style={{ overflow: 'hidden', minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: theme.black }}>
                 {nome}
               </div>
             </div>
@@ -202,12 +206,12 @@ function Card({ luta, id, getAtletaNome, onSelectWinner }: CardProps) {
                   border: 'none',
                   borderRadius: 4,
                   cursor: 'pointer',
-                  color: '#f1f5f9',
+                  color: theme.colors.blue[6],
                   display: 'inline-flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1e293b')}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = theme.colors.gray[2])}
                 onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
                 aria-label="Marcar vencedor"
               >
