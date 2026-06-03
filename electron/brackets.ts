@@ -41,10 +41,9 @@ function aplicarSeedSorting(atletas: Atleta[]): Atleta[] {
   const n = sorted.length;
   if (n <= 2) return sorted;
 
-  let sideA: number[], sideB: number[];
-  if (n === 3) { sideA = [0]; sideB = [1, 2]; }
-  else if (n === 4) { sideA = [0, 3]; sideB = [1, 2]; }
-  else { sideA = [0, 3, 4]; sideB = [1, 2]; }
+  const half = Math.ceil(n / 2);
+  const sideA = Array.from({ length: half }, (_, i) => i);
+  const sideB = Array.from({ length: n - half }, (_, i) => i + half);
 
   for (const side of [sideA, sideB]) {
     const seen = new Set<string>();
@@ -143,8 +142,48 @@ function getTotalRodadas(totalAtletas: number): number {
   if (totalAtletas <= 2) return 1;
   if (totalAtletas === 3) return 3;
   if (totalAtletas <= 4) return 2;
-  if (totalAtletas <= 8) return 3;
-  return 4;
+  return Math.ceil(Math.log2(totalAtletas));
+}
+
+function gerarLutasGeral(posicoes: Atleta[]): Luta[] {
+  const n = posicoes.length;
+  const numRodadas = Math.ceil(Math.log2(n));
+  const lutas: Luta[] = [];
+  let ordem = 1;
+
+  const round1Entries: (string)[] = [];
+  for (let i = 0; i < n; i += 2) {
+    if (i + 1 < n) {
+      const luta = criarLuta(ordem++, 1, posicoes[i].id, posicoes[i + 1].id);
+      lutas.push(luta);
+      round1Entries.push(luta.id);
+    } else {
+      const byeLuta = criarLuta(ordem++, 1, posicoes[i].id, TBD);
+      byeLuta.vencedorId = posicoes[i].id;
+      byeLuta.status = 'wo';
+      lutas.push(byeLuta);
+      round1Entries.push(posicoes[i].id);
+    }
+  }
+
+  let currentEntries = round1Entries;
+  let rodada = 2;
+  while (rodada <= numRodadas) {
+    const nextEntries: string[] = [];
+    for (let i = 0; i < currentEntries.length; i += 2) {
+      if (i + 1 < currentEntries.length) {
+        const luta = criarLuta(ordem++, rodada, TBD, TBD);
+        lutas.push(luta);
+        nextEntries.push(luta.id);
+      } else {
+        nextEntries.push(currentEntries[i]);
+      }
+    }
+    currentEntries = nextEntries;
+    rodada++;
+  }
+
+  return lutas;
 }
 
 function gerarLutas16(posicoes: Atleta[]): Luta[] {
@@ -172,7 +211,9 @@ function gerarLutas(posicoes: Atleta[]): Luta[] {
     case 4: return gerarLutasQuatro(posicoes);
     case 5: return gerarLutasCinco(posicoes);
     case 16: return gerarLutas16(posicoes);
-    default: throw new Error('Número inválido de atletas');
+    default:
+      if (posicoes.length >= 6 && posicoes.length <= 15) return gerarLutasGeral(posicoes);
+      throw new Error('Número inválido de atletas');
   }
 }
 
@@ -181,10 +222,8 @@ const FAIXA_ORDER: Record<string, number> = {
   'verde': 4, 'azul': 5, 'roxa': 6, 'marrom': 7, 'preta': 8,
 };
 
-const MAX_ATLETAS_POR_CHAVE = 16;
-
 function gerarChave(categoriaId: string, atletas: Atleta[]): Chave {
-  if (atletas.length < 2 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
+  if (atletas.length < 2 || atletas.length > 16) {
     throw new Error('A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.');
   }
 
@@ -240,13 +279,31 @@ function autoAtribuirArbitros(torneio: Torneio): void {
   }
 }
 
-function splitGrupo(grupo: Atleta[]): Atleta[][] {
+function splitGrupo(grupo: Atleta[], maxPorChave: number): Atleta[][] {
   const n = grupo.length;
-  if (n <= 5 || n === 16) return [grupo];
+  if (n <= maxPorChave && n >= 2) return [grupo];
+
   const subgrupos: Atleta[][] = [];
-  for (let i = 0; i < n; i += 5) {
-    subgrupos.push(grupo.slice(i, i + 5));
+  let idx = 0;
+
+  while (idx < n) {
+    const remaining = n - idx;
+    if (remaining <= maxPorChave) {
+      subgrupos.push(grupo.slice(idx));
+      idx = n;
+    } else {
+      subgrupos.push(grupo.slice(idx, idx + maxPorChave));
+      idx += maxPorChave;
+    }
   }
+
+  const last = subgrupos[subgrupos.length - 1];
+  if (last && last.length === 1 && subgrupos.length > 1) {
+    const prev = subgrupos[subgrupos.length - 2];
+    const migrated = prev.pop()!;
+    last.unshift(migrated);
+  }
+
   return subgrupos;
 }
 
@@ -256,7 +313,7 @@ interface GerarTodasResult {
   atletasSemChave: Atleta[];
 }
 
-function gerarTodasChavesHandler(torneioId: string): GerarTodasResult {
+function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16): GerarTodasResult {
   const torneio = loadTorneio(torneioId);
   const atletas = torneio.atletas ?? [];
 
@@ -290,7 +347,7 @@ function gerarTodasChavesHandler(torneioId: string): GerarTodasResult {
       continue;
     }
 
-    const subgrupos = splitGrupo(grupo);
+    const subgrupos = splitGrupo(grupo, maxPorChave);
 
     let chavesGeradas = 0;
     for (const sub of subgrupos) {
@@ -573,7 +630,7 @@ function advanceWinnerInChave(chave: Chave, luta: Luta): void {
     if (nextMatchIndex >= nextRoundLutas.length) return;
 
     const nextLuta = nextRoundLutas[nextMatchIndex];
-    const slotInNextMatch = matchIndex % fightsPerNextMatch;
+    const slotInNextMatch = Math.floor(matchIndex % fightsPerNextMatch);
 
     if (slotInNextMatch === 0 && (nextLuta.atletaAId === 'tbd' || nextLuta.atletaAId === '')) {
       nextLuta.atletaAId = luta.vencedorId!;
@@ -752,10 +809,11 @@ function registrarResultadoHandler(
 }
 
 export function registerBracketHandlers(): void {
-  ipcMain.handle('gerar-todas-chaves', (): GerarTodasResult => {
+  ipcMain.handle('gerar-todas-chaves', (_event, maxPorChave?: number): GerarTodasResult => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error('Nenhum torneio ativo');
-    return gerarTodasChavesHandler(torneioId);
+    const max = (maxPorChave && maxPorChave >= 2 && maxPorChave <= 16) ? maxPorChave : 16;
+    return gerarTodasChavesHandler(torneioId, max);
   });
 
   ipcMain.handle('gerar-chave', (_event, data: { categoriaId: string }): Chave => {
@@ -764,7 +822,7 @@ export function registerBracketHandlers(): void {
     const torneio = loadTorneio(torneioId);
     const atletas = (torneio.atletas ?? []).filter(a => a.categoria === data.categoriaId);
 
-    if (atletas.length < 2 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
+    if (atletas.length < 2 || atletas.length > 16) {
       throw new Error('A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.');
     }
 

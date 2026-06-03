@@ -25,7 +25,7 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   loadArbitros: () => electron.ipcRenderer.invoke("load-arbitros"),
   importArbitros: () => electron.ipcRenderer.invoke("import-arbitros"),
   exportArbitros: () => electron.ipcRenderer.invoke("export-arbitros"),
-  gerarTodasChaves: () => electron.ipcRenderer.invoke("gerar-todas-chaves"),
+  gerarTodasChaves: (maxAtletas) => electron.ipcRenderer.invoke("gerar-todas-chaves", maxAtletas),
   gerarChave: (data) => electron.ipcRenderer.invoke("gerar-chave", data),
   loadChaves: () => electron.ipcRenderer.invoke("load-chaves"),
   loadChavePorCategoria: (categoriaId) => electron.ipcRenderer.invoke("load-chave-por-categoria", categoriaId),

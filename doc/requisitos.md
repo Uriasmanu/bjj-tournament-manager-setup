@@ -207,7 +207,10 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 ### 3.11. Geração de Chaves (Implementado)
 
-- **Máximo de 16 atletas por chave:** Cada chave suporta no máximo 16 atletas. Categorias com mais de 5 atletas são divididas em subgrupos usando `splitGrupo()`: se o total for <=5 ou ==16, mantém como grupo único; caso contrário, divide em subgrupos de até 5 (ex.: 11 atletas → 5+5+1, onde o subgrupo de 1 vai para `atletasSemChave`). O gerador aceita 2, 3, 4, 5 ou 16 atletas por chave. Qualquer outro número retorna erro `"Número inválido de atletas"`.
+- **Máximo configurável de atletas por chave:** O organizador pode definir o limite de atletas por chave (valores de 2 a 16) antes de gerar as chaves. O valor padrão é 16. O campo "Máximo de atletas por chave" é exibido na tela "Gerenciar Chaves" antes do botão "Gerar Chaves".
+- **Distribuição automática:** O sistema preenche cada chave até atingir o limite configurado, criando novas chaves conforme necessário. A última chave pode ter menos atletas, however não pode ficar com apenas 1 atleta. Se a última chave resultar com apenas 1 atleta, o sistema remove 1 atleta da chave anterior e move para a última, garantindo que nenhuma chave tenha apenas 1 atleta e que nenhuma ultrapasse o limite máximo definido.
+  - Exemplos (limite = 6): 15 atletas → [6, 6, 3]; 13 atletas → [6, 5, 2] (ajuste automático); 19 atletas → [6, 6, 5, 2] (ajuste automático).
+- **Tamanhos suportados:** O gerador aceita chaves com 2 a 16 atletas. Estruturas: 2 (1 luta), 3 (3 lutas, repescagem), 4 (3 lutas), 5 (6 lutas), 6-15 (geral, eliminação simples com byes), 15 (15 lutas). Para tamanhos 6-15, o sistema usa `gerarLutasGeral()` que gera uma bracket de eliminação simples com byes automáticos.
 - **Mínimo de 2 atletas:** Categorias com 1 atleta não geram chave — o atleta é listado como "sem chave". Com 0 atletas, nenhuma chave é gerada.
 - **Formato eliminatório simples:** Sem repescagem, sem disputa de 3º lugar (exceto chave de 3 atletas que usa sistema de repescagem restrito — ver seção 3.11.1).
 - **Estrutura por quantidade de atletas:**
@@ -215,14 +218,12 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - 3 atletas: 3 lutas, 3 rodadas — rodada 1 (semifinal: seed 1 vs seed 2), rodada 2 (tbd vs seed 3 — repescagem), rodada 3 (final)
   - 4 atletas: 3 lutas, 2 rodadas (2 Semifinais + Final)
   - 5 atletas: 6 lutas, 3 rodadas — R1 (3 lutas: seed1 vs seed2, seed3 vs seed4, seed5 vs BYE auto-resolvido), R2 (2 lutas: vencedor(L2) vs seed5, vencedor(L1) vs BYE auto-resolvido), R3 (Final: vencedor(L4) vs vencedor(L5))
+  - 6-15 atletas: eliminação simples com byes automáticos — número de rodadas = ceil(log2(N))
   - 16 atletas: 15 lutas, 4 rodadas (8 lutas R1, 4 lutas R2, 2 lutas R3, 1 luta R4 final)
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
 - **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.
 - **Bloqueio de edição:** Após a primeira luta ser iniciada, a edição é bloqueada.
-- **Seed sorting (geração inicial — `aplicarSeedSorting`):** Ao gerar a chave, atletas são ordenados por: peso (decrescente) → idade (decrescente, `currentYear - anoNascimento`) → nome (ascendente, `localeCompare`). A divisão em lados varia por quantidade:
-  - 3 atletas: sideA=[0], sideB=[1,2]
-  - 4 atletas: sideA=[0,3], sideB=[1,2]
-  - 5+ atletas: sideA=[0,3,4], sideB=[1,2]
+- **Seed sorting (geração inicial — `aplicarSeedSorting`):** Ao gerar a chave, atletas são ordenados por: peso (decrescente) → idade (decrescente, `currentYear - anoNascimento`) → nome (ascendente, `localeCompare`). A divisão em lados é dinâmica: metade superior (sideA) e metade inferior (sideB) da seed, com separação de equipes entre lados.
   - 16 atletas (`aplicarSeedSorting16`): sideA = primeiros 8, sideB = últimos 8; dentro de cada lado, atletas da mesma equipe são trocados com o lado oposto.
 - **Embaralhamento (shuffle):** O botão "Embaralhar" randomiza a ordem dos atletas na chave usando Fisher-Yates shuffle e mantém a separação de equipes em lados opostos (via `separarEquipes`). Para 16 atletas, reaplica seed sorting; para os demais, aplica `separarEquipes`. Pode ser acionado a qualquer momento enquanto a chave estiver no status `gerada`.
 - **Regeneração:** Permitida apenas se nenhuma luta foi iniciada.

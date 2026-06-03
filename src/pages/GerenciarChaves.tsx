@@ -1,4 +1,4 @@
-import { Container, Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput } from '@mantine/core';
+import { Container, Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput, NumberInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
 import { IconArrowUp, IconArrowDown, IconAward, IconSearch } from '@tabler/icons-react';
@@ -132,11 +132,12 @@ export function GerenciarChaves() {
   const [atletasSemChave, setAtletasSemChave] = useState<Atleta[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [maxAtletas, setMaxAtletas] = useState<number | string>('');
 
   const [viewChave, setViewChave] = useState<Chave | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
-  const [confirmGerarOpen, { open: openConfirmGerar, close: closeConfirmGerar }] = useDisclosure(false);
+  const [configGerarOpen, { open: openConfigGerar, close: closeConfigGerar }] = useDisclosure(false);
 
   const triggerRefresh = () => setRefreshKey(k => k + 1);
 
@@ -163,6 +164,8 @@ export function GerenciarChaves() {
     }
     return counts;
   }, [athletes]);
+
+  const totalAtletas = athletes.length;
 
   useEffect(() => {
     Promise.all([
@@ -226,8 +229,10 @@ export function GerenciarChaves() {
   };
 
   const handleGerarTodas = async () => {
+    closeConfigGerar();
     try {
-      const result = await window.electronAPI.gerarTodasChaves() as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
+      const max = typeof maxAtletas === 'number' && maxAtletas >= 2 ? maxAtletas : undefined;
+      const result = await window.electronAPI.gerarTodasChaves(max) as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
       setChaves(result.chaves);
       setAtletasSemChave(result.atletasSemChave ?? []);
       setChavesGeradas(true);
@@ -243,9 +248,10 @@ export function GerenciarChaves() {
   };
 
   const handleGerarNovamente = async () => {
-    closeConfirmGerar();
+    closeConfigGerar();
     try {
-      const result = await window.electronAPI.gerarTodasChaves() as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
+      const max = typeof maxAtletas === 'number' && maxAtletas >= 2 ? maxAtletas : undefined;
+      const result = await window.electronAPI.gerarTodasChaves(max) as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
       setChaves(result.chaves);
       setAtletasSemChave(result.atletasSemChave ?? []);
       const qtd = result.chaves.length;
@@ -380,7 +386,7 @@ export function GerenciarChaves() {
                   : 'Nenhuma categoria com atletas encontrada. Cadastre atletas primeiro.'}
               </Text>
               {categoriasComAtletas.size > 0 && (
-                <Button size="xl" onClick={handleGerarTodas}>
+                <Button size="xl" onClick={openConfigGerar}>
                   Gerar Chaves
                 </Button>
               )}
@@ -390,7 +396,7 @@ export function GerenciarChaves() {
           <>
             <Group justify="space-between" w="100%">
               <Group>
-                <Button onClick={openConfirmGerar} variant="light">Gerar Novamente</Button>
+                <Button onClick={openConfigGerar} variant="light">Gerar Novamente</Button>
               </Group>
               <Group>
                 <TextInput
@@ -619,18 +625,39 @@ export function GerenciarChaves() {
       </Modal>
 
       <Modal
-        opened={confirmGerarOpen}
-        onClose={closeConfirmGerar}
-        title="Confirmar Regeneração"
-        size="sm"
+        opened={configGerarOpen}
+        onClose={closeConfigGerar}
+        title="Configurar Geração de Chaves"
+        size="md"
       >
         <Stack gap="md">
-          <Text size="sm">
-            Deseja realmente gerar novamente todas as chaves? As chaves atuais serão substituídas.
+          <Paper withBorder p="md" radius="sm" bg="blue.0">
+            <Group justify="space-between">
+              <Text size="sm" fw={500}>Total de atletas cadastrados</Text>
+              <Badge size="lg" color="blue">{totalAtletas}</Badge>
+            </Group>
+          </Paper>
+          <NumberInput
+            label="Máximo de atletas por chave"
+            description="Quantidade máxima de atletas em cada chave gerada"
+            placeholder="16"
+            value={maxAtletas}
+            onChange={(val) => setMaxAtletas(val === '' ? '' : val)}
+            min={2}
+            max={16}
+            step={1}
+          />
+          <Text size="xs" c="dimmed">
+            {typeof maxAtletas !== 'number' || maxAtletas < 2
+              ? `O sistema distribuirá os ${totalAtletas} atletas em chaves com no máximo 16 atletas cada (padrão).`
+              : `O sistema distribuirá os ${totalAtletas} atletas em chaves com no máximo ${maxAtletas} atletas cada.`
+            }
           </Text>
           <Group justify="flex-end">
-            <Button variant="light" onClick={closeConfirmGerar}>Cancelar</Button>
-            <Button color="red" onClick={handleGerarNovamente}>Gerar Novamente</Button>
+            <Button variant="light" onClick={closeConfigGerar}>Cancelar</Button>
+            <Button onClick={chavesGeradas ? handleGerarNovamente : handleGerarTodas}>
+              Gerar Chaves
+            </Button>
           </Group>
         </Stack>
       </Modal>

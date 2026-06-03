@@ -52,8 +52,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('import-arbitros'),
   exportArbitros: () =>
     ipcRenderer.invoke('export-arbitros'),
-  gerarTodasChaves: () =>
-    ipcRenderer.invoke('gerar-todas-chaves'),
+  gerarTodasChaves: (maxAtletas?: number) =>
+    ipcRenderer.invoke('gerar-todas-chaves', maxAtletas),
   gerarChave: (data: { categoriaId: string }) =>
     ipcRenderer.invoke('gerar-chave', data),
   loadChaves: () =>
