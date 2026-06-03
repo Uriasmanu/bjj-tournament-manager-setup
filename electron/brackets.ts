@@ -25,14 +25,18 @@ function saveTorneio(torneio: Torneio): void {
   fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), 'utf-8');
 }
 
-function aplicarSeedSorting(atletas: Atleta[]): Atleta[] {
-  const sorted = [...atletas].sort((a, b) => {
+function sortAtletas(atletas: Atleta[]): Atleta[] {
+  return [...atletas].sort((a, b) => {
     if (a.pesoKg !== b.pesoKg) return b.pesoKg - a.pesoKg;
     const idadeA = new Date().getFullYear() - a.anoNascimento;
     const idadeB = new Date().getFullYear() - b.anoNascimento;
     if (idadeA !== idadeB) return idadeB - idadeA;
     return a.nome.localeCompare(b.nome);
   });
+}
+
+function aplicarSeedSorting(atletas: Atleta[]): Atleta[] {
+  const sorted = sortAtletas(atletas);
 
   const n = sorted.length;
   if (n <= 2) return sorted;
@@ -64,6 +68,38 @@ function aplicarSeedSorting(atletas: Atleta[]): Atleta[] {
   return sorted;
 }
 
+function aplicarSeedSorting16(atletas: Atleta[]): Atleta[] {
+  const sorted = sortAtletas(atletas);
+
+  const sideA = sorted.slice(0, 8);
+  const sideB = sorted.slice(8, 16);
+
+  for (const side of [sideA, sideB]) {
+    const seen = new Map<string, number[]>();
+    side.forEach((a, idx) => {
+      if (a.equipe) {
+        const list = seen.get(a.equipe) ?? [];
+        list.push(idx);
+        seen.set(a.equipe, list);
+      }
+    });
+    for (const [team, indices] of seen) {
+      if (indices.length < 2) continue;
+      const otherSide = side === sideA ? sideB : sideA;
+      for (let i = 1; i < indices.length; i++) {
+        const swapIdx = otherSide.findIndex(o => o.equipe !== team);
+        if (swapIdx >= 0) {
+          [side[indices[i]], otherSide[swapIdx]] = [otherSide[swapIdx], side[indices[i]]];
+        }
+      }
+    }
+  }
+
+  return [...sideA, ...sideB];
+}
+
+const TBD = 'tbd';
+
 function criarLuta(ordem: number, rodada: number, atletaAId: string, atletaBId: string): Luta {
   return { id: crypto.randomUUID(), ordem, rodada, atletaAId, atletaBId, status: 'pending', vencedorId: null };
 }
@@ -71,8 +107,6 @@ function criarLuta(ordem: number, rodada: number, atletaAId: string, atletaBId: 
 function gerarLutasDois(posicoes: Atleta[]): Luta[] {
   return [criarLuta(1, 1, posicoes[0].id, posicoes[1].id)];
 }
-
-const TBD = 'tbd';
 
 function gerarLutasTres(posicoes: Atleta[]): Luta[] {
   return [
@@ -103,7 +137,26 @@ function getTotalRodadas(totalAtletas: number): number {
   if (totalAtletas <= 2) return 1;
   if (totalAtletas === 3) return 3;
   if (totalAtletas <= 4) return 2;
-  return 3;
+  if (totalAtletas <= 8) return 3;
+  return 4;
+}
+
+function gerarLutas16(posicoes: Atleta[]): Luta[] {
+  const lutas: Luta[] = [];
+  let ordem = 1;
+
+  for (let i = 0; i < 8; i++) {
+    lutas.push(criarLuta(ordem++, 1, posicoes[i * 2].id, posicoes[i * 2 + 1].id));
+  }
+  for (let i = 0; i < 4; i++) {
+    lutas.push(criarLuta(ordem++, 2, TBD, TBD));
+  }
+  for (let i = 0; i < 2; i++) {
+    lutas.push(criarLuta(ordem++, 3, TBD, TBD));
+  }
+  lutas.push(criarLuta(ordem++, 4, TBD, TBD));
+
+  return lutas;
 }
 
 function gerarLutas(posicoes: Atleta[]): Luta[] {
@@ -112,6 +165,7 @@ function gerarLutas(posicoes: Atleta[]): Luta[] {
     case 3: return gerarLutasTres(posicoes);
     case 4: return gerarLutasQuatro(posicoes);
     case 5: return gerarLutasCinco(posicoes);
+    case 16: return gerarLutas16(posicoes);
     default: throw new Error('Número inválido de atletas');
   }
 }
@@ -121,14 +175,14 @@ const FAIXA_ORDER: Record<string, number> = {
   'verde': 4, 'azul': 5, 'roxa': 6, 'marrom': 7, 'preta': 8,
 };
 
-const MAX_ATLETAS_POR_CHAVE = 5;
+const MAX_ATLETAS_POR_CHAVE = 16;
 
 function gerarChave(categoriaId: string, atletas: Atleta[]): Chave {
   if (atletas.length < 2 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
-    throw new Error('A categoria precisa ter entre 2 e 5 atletas para gerar uma chave.');
+    throw new Error('A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.');
   }
 
-  const posicoes = aplicarSeedSorting(atletas);
+  const posicoes = atletas.length === 16 ? aplicarSeedSorting16(atletas) : aplicarSeedSorting(atletas);
   const lutas = gerarLutas(posicoes);
 
   return {
@@ -181,9 +235,11 @@ function autoAtribuirArbitros(torneio: Torneio): void {
 }
 
 function splitGrupo(grupo: Atleta[]): Atleta[][] {
+  const n = grupo.length;
+  if (n <= 5 || n === 16) return [grupo];
   const subgrupos: Atleta[][] = [];
-  for (let i = 0; i < grupo.length; i += MAX_ATLETAS_POR_CHAVE) {
-    subgrupos.push(grupo.slice(i, i + MAX_ATLETAS_POR_CHAVE));
+  for (let i = 0; i < n; i += 5) {
+    subgrupos.push(grupo.slice(i, i + 5));
   }
   return subgrupos;
 }
@@ -228,9 +284,7 @@ function gerarTodasChavesHandler(torneioId: string): GerarTodasResult {
       continue;
     }
 
-    const subgrupos = grupo.length > MAX_ATLETAS_POR_CHAVE
-      ? splitGrupo(grupo)
-      : [grupo];
+    const subgrupos = splitGrupo(grupo);
 
     let chavesGeradas = 0;
     for (const sub of subgrupos) {
@@ -315,9 +369,13 @@ function randomizarChaveHandler(torneioId: string, data: { chaveId: string }): C
     .map(id => (torneio.atletas ?? []).find(a => a.id === id))
     .filter((a): a is Atleta => a !== undefined);
 
-  separarEquipes(atletas);
-
-  chave.posicoesAtletas = atletas.map(a => a.id);
+  if (atletas.length === 16) {
+    const sorted = aplicarSeedSorting16(atletas);
+    chave.posicoesAtletas = sorted.map(a => a.id);
+  } else {
+    separarEquipes(atletas);
+    chave.posicoesAtletas = atletas.map(a => a.id);
+  }
   chave.lutas = gerarLutas(atletas);
 
   chaves[index] = chave;
@@ -524,6 +582,40 @@ function advanceWinnerInChave(chave: Chave, luta: Luta): void {
   }
 }
 
+function advanceWinner16(chave: Chave, luta: Luta): void {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+
+  const lutaIndex = chave.lutas.indexOf(luta);
+  if (lutaIndex < 0) return;
+
+  if (luta.rodada === 1) {
+    const r2Index = 8 + Math.floor(lutaIndex / 2);
+    const isFirst = lutaIndex % 2 === 0;
+    const r2Luta = chave.lutas[r2Index];
+    if (r2Luta) {
+      if (isFirst) r2Luta.atletaAId = winnerId;
+      else r2Luta.atletaBId = winnerId;
+    }
+  } else if (luta.rodada === 2) {
+    const adjIdx = lutaIndex - 8;
+    const r3Index = 12 + Math.floor(adjIdx / 2);
+    const isFirst = adjIdx % 2 === 0;
+    const r3Luta = chave.lutas[r3Index];
+    if (r3Luta) {
+      if (isFirst) r3Luta.atletaAId = winnerId;
+      else r3Luta.atletaBId = winnerId;
+    }
+  } else if (luta.rodada === 3) {
+    const r4Luta = chave.lutas[14];
+    if (r4Luta) {
+      const isFirst = (lutaIndex - 12) === 0;
+      if (isFirst) r4Luta.atletaAId = winnerId;
+      else r4Luta.atletaBId = winnerId;
+    }
+  }
+}
+
 function registrarResultadoHandler(
   torneioId: string,
   data: {
@@ -584,6 +676,8 @@ function registrarResultadoHandler(
         r3.status = 'pending';
       }
     }
+  } else if (chave.totalAtletas === 16) {
+    advanceWinner16(chave, luta);
   } else {
     advanceWinnerInChave(chave, luta);
   }
@@ -610,7 +704,7 @@ export function registerBracketHandlers(): void {
     const atletas = (torneio.atletas ?? []).filter(a => a.categoria === data.categoriaId);
 
     if (atletas.length < 2 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
-      throw new Error('A categoria precisa ter entre 2 e 5 atletas para gerar uma chave.');
+      throw new Error('A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.');
     }
 
     const chaves = torneio.chaves ?? [];

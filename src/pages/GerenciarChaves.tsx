@@ -86,11 +86,17 @@ function getTeamConflicts(chave: Chave, athletes: Atleta[]): string[] {
     }
   });
 
+  const total = chave.totalAtletas;
+  const ladoA = total === 16
+    ? [0, 1, 2, 3, 4, 5, 6, 7]
+    : total === 5 ? [0, 3, 4] : total === 4 ? [0, 3] : [0];
+  const ladoB = total === 16
+    ? [8, 9, 10, 11, 12, 13, 14, 15]
+    : total === 5 ? [1, 2] : total === 4 ? [1, 2] : [1, 2];
+
   const conflicts: string[] = [];
   for (const [equipe, positions] of teams) {
     if (positions.length < 2) continue;
-    const ladoA = [0, 3, 4];
-    const ladoB = [1, 2];
     const hasA = positions.some(p => ladoA.includes(p));
     const hasB = positions.some(p => ladoB.includes(p));
     if (hasA && hasB) {
