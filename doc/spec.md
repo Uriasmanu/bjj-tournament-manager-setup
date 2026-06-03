@@ -1,9 +1,38 @@
 ## Problema 
-O bug é que o atleta na cheve de 5 que esta com o bye deveria ser renderizado no card da luta #5 
-quem vence a luta no card luta #1 deveria ir para o card luta #4
-quem ganha a luta no card luta #2, vai lutar no card luta #5
+
 
 ## Feature 
+atletas na mesma categoria
+Ao gerar as chaves, o sistema deve respeitar a quantidade máxima de atletas por chave informada pelo usuário.
+
+As chaves devem ser criadas automaticamente distribuindo todos os atletas cadastrados.
+
+Regras:
+
+* Nenhuma chave pode ter mais atletas do que o limite informado.
+* Nenhuma chave pode ter apenas 1 atleta.
+* Caso a distribuição resulte em uma última chave com apenas 1 atleta, os atletas devem ser redistribuídos entre todas as chaves.
+* Todas as chaves devem possuir pelo menos 2 atletas.
+
+Exemplos com limite de 16 atletas:
+
+17 atletas:
+
+* Chave 1: 9 atletas
+* Chave 2: 8 atletas
+
+33 atletas:
+
+* Chave 1: 11 atletas
+* Chave 2: 11 atletas
+* Chave 3: 11 atletas
+
+49 atletas:
+
+* Chave 1: 13 atletas
+* Chave 2: 12 atletas
+* Chave 3: 12 atletas
+* Chave 4: 12 atletas
 
 
 # Guia de Spec para Implementação de Features
