@@ -37,17 +37,17 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
 | PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
 | Áreas de Luta | ✅ Completo | CRUD com nome + múltiplos árbitros por área. Validação de unicidade de árbitro entre áreas. Migração retroativa de dados legados. Menu com Cadastrar/Listar, tabela com busca, exclusão individual/em lote. |
-| Placar (Scoreboard) | ✅ Completo | Fluxo `PlacarMenu → PlacarChaves → PlacarBracket → PlacarLuta` (seleção de área, lista de chaves da área, bracket com lutas iniciáveis, placar funcional com cronômetro, pontos 2/3/4, vantagens, punições, finalização/DQ/desempate, persistência no JSON do torneio). Cores azul anil (Atleta A) e branco (Atleta B). Vencedor propagado para a próxima rodada. |
+| Placar (Scoreboard) | ✅ Completo | Fluxo `PlacarMenu → PlacarChaves → PlacarBracket → PlacarLuta` (seleção de área, lista de chaves da área, bracket com lutas iniciáveis, placar funcional com cronômetro, pontos 2/3/4, vantagens, punições, finalização/DQ/desempate, persistência no JSON do torneio). Cores azul anil (Atleta A) e branco (Atleta B). Vencedor propagado para a próxima rodada. Validação de pontos/vantagens ao selecionar vencedor por pontos com modal de aviso. `desclassificadoId` identifica atleta desclassificado. Correção de propagação em chaves de 2, 3 e 4 atletas. |
 
 ### 2.2. Não Implementado (Planejado)
 
 | Módulo | Status |
 |---|---|
 | Cadastro de Equipes | ❌ Pendente |
-| Cadastro de Categorias | ⏳ Parcial | Categorias IBJJF implementadas como tipo (`src/types/category.ts`) e campo obrigatório no formulário de atleta. Gerenciamento dedicado de categorias (CRUD) ainda pendente. |
+| Cadastro de Categorias | ⏳ Parcial | Categorias IBJJF implementadas como tipo (`src/types/category.ts` — 151 categorias, 15 faixas etárias × 2 gêneros × 9 pesos) e campo obrigatório no formulário de atleta. Classificação automática por peso/idade/gênero/faixa disponível via `classificarCategoria()`. Gerenciamento dedicado de categorias (CRUD) ainda pendente. |
 | Controle de Inscrições | ❌ Pendente |
 | Controle de Pesagem | ❌ Pendente |
-| Geração de Chaves | ✅ Completo | Máximo de 5 atletas por chave, chave editável manualmente, shuffle com separação de equipes, import/export JSON. Atletas sem oponente exibidos em cartões com opções de remanejamento (subir/descer peso) e indicador de "luta casada". |
+| Geração de Chaves | ✅ Completo | Máximo de 16 atletas por chave (subgrupos de até 5 para categorias >5 e ≠16), chave editável manualmente, shuffle com separação de equipes (Fisher-Yates), import/export JSON. Estruturas: 2, 3, 4, 5 e 16 atletas. Atletas sem oponente exibidos em cartões com opções de remanejamento (subir/descer peso) e indicador de "luta casada". |
 | Áreas de Luta | ✅ Completo | CRUD completo, múltiplos árbitros por área, unicidade de árbitro |
 | Chamadas | ❌ Pendente | Aviso de atletas ao púlpito/área de luta (chamada por chave/rodada). |
 | Resultados | ❌ Pendente | Tela de consolidação de resultados por categoria (pódios, medalhistas, ranking). |
@@ -86,7 +86,8 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - `createdAt`: sempre substituído pelo timestamp atual (momento da importação).
   - `updatedAt`: sempre substituído pelo timestamp atual (momento da importação).
 - Se o `id` do torneio importado já existir no diretório, o sistema pergunta se deseja sobrescrever via modal de confirmação.
-- Na sobrescrita (`import-tournament-overwrite`), o `id` do arquivo é obrigatório (usado como nome do arquivo). `createdAt` e `updatedAt` são normalizados da mesma forma.
+- Na sobrescrita (`import-tournament-overwrite`), o `id` E a `data` do arquivo são obrigatórios. O `id` é usado como nome do arquivo (não é gerado novo ID, ao contrário do `import-tournament`). `createdAt` e `updatedAt` são normalizados da mesma forma.
+- Se o arquivo de destino já existir e o usuário escolher não sobrescrever, o `import-tournament` retorna `{ success: false, exists: true }` em vez de lançar erro.
 - Após importar com sucesso, o usuário é redirecionado para a listagem de torneios.
 - A importação é feita via upload de arquivo (não diálogo nativo), com leitura do conteúdo via `FileReader` e envio ao IPC.
 
@@ -156,6 +157,10 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Armazenamento por torneio:** Atletas são armazenados dentro do JSON do torneio (campo `atletas: Atleta[]`), não mais em arquivo global. Cada torneio possui sua própria lista exclusiva.
 - **Torneio ativo obrigatório:** Para cadastrar, editar, excluir ou importar atletas, é necessário que haja um torneio ativo. Caso contrário, o handler IPC lança erro `"Nenhum torneio ativo"` exibido como notificação vermelha.
 - **Sincronia imediata:** Qualquer operação CRUD sobre atletas lê e escreve diretamente no arquivo JSON do torneio ativo (`torneios/{id}.json`), atualizando o timestamp `updatedAt` do torneio.
+- **Auto-fix silencioso ao carregar (`loadAthletes`):** Se um atleta carregado do JSON estiver sem `id`, `createdAt` ou `updatedAt`, esses campos são gerados automaticamente (`crypto.randomUUID()` para `id`, `new Date().toISOString()` para timestamps). Se alguma correção for aplicada, o arquivo do torneio é reescrito silenciosamente.
+- **`saveAthlete` — auto-geração:** Se o atleta enviado não possuir `id`, um novo UUID é gerado (`crypto.randomUUID()`). Se não possuir `createdAt`, o timestamp atual é atribuído. `updatedAt` é sempre substituído pelo timestamp atual.
+- **`updateAthlete` — substituição completa:** A atualização substitui o objeto do atleta por completo no índice correspondente (não é uma mesclagem parcial).
+- **Exclusão sem verificação de chaves:** A exclusão de atletas (`deleteAthlete`, `deleteAthletes`) não verifica se o atleta está alocado em alguma chave — o atleta pode ser removido mesmo estando em uma chave.
 ### 3.9. Equipes — Resumo no Dashboard
 
 - **Funcionalidade somente leitura:** A tela de Equipes não permite cadastro, edição ou exclusão de equipes. Ela exibe um resumo agregado a partir dos dados existentes dos atletas.
@@ -202,19 +207,24 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 ### 3.11. Geração de Chaves (Implementado)
 
-- **Máximo de 5 atletas por chave:** Cada chave suporta no máximo 5 atletas. Categorias com mais de 5 atletas são divididas em subgrupos de até 5.
+- **Máximo de 16 atletas por chave:** Cada chave suporta no máximo 16 atletas. Categorias com mais de 5 atletas são divididas em subgrupos usando `splitGrupo()`: se o total for <=5 ou ==16, mantém como grupo único; caso contrário, divide em subgrupos de até 5 (ex.: 11 atletas → 5+5+1, onde o subgrupo de 1 vai para `atletasSemChave`). O gerador aceita 2, 3, 4, 5 ou 16 atletas por chave. Qualquer outro número retorna erro `"Número inválido de atletas"`.
 - **Mínimo de 2 atletas:** Categorias com 1 atleta não geram chave — o atleta é listado como "sem chave". Com 0 atletas, nenhuma chave é gerada.
-- **Formato eliminatório simples:** Sem repescagem, sem disputa de 3º lugar.
+- **Formato eliminatório simples:** Sem repescagem, sem disputa de 3º lugar (exceto chave de 3 atletas que usa sistema de repescagem restrito — ver seção 3.11.1).
 - **Estrutura por quantidade de atletas:**
-  - 2 atletas: 1 luta (Final direta)
-  - 3 atletas: 2 lutas (1 Semifinal + Final, 1 bye)
-  - 4 atletas: 3 lutas (2 Semifinais + Final)
-  - 5 atletas: 4 lutas (1 Quartas + 2 Semifinais + Final)
+  - 2 atletas: 1 luta, 1 rodada (Final direta)
+  - 3 atletas: 3 lutas, 3 rodadas — rodada 1 (semifinal: seed 1 vs seed 2), rodada 2 (tbd vs seed 3 — repescagem), rodada 3 (final)
+  - 4 atletas: 3 lutas, 2 rodadas (2 Semifinais + Final)
+  - 5 atletas: 4 lutas, 3 rodadas (1 luta R1, 1 luta R2 com bye + seed 5, 1 luta R3 final)
+  - 16 atletas: 15 lutas, 4 rodadas (8 lutas R1, 4 lutas R2, 2 lutas R3, 1 luta R4 final)
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
 - **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.
 - **Bloqueio de edição:** Após a primeira luta ser iniciada, a edição é bloqueada.
-- **Seed sorting (geração inicial):** Ao gerar a chave, atletas são posicionados por peso (decrescente), idade (decrescente) e ordem alfabética, com bloqueio de equipe (mesma equipe em lados opostos).
-- **Embaralhamento (shuffle):** O botão "Embaralhar" randomiza a ordem dos atletas na chave e mantém a separação de equipes em lados opostos (sem reordenar por peso/idade). Pode ser acionado a qualquer momento enquanto a chave estiver no status `gerada`.
+- **Seed sorting (geração inicial — `aplicarSeedSorting`):** Ao gerar a chave, atletas são ordenados por: peso (decrescente) → idade (decrescente, `currentYear - anoNascimento`) → nome (ascendente, `localeCompare`). A divisão em lados varia por quantidade:
+  - 3 atletas: sideA=[0], sideB=[1,2]
+  - 4 atletas: sideA=[0,3], sideB=[1,2]
+  - 5+ atletas: sideA=[0,3,4], sideB=[1,2]
+  - 16 atletas (`aplicarSeedSorting16`): sideA = primeiros 8, sideB = últimos 8; dentro de cada lado, atletas da mesma equipe são trocados com o lado oposto.
+- **Embaralhamento (shuffle):** O botão "Embaralhar" randomiza a ordem dos atletas na chave usando Fisher-Yates shuffle e mantém a separação de equipes em lados opostos (via `separarEquipes`). Para 16 atletas, reaplica seed sorting; para os demais, aplica `separarEquipes`. Pode ser acionado a qualquer momento enquanto a chave estiver no status `gerada`.
 - **Regeneração:** Permitida apenas se nenhuma luta foi iniciada.
 - **Propriedade `emChave`:** Todo atleta possui a propriedade booleana opcional `emChave` indicando se está alocado em alguma chave. É marcada automaticamente ao gerar, randomizar ou importar chaves, e computada dinamicamente no frontend ao carregar os dados.
 - **Atletas Sem Chave:** Atletas sozinhos na categoria (único atleta) são exibidos em seção destacada com cartões individuais contendo:
@@ -231,11 +241,40 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Ordem de pesos IBJJF:** `galo → pluma → pena → leve → medio → meio-pesado → pesado → super-pesado → pesadissimo`
 - **Busca na listagem:** campo de busca textual que filtra as chaves exibidas por título (faixa, peso, quantidade de atletas) em tempo real. Exibe mensagem "Nenhuma chave encontrada para a busca {termo}" quando não há resultados.
 - **Correção de acúmulo de chaveIds:** Ao regenerar chaves ("Gerar Novamente"), os `chaveIds` de todos os árbitros são limpos antes da reatribuição automática, eliminando o acúmulo de IDs de chaves antigas. Isso garante que a contagem exibida na coluna "Chaves Atribuídas" da tela de árbitros reflita sempre o número real de chaves atuais.
-- **Especificação detalhada:** Ver `spec/geracao-chaves.md`, `spec/shuffle-chave.md`, `spec/emchave-atleta.md` e `spec/busca-chaves-atletas-arbitros-equipes.md`.
+### 3.11.1. Propagação de Vencedores e Tratamento de DQ em Chaves
+
+- **Função `advanceWinnerInChave`:** Responsável por propagar o vencedor de uma luta para a rodada seguinte. O algoritmo calcula:
+  - `fightsPerNextMatch = currentRoundLutas.length / nextRoundLutas.length` (razão entre número de lutas da rodada atual e da rodada alvo).
+  - `nextMatchIndex = Math.floor(matchIndex / fightsPerNextMatch)` — índice da luta na próxima rodada.
+  - `slotInNextMatch = matchIndex % fightsPerNextMatch` — slot na luta destino (0 → `atletaAId`, 1 → `atletaBId`).
+  - Só preenche o slot se ele estiver vazio (`'tbd'` ou `''`).
+- **Função `advanceWinner16` (chave de 16 atletas):** Usa índices hardcoded para propagação:
+  - Rodada 1 → Rodada 2: índice `8 + floor(idx / 2)`.
+  - Rodada 2 → Rodada 3: índice `12 + floor(adjIdx / 2)`.
+  - Rodada 3 → Rodada 4: índice `14`.
+- **Função `clearWinnerFromLaterRounds`:** Quando uma luta tem seu resultado alterado (reaberta), percorre recursivamente TODAS as rodadas seguintes e limpa o vencedor propagado: seta `atletaAId`/`atletaBId` para `'tbd'`, anula `vencedorId`, reseta `status` para `'pending'` se estava `'completed'` ou `'wo'`.
+- **Constante `tbd`:** Slots de luta vazios são marcados com o valor `'tbd'` (to be determined).
+- **Resultado em chave de 3 atletas com DQ na rodada 1:** Quando `desclassificacao=true` e `luta.rodada === 1`:
+  - O atleta perdedor (desclassificado) NÃO é propagado para a rodada 2.
+  - O atleta de bye (posição 2 da seed, `atletaBId` da rodada 2) avança diretamente para a rodada 3.
+  - A rodada 2 é marcada como auto-WO.
+- **Resultado em chave de 3 atletas SEM DQ na rodada 1:** Comportamento de repescagem:
+  - O perdedor da rodada 1 vai para a rodada 2 (vs atleta de bye).
+  - O vencedor da rodada 1 avança para a rodada 3.
+  - O vencedor da rodada 2 preenche o slot `atletaBId` da rodada 3.
+- **Resultado em chave de 2 atletas:** Única luta, rodada única. Vencedor é campeão direto. Nenhuma propagação adicional.
+- **DQ (`desclassificadoId`):** Quando `desclassificacao=true` no registro de resultado:
+  - O campo `desclassificadoId` é preenchido com o ID do atleta que NÃO é o vencedor.
+  - Quando `desclassificacao=false` ou `undefined`, `desclassificadoId` é limpo (`undefined`).
+- **Mapeamento de status:** `data.status === 'wo'` → luta salva com `status='wo'`; qualquer outro valor → `status='completed'`.
+- **Deep-clone:** O handler `registrarResultadoHandler` faz uma cópia profunda do bracket antes de modificá-lo (`JSON.parse(JSON.stringify(...))`), garantindo isolamento de mutação.
+- **Normalização retroativa (`normalizeLuta`):** Ao carregar chaves, toda luta recebe defaults: `ordem=0`, `rodada=1`, `atletaAId=''`, `atletaBId=''`, `status='pending'`, `vencedorId=null`, `finalizacao=undefined`, `desclassificacao=undefined`, `desclassificadoId=undefined`, `placarA=undefined`, `placarB=undefined`, `desempateArbitro=undefined`.
+- **Normalização retroativa (`normalizeChave`):** Ao carregar, defaults: `categoriaId=''`, `arbitroId=null`, `totalRodadas` computado do maior `luta.rodada`.
 
 ### 3.12. Importação de Chaves
 
 - **Formato:** Array JSON de objetos `Chave`. Cada chave deve conter `categoriaId` (string) e `lutas` (array) — `id` é opcional.
+- **Validação de estrutura:** O arquivo deve ser um array. Objetos, strings ou números são rejeitados com `"Arquivo inválido: o conteúdo deve ser um array de chaves."`. Cada item do array deve possuir `categoriaId` e `lutas` (array); caso contrário, retorna `"Estrutura de chave inválida no arquivo."`.
 - **Normalização automática:**
   - `id`: preservado do arquivo se presente; gerado (`crypto.randomUUID()`) se ausente.
   - Demais campos (`posicoesAtletas`, `arbitroId`, `totalAtletas`, `totalLutas`, `status`) são preservados do arquivo.
@@ -249,8 +288,9 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - Na primeira execução, exige senha de ativação fornecida pelo desenvolvedor.
 - Senha validada por hash SHA-256 (nunca armazenada em texto puro).
 - Após ativação bem-sucedida, gera token HMAC-SHA256 vinculado ao hardware da máquina (UUID obtido via `wmic csproduct get uuid`).
-- Token salvo em `{userData}/activation.json`; execuções subsequentes verificam o token automaticamente.
+- Token salvo em `{userData}/activation.json` com timestamp `activatedAt` (ISO); execuções subsequentes verificam o token automaticamente.
 - Senha mestra padrão: `Bjj@2025!Secure` (hash SHA-256: `57a8d2d84be94e9bdae407ad8352065346269c6997b0be31ff32101fc51e7c3e`).
+- A senha mestra pode ser sobrescrita via variável de ambiente `MASTER_PASSWORD_HASH` (útil para ambientes de desenvolvimento ou distribuição customizada).
 - Fallback para `crypto.randomUUID()` se o comando `wmic` falhar (Linux/macOS ou restrição de segurança).
 - O `App.tsx` faz 3 estados: `null` (carregando), `false` (tela de ativação), `true` (app principal). O `.catch(() => setActivated(false))` trata falhas de IPC.
 
@@ -322,8 +362,9 @@ A categoria de um atleta é determinada pela combinação de quatro fatores:
 | Meio-Pesado | até 74,0 |
 | Pesado | até 79,3 |
 | Super Pesado | sem limite |
+| Pesadíssimo | sem limite |
 
-> Pesadíssimo feminino não se aplica na IBJJF.
+> Pesadíssimo feminino não se aplica na IBJJF. No código, tanto masculino quanto feminino usam `null` como sentinela de "sem limite superior".
 
 #### 3.15.4. Classificação Automática
 
@@ -331,9 +372,11 @@ A função `classificarCategoria(atleta)` em `src/types/category.ts` determina a
 
 1. Cálculo da faixa etária a partir da idade (`anoAtual - anoNascimento`)
 2. Filtragem por gênero
-3. Encaixe na categoria de peso correta (menor limite que seja ≥ peso do atleta; `pesoMaximoKg = null` é tratado como "sem limite" e recebido por último)
+3. Encaixe na categoria de peso correta: filtra por faixa etária + gênero, ordena por `pesoMaximoKg` ascendente (valores `null` por último — representam "sem limite"), retorna a primeira onde `pesoKg <= pesoMaximoKg` ou a categoria de limite nulo
 
 A classificação automática não substitui a seleção manual no formulário — o usuário sempre escolhe a categoria explicitamente.
+
+O array `CATEGORIAS_IBJJF` é gerado programaticamente por `gerarCategorias()` que itera 15 faixas etárias × 2 gêneros × 9 pesos, pulando combinações onde `pesoLimite === undefined` (total: 151 categorias). O lookup `categoriaLabels` é construído a partir do mesmo array, mapeando `categoriaId → label`.
 
 #### 3.15.5. ID da Categoria
 
@@ -385,7 +428,7 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 | `src/pages/Equipes.tsx` | Loading/Error states: `fluid` + `min-height` |
 | `src/pages/Dashboard.tsx` | Loading state: `fluid` + `min-height` |
 
-### 3.16. Árbitros (Implementado)
+### 3.17. Árbitros (Implementado)
 
 - **Menu intermediário:** Ao clicar no card "Árbitros" no Dashboard, navega para `/admin/arbitros` que renderiza `ArbitrosMenu` — um menu com 3 cartões:
   - **Cadastrar Árbitro** — Abre o modal `ArbitroForm` diretamente na mesma página para criar um novo árbitro.
@@ -408,22 +451,40 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Torneio ativo obrigatório:** Para cadastrar, editar, excluir ou importar árbitros, é necessário que haja um torneio ativo.
 - **Sincronia imediata:** Qualquer operação CRUD sobre árbitros lê e escreve diretamente no arquivo JSON do torneio ativo.
 - **Equipe:** Campo opcional que registra a equipe/academia do árbitro. Utilizado na atribuição de chaves para alertar se o árbitro pertence à mesma equipe que atletas da chave (apenas aviso, não bloqueia).
-- **Importação:** Formato JSON com array de objetos contendo `{ "nome": "...", "faixa": "..." }` — `equipe` e `id` são opcionais. Deduplicação por nome (case-insensitive). Validação de faixa (apenas roxa, marrom, preta). **Normalização automática:**
-  - `id`: preservado do arquivo se presente; gerado (`crypto.randomUUID()`) se ausente.
-  - `createdAt`: sempre substituído pelo timestamp atual (momento da importação).
-  - `updatedAt`: sempre substituído pelo timestamp atual (momento da importação).
-  - `chaveIds`: preservado do arquivo se presente; `[]` se ausente.
-- **Exportação:** Array completo de árbitros com todos os campos (`nome`, `equipe`, `faixa`, `id`, `chaveIds`, `createdAt`, `updatedAt`).
-- **Exclusão:** Ao excluir um árbitro, as chaves que ele estava arbitrando ficam sem árbitro (`arbitroId = null`). Exibe modal de confirmação antes de excluir.
+- **Normalização no cadastro (`saveArbitro`):** `nome.trim().toLowerCase()`, `equipe.trim().toLowerCase()`, auto-geração de `id` e timestamps.
+- **Normalização na edição (`updateArbitro`):** Apenas `nome` é re-normalizado (`trim().toLowerCase()`). `equipe` NÃO é re-normalizada (preservada como foi enviada).
+- **Importação:** Formato JSON com array de objetos contendo `{ "nome": "...", "faixa": "..." }` — `equipe` e `id` são opcionais. **Validações:**
+  - O conteúdo do arquivo deve ser um **array** (objetos/strings/números são rejeitados com `"Arquivo inválido: o conteúdo deve ser um array de árbitros."`).
+  - Nome obrigatório, mínimo 2 caracteres.
+  - Faixa obrigatória, deve ser `roxa`, `marrom` ou `preta`.
+  - Se equipe for informada, deve ter no mínimo 2 caracteres.
+  - Deduplicação por nome (case-insensitive).
+  - **Normalização automática:**
+    - `id`: preservado do arquivo se presente; gerado (`crypto.randomUUID()`) se ausente.
+    - `nome`: `trim().toLowerCase()`.
+    - `equipe`: `trim().toLowerCase()` ou `''` se falsy/não-string.
+    - `createdAt`: sempre substituído pelo timestamp atual (momento da importação).
+    - `updatedAt`: sempre substituído pelo timestamp atual (momento da importação).
+    - `chaveIds`: preservado do arquivo se presente; `[]` se ausente.
+- **Exportação:** Array completo de árbitros com todos os campos (`nome`, `equipe`, `faixa`, `id`, `chaveIds`, `createdAt`, `updatedAt`). Nome padrão do arquivo: `{torneioNome}_arbitros.json` com caracteres especiais substituídos por `_`.
+- **Exclusão individual:** Ao excluir um árbitro, as chaves que ele estava arbitrando ficam sem árbitro (`arbitroId = null`). Exibe modal de confirmação antes de excluir.
+- **Exclusão em lote (`deleteArbitros`):** Mesmo cascade de exclusão individual — todas as chaves dos árbitros excluídos recebem `arbitroId = null`.
 - **Atribuição de chaves:** A atribuição de chaves a um árbitro é feita na tela de Gerenciamento de Chaves. Um árbitro pode arbitrar múltiplas chaves, mas uma chave pode ter no máximo 1 árbitro.
 - **Distribuição automática:** Após a geração das chaves, o sistema distribui automaticamente os árbitros entre as chaves com base na hierarquia de faixas. A distribuição pode ser ajustada manualmente.
-- **Hierarquia de faixas para arbitragem:** A faixa do árbitro define quais chaves ele pode arbitrar. A ordem hierárquica define que:
-  - **Roxa** arbitra chaves com atletas até faixa roxa (branca a roxa).
-  - **Marrom** arbitra chaves com atletas até faixa marrom (branca a marrom).
-  - **Preta** arbitra chaves com qualquer faixa.
+- **Hierarquia de faixas para arbitragem:** A faixa do árbitro define quais chaves ele pode arbitrar. A ordem hierárquica (mapeada numericamente em `FAIXA_ORDER`: branca=0, cinza=1, amarela=2, laranja=3, verde=4, azul=5, roxa=6, marrom=7, preta=8) define que:
+  - **Roxa** (índice 6) arbitra chaves com atletas até faixa roxa (índice ≤6).
+  - **Marrom** (índice 7) arbitra chaves com atletas até faixa marrom (índice ≤7).
+  - **Preta** (índice 8) arbitra chaves com qualquer faixa.
   - A distribuição automática respeita esta hierarquia. Na edição manual, o sistema avisa se a regra for violada, mas **não bloqueia**.
+- **Algoritmo de distribuição automática (`autoAtribuirArbitros`):**
+  1. Limpa os `chaveIds` de TODOS os árbitros (elimina acúmulo de IDs antigos).
+  2. Para cada chave, calcula o nível máximo de faixa entre seus atletas.
+  3. Ordena as chaves por faixa máxima (decrescente).
+  4. Para cada chave (da mais exigente para a menos), encontra árbitros elegíveis (faixa do árbitro ≥ faixa máxima da chave).
+  5. Dentre os elegíveis, seleciona o árbitro com menor número de chaves atribuídas (balanceamento de carga).
+  6. Atribui a chave ao árbitro selecionado.
 
-### 3.17. Áreas de Luta (Implementado)
+### 3.18. Áreas de Luta (Implementado)
 
 - **Menu intermediário:** Ao clicar no card "Áreas de Luta" no Dashboard, navega para `/admin/areas` que renderiza `AreasMenu` — um menu com 2 cartões:
   - **Cadastrar Área de Luta** — Abre o modal `AreaForm` diretamente na mesma página.
@@ -445,10 +506,12 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Sincronia imediata:** Qualquer operação CRUD lê e escreve diretamente no arquivo JSON do torneio ativo.
 - **Múltiplos árbitros por área:** Cada área pode ter zero, um ou vários árbitros responsáveis (campo `arbitroIds: string[]`).
 - **Unicidade de árbitro:** Um árbitro não pode estar atribuído a mais de uma área simultaneamente. A validação ocorre no backend (`electron/areas.ts:checkRefereeNotInUse`) e a mensagem de erro é exibida como notificação vermelha no frontend.
+- **`checkRefereeNotInUse` — detalhes:** A função percorre todas as áreas (exceto a própria área sendo editada), coleta todos os `arbitroIds` em uso, e verifica se algum dos árbitros solicitados já está atribuído. No cadastro (`saveArea`), não há exclusão de área; na edição (`updateArea`), a própria área é excluída da verificação.
+- **Normalização ao salvar (`saveArea`/`updateArea`):** `nome.trim()` e `arbitroIds.filter(Boolean)` removem espaços extras e IDs vazios antes de persistir.
 - **Migração retroativa:** O campo `normalizeArea()` no backend converte automaticamente dados legados do formato `arbitroId` (string) para `arbitroIds` (array) ao carregar as áreas do JSON.
 - **Exclusão em lote:** Na tela de listagem, cada linha possui um checkbox. O cabeçalho possui um checkbox "Selecionar todas" com estado indeterminado. Com uma ou mais áreas selecionadas, um botão "Excluir Selecionados (N)" aparece. A exclusão em lote é feita via IPC `delete-areas`.
 
-### 3.18. Placar / Scoreboard (Implementado)
+### 3.19. Placar / Scoreboard (Implementado)
 
 - **Fluxo de navegação:** `Dashboard → Placar → PlacarMenu` (seleção de área) → `PlacarChaves` (lista de chaves da área) → `PlacarBracket` (bracket + lutas iniciáveis) → `PlacarLuta` (placar funcional).
 - **Tela de seleção de área (`/admin/placar`):** `PlacarMenu` exibe `Select` com as áreas de luta cadastradas. Botão "Acessar" navega para `/admin/placar/chaves/:areaId`.
@@ -464,7 +527,9 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
   - Alerta visual de "Desclassificação" ao atingir 4 punições.
   - Botão "Finalizar Luta" → modal com tipo (Pontos, Finalização, DQ, Desempate) e vencedor. Todas as opções de resultado estão sempre habilitadas (sem restrição por estado da luta). O modal não exibe detalhes de implementação (flags do JSON). Ao clicar em "Confirmar", um segundo modal centralizado de confirmação aparece (com texto dinâmico por tipo e botão "Confirmar desclassificação" para DQ). Somente após essa segunda confirmação o resultado é persistido e o vencedor é propagado para a próxima rodada.
   - Botão "Voltar sem finalizar" → retorna para o `PlacarBracket` da chave (rota `/admin/placar/chave/:areaId/:chaveId`).
-- **Persistência:** Após a segunda confirmação, a `Luta` recebe `vencedorId`, `status` (`completed` ou `wo` — `wo` para DQ), `placarA`, `placarB`, `finalizacao`, `desclassificacao`, `desempateArbitro`. O vencedor é propagado para a próxima rodada (slot `tbd`) pela função `advanceWinnerInChave`. O sistema não implementa regra automática de dupla desclassificação — o operador sempre declara um vencedor.
+- **Persistência:** Após a segunda confirmação, a `Luta` recebe `vencedorId`, `status` (`completed` ou `wo` — `wo` para DQ), `placarA`, `placarB`, `finalizacao`, `desclassificacao`, `desclassificadoId`, `desempateArbitro`. O vencedor é propagado para a próxima rodada (slot `tbd`) pela função `advanceWinnerInChave` (ver seção 3.11.1). O sistema não implementa regra automática de dupla desclassificação — o operador sempre declara um vencedor.
+- **`desclassificadoId`:** Quando o resultado é do tipo DQ, o campo `desclassificadoId` é preenchido com o ID do atleta desclassificado (o perdedor, que não é o `vencedorId`). Quando o resultado não é DQ, `desclassificadoId` fica `undefined`.
+- **Validação de pontos:** Quando o tipo de resultado é "Pontos", antes da segunda confirmação o sistema valida se o atleta selecionado como vencedor realmente possui mais pontos totais no placar. Em caso de empate nos pontos, o critério de desempate é `vantagens`. Se a validação falhar, um modal de aviso vermelho é exibido com a mensagem "Tem certeza que este é o campeão?" e opções "Voltar" (retorna ao modal anterior) e "Confirmar mesmo assim" (prossegue com o registro). Para tipos de resultado diferentes de "Pontos" (finalização, DQ, desempate), a validação não é acionada.
 - **Normalização retroativa:** Chaves legadas sem `placarA`/`placarB` carregam sem erro; `normalizeLuta` adiciona defaults.
 - **Estado bloqueado:** Lutas com `tbd`/`bye` ou `completed`/`wo` exibem placar congelado e desabilitam controles e "Finalizar Luta".
 - **Especificação detalhada:** Ver `spec/placar.md` (fluxo), `spec/placar-jiu-jitsu.md` (placar funcional), `spec/placar-voltar-bracket.md` (correção do botão Voltar) e `spec/finalizar-luta-desclassificacao.md` (confirmação de resultado e habilitação de opções).
@@ -479,6 +544,11 @@ A aplicação será desenvolvida para:
 - Windows 11
 
 O sistema será distribuído como software desktop utilizando Electron.
+
+### 4.1. Configuração da Janela
+
+- A janela do Electron é criada com `win.maximize()` na inicialização, ocupando toda a tela disponível.
+- Ícone da janela: `{VITE_PUBLIC}/favicon.svg`.
 
 ---
 
@@ -522,6 +592,10 @@ O sistema utiliza exclusivamente arquivos JSON para armazenamento local, sem dep
 Cada entidade é persistida em um ou mais arquivos JSON. Os torneios são armazenados em arquivos individuais dentro de `{userData}/data/torneios/`. O arquivo de cada torneio é gerado no momento da criação ou importação.
 
 O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazena o `id` do torneio em uso.
+
+- **`ensureDirs()`:** No momento do primeiro acesso a dados, o sistema cria automaticamente os diretórios `{userData}/data/torneios/` e `{userData}/data/` se não existirem.
+- **`getActiveTournamentId()`:** Lê o arquivo `torneio-ativo.json`. Se o arquivo não existir ou estiver malformado, retorna `null` (sem lançar erro).
+- **`list-tournaments`:** Lê TODOS os arquivos `.json` do diretório `torneios/` — não há validação de esquema; qualquer `.json` presente é tratado como torneio.
 
 ### 6.2. Estrutura de Diretórios
 
@@ -625,6 +699,13 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `update-area` | Renderer → Main | Atualiza área de luta existente (match por `id`) |
 | `delete-area` | Renderer → Main | Remove área de luta do torneio ativo pelo `id` |
 | `delete-areas` | Renderer → Main | Remove múltiplas áreas de luta do torneio ativo |
+| `delete-athletes` | Renderer → Main | Remove múltiplos atletas do torneio ativo |
+| `delete-arbitros` | Renderer → Main | Remove múltiplos árbitros do torneio ativo |
+| `registrar-resultado` | Renderer → Main | Registra resultado de luta e propaga vencedor |
+| `load-chaves-por-area` | Renderer → Main → Renderer | Carrega chaves filtradas por área (pelos árbitros da área) |
+| `editar-chave` | Renderer → Main → Renderer | Edita manualmente as posições dos atletas em uma chave |
+| `salvar-resultado-luta` | Renderer → Main | Salva resultado de luta no placar (persistência do placar) |
+| `export-athletes` | Renderer → Main | Abre diálogo "Salvar como" e exporta JSON dos atletas |
 
 ---
 
@@ -645,6 +726,10 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `/admin/categorias/chaves` | `GerenciarChaves` | Geração, edição e visualização de chaves de luta (máx. 5 atletas) |
 | `/admin/areas` | `AreasMenu` | Menu de áreas de luta com 2 cartões (Cadastrar, Listar) |
 | `/admin/areas/lista` | `AdminAreas` | Gerenciamento de áreas de luta (tabela CRUD + busca) |
+| `/admin/placar` | `PlacarMenu` | Seleção de área de luta para o placar |
+| `/admin/placar/chaves/:areaId` | `PlacarChaves` | Lista de chaves da área selecionada |
+| `/admin/placar/chave/:areaId/:chaveId` | `PlacarBracket` | Bracket da chave + lutas iniciáveis |
+| `/admin/placar/luta/:areaId/:chaveId/:lutaId` | `PlacarLuta` | Placar funcional (cronômetro, pontos, vantagens, punições) |
 
 > O roteamento utiliza `HashRouter` (não `BrowserRouter`) para compatibilidade com o protocolo `file://` no Electron em produção.
 
@@ -850,6 +935,30 @@ A validação ocorre:
 - Atletas com `id` já existente na lista são ignorados (skipped) — somente se `id` foi fornecido no arquivo.
 - Atletas com mesmo `nome` (case-insensitive, trimmed) + `anoNascimento` são ignorados (skipped).
 
+### 11.5. Geração de Chaves (main process)
+
+| Validação | Mensagem de Erro |
+|---|---|
+| Categoria deve ter entre 2 e 16 atletas | `"A categoria precisa ter entre 2 e 16 atletas para gerar uma chave."` |
+| Número de atletas deve ser 2, 3, 4, 5 ou 16 | `"Número inválido de atletas"` |
+| Chave já existe para a categoria | `"Chave já existe para esta categoria."` |
+
+### 11.6. Importação de Chaves (main process)
+
+| Validação | Mensagem de Erro |
+|---|---|
+| Conteúdo do arquivo deve ser um array | `"Arquivo inválido: o conteúdo deve ser um array de chaves."` |
+| Cada chave deve ter `categoriaId` e `lutas` | `"Estrutura de chave inválida no arquivo."` |
+
+### 11.7. Importação de Árbitros (main process)
+
+| Validação | Mensagem de Erro |
+|---|---|
+| Conteúdo do arquivo deve ser um array | `"Arquivo inválido: o conteúdo deve ser um array de árbitros."` |
+| Nome obrigatório, mínimo 2 caracteres | `"Nome deve ter ao menos 2 caracteres."` |
+| Faixa deve ser roxa, marrom ou preta | `"Faixa inválida."` |
+| Se equipe informada, mínimo 2 caracteres | `"Equipe deve ter ao menos 2 caracteres se informada."` |
+
 ---
 
 ## 12. Regras de Duplicidade
@@ -919,6 +1028,9 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `spec/placar.md` | Especificação do fluxo Placar (PlacarMenu, PlacarChaves, PlacarBracket, PlacarLuta placeholder) |
 | `spec/placar-jiu-jitsu.md` | Especificação do placar funcional de Jiu-Jitsu (pontos 2/3/4, vantagens, punições, cronômetro, finalização/DQ/desempate) |
 | `spec/placar-voltar-bracket.md` | Correção do botão Voltar do PlacarLuta — navegação para `PlacarBracket` (inclusão de `areaId` na rota) |
+| `spec/correcao-avanca-vencedor-chave-4.md` | Correção da propagação de vencedor em chaves de 4 atletas (fórmula baseada em razão) |
+| `spec/correcao-dq-bracket.md` | Correção do DQ: campo `desclassificadoId` e propagação em chaves de 2 e 3 atletas |
+| `spec/validacao-pontos-vitoria.md` | Validação de pontos/vantagens ao selecionar vencedor por pontos (modal de aviso) |
 | `doc/import-audit.md` | Auditoria de importação: regras de geração automática de ID e timestamps |
 
 ---
@@ -965,6 +1077,7 @@ bjj-tournament-manager-setup/
 │   │   ├── BracketCard.tsx      ← Card de luta individual na árvore
 │   │   ├── RegistrarResultadoModal.tsx ← Modal de registro de resultado de luta
 │   │   ├── EditarChaveModal.tsx ← Modal de edição manual de posições na chave
+│   │   ├── AreaForm.tsx         ← Modal de cadastro/edição de área de luta
 │   │   └── ArbitroForm.tsx      ← Modal de cadastro/edição de árbitro
 │   ├── types/
 │   │   ├── tournament.ts        ← Interfaces Torneio, CreateTorneioInput
