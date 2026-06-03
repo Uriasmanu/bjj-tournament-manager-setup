@@ -214,7 +214,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - 2 atletas: 1 luta, 1 rodada (Final direta)
   - 3 atletas: 3 lutas, 3 rodadas — rodada 1 (semifinal: seed 1 vs seed 2), rodada 2 (tbd vs seed 3 — repescagem), rodada 3 (final)
   - 4 atletas: 3 lutas, 2 rodadas (2 Semifinais + Final)
-  - 5 atletas: 4 lutas, 3 rodadas (1 luta R1, 1 luta R2 com bye + seed 5, 1 luta R3 final)
+  - 5 atletas: 4 lutas, 3 rodadas — R1 (Quartas: seed1 vs seed2), R2 (Semifinal: vencedor R1 + 3 byes em 2 lutas), R3 (Final)
   - 16 atletas: 15 lutas, 4 rodadas (8 lutas R1, 4 lutas R2, 2 lutas R3, 1 luta R4 final)
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
 - **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.

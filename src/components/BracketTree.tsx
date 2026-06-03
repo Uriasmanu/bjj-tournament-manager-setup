@@ -49,6 +49,23 @@ function buildConnections(chave: Chave, athleteIds?: string[]): { from: string; 
     return conns;
   }
 
+  if (chave.totalAtletas === 5) {
+    const luta1 = chave.lutas.find(l => l.ordem === 1);
+    const luta2 = chave.lutas.find(l => l.ordem === 2);
+    const luta3 = chave.lutas.find(l => l.ordem === 3);
+    const luta4 = chave.lutas.find(l => l.ordem === 4);
+    const luta5 = chave.lutas.find(l => l.ordem === 5);
+    const luta6 = chave.lutas.find(l => l.ordem === 6);
+    const conns: { from: string; to: string }[] = [];
+    if (luta1 && luta5) conns.push({ from: `m${luta1.id}`, to: `m${luta5.id}` });
+    if (luta2 && luta4) conns.push({ from: `m${luta2.id}`, to: `m${luta4.id}` });
+    if (luta3 && luta4) conns.push({ from: `m${luta3.id}`, to: `m${luta4.id}` });
+    if (luta4 && luta6) conns.push({ from: `m${luta4.id}`, to: `m${luta6.id}` });
+    if (luta5 && luta6) conns.push({ from: `m${luta5.id}`, to: `m${luta6.id}` });
+    if (luta6?.vencedorId) conns.push({ from: `m${luta6.id}`, to: 'champion-card' });
+    return conns;
+  }
+
   if (chave.totalAtletas === 16) {
     return buildConnections16(chave, athleteIds);
   }
@@ -115,6 +132,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
   const bracketRef = useRef<HTMLDivElement>(null);
 
   const isPyramidLayout = chave.totalAtletas === 3;
+  const isFiveLayout = chave.totalAtletas === 5;
   const is16Layout = chave.totalAtletas === 16;
 
   const columns = useMemo(() => {
@@ -134,6 +152,35 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
 
       const hasChampion = r3?.vencedorId != null && r3.vencedorId !== 'tbd';
       if (hasChampion) cols.push(['champion']);
+
+      return cols;
+    }
+
+    if (isFiveLayout) {
+      const luta1 = chave.lutas.find(l => l.ordem === 1);
+      const luta2 = chave.lutas.find(l => l.ordem === 2);
+      const luta3 = chave.lutas.find(l => l.ordem === 3);
+      const luta4 = chave.lutas.find(l => l.ordem === 4);
+      const luta5 = chave.lutas.find(l => l.ordem === 5);
+      const luta6 = chave.lutas.find(l => l.ordem === 6);
+      const cols: (Luta | 'bye5' | 'champion')[][] = [];
+
+      const col1: (Luta | 'bye5')[] = [];
+      if (luta1) col1.push(luta1);
+      if (luta2) col1.push(luta2);
+      if (luta3) col1.push(luta3);
+      cols.push(col1);
+
+      const col2: (Luta | 'bye5')[] = [];
+      if (luta4) col2.push(luta4);
+      if (luta5) col2.push(luta5);
+      cols.push(col2);
+
+      const col3: (Luta | 'champion')[] = [];
+      if (luta6) col3.push(luta6);
+      const hasChampion = luta6?.vencedorId != null && luta6.vencedorId !== 'tbd';
+      if (hasChampion) col3.push('champion');
+      if (col3.length > 0) cols.push(col3);
 
       return cols;
     }
@@ -164,7 +211,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
     if (hasChampion) cols.push(['champion']);
 
     return cols;
-  }, [chave, isPyramidLayout, is16Layout]);
+  }, [chave, isPyramidLayout, isFiveLayout, is16Layout]);
 
   const athleteIds16 = useMemo(() => {
     if (!is16Layout) return undefined;
@@ -210,7 +257,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
         style={{
           position: 'relative',
           display: 'flex',
-          gap: isPyramidLayout ? 40 : (is16Layout ? 32 : 48),
+          gap: isPyramidLayout ? 40 : (isFiveLayout ? 40 : (is16Layout ? 32 : 48)),
           justifyContent: 'center',
           alignItems: 'stretch',
           minHeight: 320,
@@ -252,8 +299,8 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
                 </div>
               )}
               {columnLutas.map(item => {
-                if (item === 'bye') {
-                  return <ByeCard key="bye" chave={chave} getAtletaNome={getAtletaNome} theme={theme} />;
+                if (item === 'bye' || item === 'bye5') {
+                  return <ByeCard key={item} chave={chave} getAtletaNome={getAtletaNome} theme={theme} />;
                 }
                 if (item === 'champion') {
                   const maxRodada = Math.max(...chave.lutas.map(l => l.rodada));
@@ -402,7 +449,7 @@ function ColumnAthletes16({
 }
 
 function ByeCard({ chave, getAtletaNome, theme }: { chave: Chave; getAtletaNome: (id: string | null) => string; theme: ReturnType<typeof useMantineTheme> }) {
-  const seed3Id = chave.posicoesAtletas[2];
+  const byeId = chave.totalAtletas === 5 ? chave.posicoesAtletas[4] : chave.posicoesAtletas[2];
   return (
     <div
       id="bye-card"
@@ -421,7 +468,7 @@ function ByeCard({ chave, getAtletaNome, theme }: { chave: Chave; getAtletaNome:
       </div>
       <div style={{ padding: 8, borderRadius: 4, backgroundColor: theme.colors.blue[0], display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: theme.colors.blue[7], backgroundColor: theme.colors.blue[2], borderRadius: 4, padding: '1px 6px' }}>BYE</span>
-        <span style={{ fontSize: 14, fontWeight: 700, color: theme.black }}>{getAtletaNome(seed3Id)}</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: theme.black }}>{getAtletaNome(byeId)}</span>
       </div>
     </div>
   );
