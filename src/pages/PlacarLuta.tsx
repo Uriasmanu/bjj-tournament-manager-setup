@@ -286,6 +286,7 @@ export function PlacarLuta() {
   const [rodando, setRodando] = useState(false);
 
   const [finalizarOpened, { open: openFinalizar, close: closeFinalizar }] = useDisclosure(false);
+  const [confirmarResultadoOpened, { open: openConfirmarResultado, close: closeConfirmarResultado }] = useDisclosure(false);
   const [resultadoTipo, setResultadoTipo] = useState<ResultadoTipo>('pontos');
   const [vencedorFinal, setVencedorFinal] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
@@ -397,7 +398,22 @@ export function PlacarLuta() {
     openFinalizar();
   };
 
-  const handleConfirmarFinalizar = async () => {
+  const handleConfirmarFinalizar = () => {
+    if (!chave || !luta || !vencedorFinal) return;
+    closeFinalizar();
+    openConfirmarResultado();
+  };
+
+  const handleConfirmarResultado = () => {
+    void persistirResultado();
+  };
+
+  const handleCancelarResultado = () => {
+    closeConfirmarResultado();
+    openFinalizar();
+  };
+
+  const persistirResultado = async () => {
     if (!chave || !luta || !vencedorFinal) return;
     setSalvando(true);
     try {
@@ -417,6 +433,7 @@ export function PlacarLuta() {
       const updatedLuta = updatedChave.lutas.find(l => l.id === luta.id) ?? null;
       setLuta(updatedLuta);
       closeFinalizar();
+      closeConfirmarResultado();
       navigate(`/admin/placar/chave/${areaId}/${chaveId}`);
     } catch (err) {
       console.error('Erro ao registrar resultado:', err);
@@ -615,22 +632,10 @@ export function PlacarLuta() {
             onChange={(v) => setResultadoTipo(v as ResultadoTipo)}
           >
             <Stack gap="xs" mt="xs">
-              <Radio
-                value="pontos"
-                label="Vitória por pontos"
-                disabled={placarA.total === placarB.total}
-              />
+              <Radio value="pontos" label="Vitória por pontos" />
               <Radio value="finalizacao" label="Vitória por finalização (submission)" />
-              <Radio
-                value="desclassificacao"
-                label="Vitória por desclassificação (DQ)"
-                disabled={placarA.punicoes < MAX_PUNICOES && placarB.punicoes < MAX_PUNICOES}
-              />
-              <Radio
-                value="desempate"
-                label="Decisão dos árbitros (desempate)"
-                disabled={placarA.total !== placarB.total && !(placarA.vantagens === placarB.vantagens && placarA.punicoes === placarB.punicoes)}
-              />
+              <Radio value="desclassificacao" label="Vitória por desclassificação (DQ)" />
+              <Radio value="desempate" label="Decisão dos árbitros (desempate)" />
             </Stack>
           </Radio.Group>
 
@@ -645,22 +650,6 @@ export function PlacarLuta() {
             </Stack>
           </Radio.Group>
 
-          {resultadoTipo === 'desempate' && (
-            <Alert color="orange" icon={<IconAlertTriangle size={16} />}>
-              O vencedor será marcado com a flag <b>desempateArbitro</b> no JSON.
-            </Alert>
-          )}
-          {resultadoTipo === 'desclassificacao' && (
-            <Alert color="red" icon={<IconAlertTriangle size={16} />}>
-              O vencedor será marcado com a flag <b>desclassificacao</b> no JSON.
-            </Alert>
-          )}
-          {resultadoTipo === 'finalizacao' && (
-            <Alert color="grape" icon={<IconFlag size={16} />}>
-              O vencedor será marcado com a flag <b>finalizacao</b> no JSON.
-            </Alert>
-          )}
-
           <Group justify="flex-end" gap="sm">
             <Button variant="default" onClick={closeFinalizar} disabled={salvando}>
               Cancelar
@@ -672,6 +661,68 @@ export function PlacarLuta() {
               disabled={!vencedorFinal}
             >
               Confirmar
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={confirmarResultadoOpened}
+        onClose={closeConfirmarResultado}
+        title="Confirmar resultado"
+        size="sm"
+        centered
+        withCloseButton={false}
+        closeOnClickOutside={false}
+        closeOnEscape={false}
+      >
+        <Stack gap="md">
+          {resultadoTipo === 'desclassificacao' ? (
+            <Text ta="center" size="lg" fw={700}>
+              Confirmar desclassificação do atleta{' '}
+              <Text component="span" c="red" fw={900} tt="uppercase">
+                {vencedorFinal === luta.atletaAId ? atletaBInfo.nome : atletaAInfo.nome}
+              </Text>
+              ?
+              <br />
+              Vencedor: <b>{vencedorFinal === luta.atletaAId ? atletaAInfo.nome : atletaBInfo.nome}</b>
+            </Text>
+          ) : resultadoTipo === 'pontos' ? (
+            <Text ta="center" size="lg" fw={700}>
+              Confirmar vitória por pontos do atleta{' '}
+              <Text component="span" c="blue" fw={900} tt="uppercase">
+                {vencedorFinal === luta.atletaAId ? atletaAInfo.nome : atletaBInfo.nome}
+              </Text>
+              ?
+            </Text>
+          ) : resultadoTipo === 'finalizacao' ? (
+            <Text ta="center" size="lg" fw={700}>
+              Confirmar vitória por finalização do atleta{' '}
+              <Text component="span" c="grape" fw={900} tt="uppercase">
+                {vencedorFinal === luta.atletaAId ? atletaAInfo.nome : atletaBInfo.nome}
+              </Text>
+              ?
+            </Text>
+          ) : (
+            <Text ta="center" size="lg" fw={700}>
+              Confirmar decisão dos árbitros a favor do atleta{' '}
+              <Text component="span" c="orange" fw={900} tt="uppercase">
+                {vencedorFinal === luta.atletaAId ? atletaAInfo.nome : atletaBInfo.nome}
+              </Text>
+              ?
+            </Text>
+          )}
+          <Group justify="center" gap="sm" mt="sm">
+            <Button variant="default" onClick={handleCancelarResultado} disabled={salvando}>
+              Cancelar
+            </Button>
+            <Button
+              color={resultadoTipo === 'desclassificacao' ? 'red' : 'blue'}
+              onClick={handleConfirmarResultado}
+              loading={salvando}
+              leftSection={resultadoTipo === 'desclassificacao' ? <IconAlertTriangle size={16} /> : <IconFlag size={16} />}
+            >
+              {resultadoTipo === 'desclassificacao' ? 'Confirmar desclassificação' : 'Confirmar resultado'}
             </Button>
           </Group>
         </Stack>
