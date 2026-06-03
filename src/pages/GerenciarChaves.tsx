@@ -426,7 +426,7 @@ export function GerenciarChaves() {
                       <Stack gap="xs">
                         <Text fw={700} size="sm">{getChaveTitle(chave, athletes)}</Text>
                         <Group gap={4}>
-                          <Badge size="sm" color="grape">{chave.totalLutas} luta(s)</Badge>
+                          <Badge size="sm" color="blue">{chave.totalLutas} luta(s)</Badge>
                           <Badge size="sm" color="green">Gerada</Badge>
                         </Group>
                         <Text size="xs" c="dimmed">

@@ -527,7 +527,11 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 
 - **Fluxo de navegação:** `Dashboard → Placar → PlacarMenu` (seleção de área) → `PlacarChaves` (lista de chaves da área) → `PlacarBracket` (bracket + lutas iniciáveis) → `PlacarLuta` (placar funcional).
 - **Tela de seleção de área (`/admin/placar`):** `PlacarMenu` exibe `Select` com as áreas de luta cadastradas. Botão "Acessar" navega para `/admin/placar/chaves/:areaId`.
-- **Tela de chaves da área (`/admin/placar/chaves/:areaId`):** `PlacarChaves` lista as chaves alocadas na área como cards clicáveis. Exibe faixa, peso, quantidade de atletas e árbitro responsável. Suporta busca textual por título da chave.
+- **Tela de chaves da área (`/admin/placar/chaves/:areaId`):** `PlacarChaves` lista as chaves alocadas na área como cards clicáveis. Exibe faixa, peso, quantidade de atletas e árbitro responsável. Suporta busca textual por título da chave. Cada card exibe badge de status no canto superior direito:
+  - **"ENCERRADO"** (amarelo gold): quando a luta da última rodada da chave possui vencedor definido (chave finalizada com campeão).
+  - **"EM ANDAMENTO"** (ciano): quando a chave possui pelo menos uma luta concluída (`completed` ou `wo`) mas a última rodada ainda não possui vencedor.
+  - Sem badge: quando nenhuma luta da chave foi iniciada.
+  - Badge de contagem de lutas usa cor azul (padrão visual `#1565C0`).
 - **Tela do bracket (`/admin/placar/chave/:areaId/:chaveId`):** `PlacarBracket` renderiza a árvore do bracket (`BracketTree`) e abaixo uma tabela "Lutas para Iniciar" com botão "Iniciar" para cada luta válida.
 - **Bloqueio de lutas inválidas:** Lutas com pelo menos um lado `tbd` ou `bye` não exibem botão "Iniciar". Lutas com status `completed` ou `wo` também não.
 - **Tela do placar (`/admin/placar/luta/:areaId/:chaveId/:lutaId`):** `PlacarLuta` exibe:
@@ -1044,6 +1048,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `spec/correcao-dq-bracket.md` | Correção do DQ: campo `desclassificadoId` e propagação em chaves de 2 e 3 atletas |
 | `spec/validacao-pontos-vitoria.md` | Validação de pontos/vantagens ao selecionar vencedor por pontos (modal de aviso) |
 | `spec/correcao-chave-6-atletas.md` | Correção da chave de 6 atletas: separarEquipes, getTeamConflicts e advanceWinner6 |
+| `spec/tag-vencedor-placar-correcao-cores.md` | Tags de status no PlacarChaves (ENCERRADO/EM ANDAMENTO) e correção de cores grape→blue |
 | `doc/import-audit.md` | Auditoria de importação: regras de geração automática de ID e timestamps |
 
 ---

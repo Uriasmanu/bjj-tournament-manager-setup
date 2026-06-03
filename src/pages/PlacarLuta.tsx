@@ -714,7 +714,7 @@ export function PlacarLuta() {
           ) : resultadoTipo === 'finalizacao' ? (
             <Text ta="center" size="lg" fw={700}>
               Confirmar vitória por finalização do atleta{' '}
-              <Text component="span" c="grape" fw={900} tt="uppercase">
+              <Text component="span" c="blue" fw={900} tt="uppercase">
                 {vencedorFinal === luta.atletaAId ? atletaAInfo.nome : atletaBInfo.nome}
               </Text>
               ?

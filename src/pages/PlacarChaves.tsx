@@ -136,7 +136,7 @@ export function PlacarChaves() {
                   radius="md"
                   role="button"
                   tabIndex={0}
-                  style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }}
+                  style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
                     e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
@@ -147,10 +147,30 @@ export function PlacarChaves() {
                   }}
                   onClick={() => navigate(`/admin/placar/chave/${areaId}/${chave.id}`)}
                 >
+                  {(() => {
+                    const maxRodada = Math.max(...chave.lutas.map(l => l.rodada));
+                    const isEncerrado = chave.lutas.some(l => l.rodada === maxRodada && l.vencedorId);
+                    const isEmAndamento = !isEncerrado && chave.lutas.some(l => l.status === 'completed' || l.status === 'wo');
+                    if (isEncerrado) {
+                      return (
+                        <Badge size="sm" color="yellow" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
+                          ENCERRADO
+                        </Badge>
+                      );
+                    }
+                    if (isEmAndamento) {
+                      return (
+                        <Badge size="sm" color="cyan" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
+                          EM ANDAMENTO
+                        </Badge>
+                      );
+                    }
+                    return null;
+                  })()}
                   <Stack gap="xs">
                     <Text fw={700} size="sm">{getChaveTitle(chave, athletes)}</Text>
                     <Group gap={4}>
-                      <Badge size="sm" color="grape">{chave.totalLutas} luta(s)</Badge>
+                      <Badge size="sm" color="blue">{chave.totalLutas} luta(s)</Badge>
                       <Badge size="sm" color="green">Gerada</Badge>
                     </Group>
                     <Text size="xs" c="dimmed">
