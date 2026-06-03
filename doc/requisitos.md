@@ -214,7 +214,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - 4 atletas: 3 lutas, 2 rodadas (2 Semifinais + Final)
   - 5 atletas: 6 lutas, 3 rodadas — R1 (3 lutas: seed1 vs seed2, seed3 vs seed4, seed5 vs BYE auto-resolvido), R2 (2 lutas: vencedor(L2) vs seed5, vencedor(L1) vs BYE auto-resolvido), R3 (Final: vencedor(L4) vs vencedor(L5))
   - 6 atletas: 5 lutas, 3 rodadas — R1 (3 lutas: seed0 vs seed1, seed2 vs seed3, seed4 vs seed5), R2 (1 luta: vencedor(L1) vs vencedor(L2) + carry-over do vencedor(L3) direto para a final), R3 (Final: vencedor(L4) vs vencedor(L3))
-  - 7-15 atletas: eliminação simples com byes automáticos — número de rodadas = ceil(log2(N))
+  - 7-15 atletas: eliminação simples com byes automáticos — número de rodadas = ceil(log2(N)). Exemplo para 7 atletas: R1 (4 lutas: seed0 vs seed1, seed2 vs seed3, seed4 vs seed5, seed6 vs BYE auto-resolvido), R2 (2 lutas: vencedor(L1) vs vencedor(L2), vencedor(L3) vs vencedor(BYE)), R3 (Final: vencedor(L5) vs vencedor(L6)).
   - 16 atletas: 15 lutas, 4 rodadas (8 lutas R1, 4 lutas R2, 2 lutas R3, 1 luta R4 final)
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
 - **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.

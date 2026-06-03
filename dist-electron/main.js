@@ -797,6 +797,26 @@ function gerarLutasGeral(posicoes) {
     currentEntries = nextEntries;
     rodada++;
   }
+  for (let r = 1; r < numRodadas; r++) {
+    const currentRoundLutas = lutas.filter((l) => l.rodada === r);
+    const nextRoundLutas = lutas.filter((l) => l.rodada === r + 1);
+    if (nextRoundLutas.length === 0) continue;
+    const fightsPerNextMatch = currentRoundLutas.length / nextRoundLutas.length;
+    if (!Number.isInteger(fightsPerNextMatch)) continue;
+    for (let i = 0; i < currentRoundLutas.length; i++) {
+      const luta = currentRoundLutas[i];
+      if (luta.status !== "wo" || !luta.vencedorId) continue;
+      const nextMatchIndex = Math.floor(i / fightsPerNextMatch);
+      const slotInNextMatch = i % fightsPerNextMatch;
+      if (nextMatchIndex >= nextRoundLutas.length) continue;
+      const nextLuta = nextRoundLutas[nextMatchIndex];
+      if (slotInNextMatch === 0 && (nextLuta.atletaAId === "tbd" || nextLuta.atletaAId === "")) {
+        nextLuta.atletaAId = luta.vencedorId;
+      } else if (slotInNextMatch === 1 && (nextLuta.atletaBId === "tbd" || nextLuta.atletaBId === "")) {
+        nextLuta.atletaBId = luta.vencedorId;
+      }
+    }
+  }
   return lutas;
 }
 function gerarLutas16(posicoes) {
