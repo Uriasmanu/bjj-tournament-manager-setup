@@ -37,6 +37,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
 | PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
 | Áreas de Luta | ✅ Completo | CRUD com nome + múltiplos árbitros por área. Validação de unicidade de árbitro entre áreas. Migração retroativa de dados legados. Menu com Cadastrar/Listar, tabela com busca, exclusão individual/em lote. |
+| Placar (Scoreboard) | ✅ Completo | Fluxo `PlacarMenu → PlacarChaves → PlacarBracket → PlacarLuta` (seleção de área, lista de chaves da área, bracket com lutas iniciáveis, placar funcional com cronômetro, pontos 2/3/4, vantagens, punições, finalização/DQ/desempate, persistência no JSON do torneio). Cores azul anil (Atleta A) e branco (Atleta B). Vencedor propagado para a próxima rodada. |
 
 ### 2.2. Não Implementado (Planejado)
 
@@ -48,7 +49,8 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Controle de Pesagem | ❌ Pendente |
 | Geração de Chaves | ✅ Completo | Máximo de 5 atletas por chave, chave editável manualmente, shuffle com separação de equipes, import/export JSON. Atletas sem oponente exibidos em cartões com opções de remanejamento (subir/descer peso) e indicador de "luta casada". |
 | Áreas de Luta | ✅ Completo | CRUD completo, múltiplos árbitros por área, unicidade de árbitro |
-| Chamadas / Placar / Resultados | ❌ Pendente |
+| Chamadas | ❌ Pendente | Aviso de atletas ao púlpito/área de luta (chamada por chave/rodada). |
+| Resultados | ❌ Pendente | Tela de consolidação de resultados por categoria (pódios, medalhistas, ranking). |
 | Ranking / Medalhistas | ❌ Pendente |
 | Relatórios | ❌ Pendente |
 
@@ -446,6 +448,27 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Migração retroativa:** O campo `normalizeArea()` no backend converte automaticamente dados legados do formato `arbitroId` (string) para `arbitroIds` (array) ao carregar as áreas do JSON.
 - **Exclusão em lote:** Na tela de listagem, cada linha possui um checkbox. O cabeçalho possui um checkbox "Selecionar todas" com estado indeterminado. Com uma ou mais áreas selecionadas, um botão "Excluir Selecionados (N)" aparece. A exclusão em lote é feita via IPC `delete-areas`.
 
+### 3.18. Placar / Scoreboard (Implementado)
+
+- **Fluxo de navegação:** `Dashboard → Placar → PlacarMenu` (seleção de área) → `PlacarChaves` (lista de chaves da área) → `PlacarBracket` (bracket + lutas iniciáveis) → `PlacarLuta` (placar funcional).
+- **Tela de seleção de área (`/admin/placar`):** `PlacarMenu` exibe `Select` com as áreas de luta cadastradas. Botão "Acessar" navega para `/admin/placar/chaves/:areaId`.
+- **Tela de chaves da área (`/admin/placar/chaves/:areaId`):** `PlacarChaves` lista as chaves alocadas na área como cards clicáveis. Exibe faixa, peso, quantidade de atletas e árbitro responsável. Suporta busca textual por título da chave.
+- **Tela do bracket (`/admin/placar/chave/:areaId/:chaveId`):** `PlacarBracket` renderiza a árvore do bracket (`BracketTree`) e abaixo uma tabela "Lutas para Iniciar" com botão "Iniciar" para cada luta válida.
+- **Bloqueio de lutas inválidas:** Lutas com pelo menos um lado `tbd` ou `bye` não exibem botão "Iniciar". Lutas com status `completed` ou `wo` também não.
+- **Tela do placar (`/admin/placar/luta/:areaId/:chaveId/:lutaId`):** `PlacarLuta` exibe:
+  - Atleta A no lado esquerdo com fundo **azul anil** (`#1e3a8a`) e texto branco.
+  - Atleta B no lado direito com fundo **branco** (`#ffffff`) e texto escuro.
+  - Cronômetro regressivo central (mm:ss) com botões **Iniciar/Pausar** e **Zerar**; valor inicial editável (1–30 min, padrão 5 min); sem áudio.
+  - Contadores de pontos 2/3/4 (com + e −) por atleta; total acumulado = 2×qtd2 + 3×qtd3 + 4×qtd4.
+  - Contadores de vantagens e punições (0–4) por atleta.
+  - Alerta visual de "Desclassificação" ao atingir 4 punições.
+  - Botão "Finalizar Luta" → modal com tipo (Pontos, Finalização, DQ, Desempate) e vencedor; ao confirmar persiste no JSON e propaga vencedor para próxima rodada.
+  - Botão "Voltar sem finalizar" → retorna para o `PlacarBracket` da chave (rota `/admin/placar/chave/:areaId/:chaveId`).
+- **Persistência:** Ao confirmar resultado, a `Luta` recebe `vencedorId`, `status` (`completed` ou `wo`), `placarA`, `placarB`, `finalizacao`, `desclassificacao`, `desempateArbitro`. O vencedor é propagado para a próxima rodada (slot `tbd`) pela função `advanceWinnerInChave`.
+- **Normalização retroativa:** Chaves legadas sem `placarA`/`placarB` carregam sem erro; `normalizeLuta` adiciona defaults.
+- **Estado bloqueado:** Lutas com `tbd`/`bye` ou `completed`/`wo` exibem placar congelado e desabilitam controles e "Finalizar Luta".
+- **Especificação detalhada:** Ver `spec/placar.md` (fluxo), `spec/placar-jiu-jitsu.md` (placar funcional) e `spec/placar-voltar-bracket.md` (correção do botão Voltar — navegação para `PlacarBracket`).
+
 ---
 
 ## 4. Plataforma
@@ -656,7 +679,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
     ├── Chaves      → /admin/categorias/chaves (GerenciarChaves, geração/edição)
     ├── Áreas       → /admin/areas (AreasMenu)
     ├── Árbitros    → /admin/arbitros (ArbitrosMenu)
-    ├── Placar      → (Em breve)
+    ├── Placar      → /admin/placar (PlacarMenu → PlacarChaves → PlacarBracket → PlacarLuta)
     ├── Resultados  → (Em breve)
     └── Relatórios  → (Em breve)
 ```
@@ -893,6 +916,9 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `spec/cadastro-arbitro.md` | Especificação detalhada do CRUD de árbitros |
 | `spec/emchave-atleta.md` | Especificação da propriedade `emChave` e melhoria da visualização de atletas sem chave |
 | `spec/busca-chaves-atletas-arbitros-equipes.md` | Especificação da busca textual em todas as telas e correção do acúmulo de `chaveIds` |
+| `spec/placar.md` | Especificação do fluxo Placar (PlacarMenu, PlacarChaves, PlacarBracket, PlacarLuta placeholder) |
+| `spec/placar-jiu-jitsu.md` | Especificação do placar funcional de Jiu-Jitsu (pontos 2/3/4, vantagens, punições, cronômetro, finalização/DQ/desempate) |
+| `spec/placar-voltar-bracket.md` | Correção do botão Voltar do PlacarLuta — navegação para `PlacarBracket` (inclusão de `areaId` na rota) |
 | `doc/import-audit.md` | Auditoria de importação: regras de geração automática de ID e timestamps |
 
 ---
@@ -924,7 +950,11 @@ bjj-tournament-manager-setup/
 │   │   ├── Equipes.tsx          ← Resumo de equipes com contagem de atletas
 │   │   ├── ArbitrosMenu.tsx     ← Menu intermediário de árbitros (3 cartões)
 │   │   ├── AdminArbitros.tsx    ← Gerenciamento de árbitros (tabela CRUD)
-│   │   └── GerenciarChaves.tsx  ← Geração, edição e visualização de chaves de luta
+│   │   ├── GerenciarChaves.tsx  ← Geração, edição e visualização de chaves de luta
+│   │   ├── PlacarMenu.tsx       ← Seleção de área de luta (entrada do Placar)
+│   │   ├── PlacarChaves.tsx     ← Lista de chaves da área selecionada
+│   │   ├── PlacarBracket.tsx    ← Bracket da chave + lutas iniciáveis
+│   │   └── PlacarLuta.tsx       ← Placar funcional da luta (cronômetro, pontos, vantagens, punições)
 │   ├── components/
 │   │   ├── AthleteForm.tsx      ← Modal de cadastro/edição de atleta (modo controlled)
 │   │   ├── AthleteTable.tsx     ← Tabela de listagem de atletas
@@ -958,7 +988,10 @@ bjj-tournament-manager-setup/
 │   ├── shuffle-chave.md    ← Spec da correção do embaralhamento de chaves
 │   ├── emchave-atleta.md   ← Spec da propriedade emChave e visualização de atletas sem chave
 │   ├── busca-chaves-atletas-arbitros-equipes.md ← Spec da busca textual nas telas e correção do acúmulo de chaveIds
-│   └── cadastro-arbitro.md  ← Spec detalhado do CRUD de árbitros
+│   ├── cadastro-arbitro.md  ← Spec detalhado do CRUD de árbitros
+│   ├── placar.md           ← Spec do fluxo Placar (seleção de área → bracket → placar)
+│   ├── placar-jiu-jitsu.md ← Spec do placar funcional de Jiu-Jitsu (pontos, vantagens, punições, cronômetro)
+│   └── placar-voltar-bracket.md ← Spec da correção do botão Voltar (navegação PlacarLuta → PlacarBracket)
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)
 ```
