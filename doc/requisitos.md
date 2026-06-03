@@ -43,16 +43,10 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 | Módulo | Status |
 |---|---|
-| Cadastro de Equipes | ❌ Pendente |
-| Cadastro de Categorias | ⏳ Parcial | Categorias IBJJF implementadas como tipo (`src/types/category.ts` — 151 categorias, 15 faixas etárias × 2 gêneros × 9 pesos) e campo obrigatório no formulário de atleta. Classificação automática por peso/idade/gênero/faixa disponível via `classificarCategoria()`. Gerenciamento dedicado de categorias (CRUD) ainda pendente. |
-| Controle de Inscrições | ❌ Pendente |
-| Controle de Pesagem | ❌ Pendente |
 | Geração de Chaves | ✅ Completo | Máximo de 16 atletas por chave (subgrupos configuráveis de 2 a 16), chave editável manualmente, shuffle com separação de equipes (Fisher-Yates), import/export JSON. Estruturas: 2, 3, 4, 5, 6-15 (geral) e 16 atletas. Atletas sem oponente exibidos em cartões com opções de remanejamento (subir/descer peso) e indicador de "luta casada". |
 | Áreas de Luta | ✅ Completo | CRUD completo, múltiplos árbitros por área, unicidade de árbitro |
-| Chamadas | ❌ Pendente | Aviso de atletas ao púlpito/área de luta (chamada por chave/rodada). |
 | Resultados | ❌ Pendente | Tela de consolidação de resultados por categoria (pódios, medalhistas, ranking). |
 | Ranking / Medalhistas | ❌ Pendente |
-| Relatórios | ❌ Pendente |
 
 ---
 
@@ -225,7 +219,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
 - **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.
 - **Bloqueio de edição:** Após a primeira luta ser iniciada, a edição é bloqueada.
-- **Seed sorting (geração inicial — `aplicarSeedSorting`):** Ao gerar a chave, atletas são ordenados por: peso (decrescente) → idade (decrescente, `currentYear - anoNascimento`) → nome (ascendente, `localeCompare`). A divisão em lados é dinâmica: metade superior (sideA) e metade inferior (sideB) da seed, com separação de equipes entre lados.
+- **Seed sorting (geração inicial — `aplicarSeedSorting`):** Ao gerar a chave, os atletas são primeiro embaralhados aleatoriamente (Fisher-Yates shuffle) e depois ordenados por: peso (decrescente) → idade (decrescente, `currentYear - anoNascimento`) → nome (ascendente, `localeCompare`). O embaralhamento prévio garante que a posição do BYE (quando o número de atletas é ímpar) seja aleatória a cada geração. A divisão em lados é dinâmica: metade superior (sideA) e metade inferior (sideB) da seed, com separação de equipes entre lados.
   - 16 atletas (`aplicarSeedSorting16`): sideA = primeiros 8, sideB = últimos 8; dentro de cada lado, atletas da mesma equipe são trocados com o lado oposto.
 - **Embaralhamento (shuffle):** O botão "Embaralhar" randomiza a ordem dos atletas na chave usando Fisher-Yates shuffle e mantém a separação de equipes em lados opostos (via `separarEquipes`). Para 16 atletas, reaplica seed sorting; para os demais, aplica `separarEquipes`. A separação de equipes funciona para chaves de 4 (sideA=[0,3], sideB=[1,2]), 5 (sideA=[0,1,2], sideB=[3,4]) e 6 (sideA=[0,1,2], sideB=[3,4,5]) atletas. Pode ser acionado a qualquer momento enquanto a chave estiver no status `gerada`.
 - **Regeneração:** Permitida apenas se nenhuma luta foi iniciada.
