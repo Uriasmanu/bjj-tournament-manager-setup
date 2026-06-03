@@ -7,7 +7,7 @@ interface BracketCardProps {
   onSelectWinner?: (luta: Luta, atletaId: string) => void;
 }
 
-function getAthleteRowStyle(athleteId: string | null | undefined, winnerId: string | null | undefined, isTbdOrBye: boolean): React.CSSProperties {
+function getAthleteRowStyle(athleteId: string | null | undefined, winnerId: string | null | undefined, isTbdOrBye: boolean, desclassificadoId?: string): React.CSSProperties {
   const base: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -21,6 +21,17 @@ function getAthleteRowStyle(athleteId: string | null | undefined, winnerId: stri
   // Atleta indefinido ou BYE (cinza bem claro)
   if (!athleteId || isTbdOrBye) {
     return { ...base, backgroundColor: '#f8fafc', color: '#94a3b8' };
+  }
+
+  // Atleta Desclassificado (Vermelho claro)
+  if (desclassificadoId && desclassificadoId === athleteId) {
+    return {
+      ...base,
+      backgroundColor: '#fef2f2',
+      color: '#991b1b',
+      fontWeight: 600,
+      borderLeft: '4px solid #ef4444',
+    };
   }
 
   if (winnerId) {
@@ -75,7 +86,7 @@ export function BracketCard({ luta, atletaANome, atletaBNome, onSelectWinner }: 
           }
         }}
         style={{
-          ...getAthleteRowStyle(luta.atletaAId, luta.vencedorId, aIsTbd),
+          ...getAthleteRowStyle(luta.atletaAId, luta.vencedorId, aIsTbd, luta.desclassificadoId),
           borderTopLeftRadius: '7px',
           borderTopRightRadius: '7px',
           borderBottom: '1px solid #e2e8f0', // Divisor sutil entre as linhas
@@ -96,6 +107,9 @@ export function BracketCard({ luta, atletaANome, atletaBNome, onSelectWinner }: 
         {luta.vencedorId === luta.atletaAId && luta.atletaAId && (
           <span style={{ color: '#166534', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>VENCEU</span>
         )}
+        {luta.desclassificadoId === luta.atletaAId && luta.status !== 'pending' && (
+          <span style={{ color: '#ef4444', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>DESCLASSIFICADO</span>
+        )}
       </div>
       <div
         onClick={() => {
@@ -104,7 +118,7 @@ export function BracketCard({ luta, atletaANome, atletaBNome, onSelectWinner }: 
           }
         }}
         style={{
-          ...getAthleteRowStyle(luta.atletaBId, luta.vencedorId, bIsTbd),
+          ...getAthleteRowStyle(luta.atletaBId, luta.vencedorId, bIsTbd, luta.desclassificadoId),
           borderBottomLeftRadius: '7px',
           borderBottomRightRadius: '7px',
         }}
@@ -123,6 +137,9 @@ export function BracketCard({ luta, atletaANome, atletaBNome, onSelectWinner }: 
         </span>
         {luta.vencedorId === luta.atletaBId && luta.atletaBId && (
           <span style={{ color: '#166534', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>VENCEU</span>
+        )}
+        {luta.desclassificadoId === luta.atletaBId && luta.status !== 'pending' && (
+          <span style={{ color: '#ef4444', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>DESCLASSIFICADO</span>
         )}
       </div>
     </div>

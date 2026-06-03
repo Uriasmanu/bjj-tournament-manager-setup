@@ -503,6 +503,7 @@ function normalizeLuta(luta: Record<string, unknown>): Luta {
     placarB: (luta.placarB as Luta['placarB']) ?? undefined,
     finalizacao: (luta.finalizacao as boolean) ?? undefined,
     desclassificacao: (luta.desclassificacao as boolean) ?? undefined,
+    desclassificadoId: (luta.desclassificadoId as string | undefined) ?? undefined,
     desempateArbitro: (luta.desempateArbitro as boolean) ?? undefined,
   };
 }
@@ -652,6 +653,13 @@ function registrarResultadoHandler(
   luta.desclassificacao = data.desclassificacao ?? false;
   luta.desempateArbitro = data.desempateArbitro ?? false;
 
+  // Compute which athlete was disqualified (the one who is NOT the winner)
+  if (data.desclassificacao && luta.vencedorId) {
+    luta.desclassificadoId = luta.atletaAId === luta.vencedorId ? luta.atletaBId : luta.atletaAId;
+  } else {
+    luta.desclassificadoId = undefined;
+  }
+
   if (chave.totalAtletas === 3) {
     const r2 = chave.lutas.find(l => l.rodada === 2);
     const r3 = chave.lutas.find(l => l.rodada === 3);
@@ -659,16 +667,29 @@ function registrarResultadoHandler(
     if (luta.rodada === 1) {
       const loserId = luta.vencedorId === luta.atletaAId ? luta.atletaBId : luta.atletaAId;
 
-      if (r2) {
-        r2.atletaAId = loserId;
-        r2.vencedorId = null;
-        r2.status = 'pending';
-      }
-      if (r3) {
-        r3.atletaAId = luta.vencedorId;
-        r3.atletaBId = 'tbd';
-        r3.vencedorId = null;
-        r3.status = 'pending';
+      if (data.desclassificacao) {
+        // DQ: eliminated athlete does NOT advance; bye athlete goes directly to final
+        if (r2 && r3) {
+          r2.atletaAId = r2.atletaBId;
+          r2.vencedorId = r2.atletaBId;
+          r2.status = 'wo';
+          r3.atletaAId = luta.vencedorId;
+          r3.atletaBId = r2.atletaBId;
+          r3.vencedorId = null;
+          r3.status = 'pending';
+        }
+      } else {
+        if (r2) {
+          r2.atletaAId = loserId;
+          r2.vencedorId = null;
+          r2.status = 'pending';
+        }
+        if (r3) {
+          r3.atletaAId = luta.vencedorId;
+          r3.atletaBId = 'tbd';
+          r3.vencedorId = null;
+          r3.status = 'pending';
+        }
       }
     } else if (luta.rodada === 2) {
       if (r3 && r3.atletaBId === 'tbd') {

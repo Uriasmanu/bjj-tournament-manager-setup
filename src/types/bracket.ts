@@ -19,6 +19,7 @@ export interface Luta {
   placarB?: PlacarLuta;
   finalizacao?: boolean;
   desclassificacao?: boolean;
+  desclassificadoId?: string;
   desempateArbitro?: boolean;
 }
 

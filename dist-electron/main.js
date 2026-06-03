@@ -1,135 +1,186 @@
-import { app as A, ipcMain as f, dialog as E, BrowserWindow as k } from "electron";
-import { fileURLToPath as de } from "node:url";
-import m from "node:path";
-import u from "node:fs";
-import p from "node:crypto";
-import { execSync as ce } from "node:child_process";
-const C = m.join(A.getPath("userData"), "data"), L = m.join(C, "torneios"), x = m.join(C, "torneio-ativo.json");
-function O() {
-  u.existsSync(C) || u.mkdirSync(C, { recursive: !0 }), u.existsSync(L) || u.mkdirSync(L, { recursive: !0 });
+import { app, ipcMain, dialog, BrowserWindow } from "electron";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import fs from "node:fs";
+import crypto from "node:crypto";
+import { execSync } from "node:child_process";
+const DATA_DIR$4 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR$4 = path.join(DATA_DIR$4, "torneios");
+const ATIVO_FILE = path.join(DATA_DIR$4, "torneio-ativo.json");
+function ensureDirs() {
+  if (!fs.existsSync(DATA_DIR$4)) fs.mkdirSync(DATA_DIR$4, { recursive: true });
+  if (!fs.existsSync(TORNEIOS_DIR$4)) fs.mkdirSync(TORNEIOS_DIR$4, { recursive: true });
 }
-function y(e) {
-  return m.join(L, `${e}.json`);
+function getTorneioPath$4(id) {
+  return path.join(TORNEIOS_DIR$4, `${id}.json`);
 }
-function h() {
-  if (!u.existsSync(x)) return null;
+function getActiveTournamentId() {
+  if (!fs.existsSync(ATIVO_FILE)) return null;
   try {
-    const { id: e } = JSON.parse(u.readFileSync(x, "utf-8"));
-    return e;
+    const { id } = JSON.parse(fs.readFileSync(ATIVO_FILE, "utf-8"));
+    return id;
   } catch {
     return null;
   }
 }
-function le() {
-  f.handle("create-tournament", (e, t) => {
-    O();
-    const n = {
-      id: p.randomUUID(),
-      nome: t.nome,
-      data: t.data,
+function registerTournamentHandlers() {
+  ipcMain.handle("create-tournament", (_event, data) => {
+    ensureDirs();
+    const torneio = {
+      id: crypto.randomUUID(),
+      nome: data.nome,
+      data: data.data,
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       atletas: []
     };
-    return u.writeFileSync(y(n.id), JSON.stringify(n, null, 2), "utf-8"), n;
-  }), f.handle("list-tournaments", () => (O(), u.readdirSync(L).filter((t) => t.endsWith(".json")).map((t) => {
-    const n = u.readFileSync(m.join(L, t), "utf-8");
-    return JSON.parse(n);
-  }))), f.handle("start-tournament", (e, t) => {
-    O(), u.writeFileSync(x, JSON.stringify({ id: t }), "utf-8");
-    const n = y(t);
-    if (u.existsSync(n)) {
-      const o = JSON.parse(u.readFileSync(n, "utf-8"));
-      return o.startedAt = (/* @__PURE__ */ new Date()).toISOString(), o.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), u.writeFileSync(n, JSON.stringify(o, null, 2), "utf-8"), o;
+    fs.writeFileSync(getTorneioPath$4(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
+    return torneio;
+  });
+  ipcMain.handle("list-tournaments", () => {
+    ensureDirs();
+    const files = fs.readdirSync(TORNEIOS_DIR$4).filter((f) => f.endsWith(".json"));
+    return files.map((f) => {
+      const content = fs.readFileSync(path.join(TORNEIOS_DIR$4, f), "utf-8");
+      return JSON.parse(content);
+    });
+  });
+  ipcMain.handle("start-tournament", (_event, id) => {
+    ensureDirs();
+    fs.writeFileSync(ATIVO_FILE, JSON.stringify({ id }), "utf-8");
+    const filePath = getTorneioPath$4(id);
+    if (fs.existsSync(filePath)) {
+      const torneio = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      torneio.startedAt = (/* @__PURE__ */ new Date()).toISOString();
+      torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      fs.writeFileSync(filePath, JSON.stringify(torneio, null, 2), "utf-8");
+      return torneio;
     }
     throw new Error("Torneio não encontrado");
-  }), f.handle("get-active-tournament", () => {
-    O();
-    const e = h();
-    if (!e) return null;
-    const t = y(e);
-    return u.existsSync(t) ? JSON.parse(u.readFileSync(t, "utf-8")) : null;
-  }), f.handle("export-tournament", async (e, t) => {
-    O();
-    const n = y(t);
-    if (!u.existsSync(n)) throw new Error("Torneio não encontrado");
-    const o = JSON.parse(u.readFileSync(n, "utf-8")), r = o.nome || `Torneio ${o.data}`, i = await E.showSaveDialog({
+  });
+  ipcMain.handle("get-active-tournament", () => {
+    ensureDirs();
+    const id = getActiveTournamentId();
+    if (!id) return null;
+    const filePath = getTorneioPath$4(id);
+    if (!fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  });
+  ipcMain.handle("export-tournament", async (_event, id) => {
+    ensureDirs();
+    const sourcePath = getTorneioPath$4(id);
+    if (!fs.existsSync(sourcePath)) throw new Error("Torneio não encontrado");
+    const torneio = JSON.parse(fs.readFileSync(sourcePath, "utf-8"));
+    const defaultName = torneio.nome || `Torneio ${torneio.data}`;
+    const result = await dialog.showSaveDialog({
       title: "Exportar Torneio",
-      defaultPath: `${r.replace(/[^a-zA-Z0-9]/g, "_")}.json`,
+      defaultPath: `${defaultName.replace(/[^a-zA-Z0-9]/g, "_")}.json`,
       filters: [{ name: "JSON", extensions: ["json"] }]
     });
-    !i.canceled && i.filePath && u.copyFileSync(n, i.filePath);
-  }), f.handle("import-tournament", (e, t) => {
-    if (O(), !t.data)
-      throw new Error("Estrutura inválida");
-    const n = t.atletas ?? [], o = [];
-    for (const a of n) {
-      const s = a.nome.trim().toLowerCase();
-      o.some(
-        (d) => a.id && d.id === a.id || d.nome.trim().toLowerCase() === s && d.anoNascimento === a.anoNascimento
-      ) || o.push({
-        ...a,
-        id: a.id || p.randomUUID(),
-        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        nome: s,
-        equipe: (a.equipe || "").trim().toLowerCase()
-      });
+    if (!result.canceled && result.filePath) {
+      fs.copyFileSync(sourcePath, result.filePath);
     }
-    const r = {
-      ...t,
-      id: t.id || p.randomUUID(),
-      atletas: o,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    }, i = y(r.id);
-    return u.existsSync(i) ? { success: !1, exists: !0 } : (u.writeFileSync(i, JSON.stringify(r, null, 2), "utf-8"), { success: !0 });
-  }), f.handle("import-tournament-overwrite", (e, t) => {
-    if (O(), !t.id || !t.data)
+  });
+  ipcMain.handle("import-tournament", (_event, data) => {
+    ensureDirs();
+    if (!data.data) {
       throw new Error("Estrutura inválida");
-    const n = t.atletas ?? [], o = [];
-    for (const a of n) {
-      const s = a.nome.trim().toLowerCase();
-      o.some(
-        (d) => a.id && d.id === a.id || d.nome.trim().toLowerCase() === s && d.anoNascimento === a.anoNascimento
-      ) || o.push({
-        ...a,
-        id: a.id || p.randomUUID(),
-        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-        nome: s,
-        equipe: (a.equipe || "").trim().toLowerCase()
-      });
     }
-    const r = {
-      ...t,
-      atletas: o,
+    const atletas = data.atletas ?? [];
+    const atletasDedup = [];
+    for (const a of atletas) {
+      const nomeLower = a.nome.trim().toLowerCase();
+      const exists = atletasDedup.some(
+        (ex) => a.id && ex.id === a.id || ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento
+      );
+      if (!exists) {
+        atletasDedup.push({
+          ...a,
+          id: a.id || crypto.randomUUID(),
+          createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          nome: nomeLower,
+          equipe: (a.equipe || "").trim().toLowerCase()
+        });
+      }
+    }
+    const torneio = {
+      ...data,
+      id: data.id || crypto.randomUUID(),
+      atletas: atletasDedup,
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    }, i = y(r.id);
-    u.writeFileSync(i, JSON.stringify(r, null, 2), "utf-8");
-  }), f.handle("update-tournament", (e, t) => {
-    O();
-    const n = y(t.id);
-    if (!u.existsSync(n)) throw new Error("Torneio não encontrado");
-    const o = {
-      ...t,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    return u.writeFileSync(n, JSON.stringify(o, null, 2), "utf-8"), o;
-  }), f.handle("delete-tournament", (e, t) => {
-    O();
-    const n = y(t);
-    if (!u.existsSync(n)) throw new Error("Torneio não encontrado");
-    if (u.unlinkSync(n), u.existsSync(x))
+    const dest = getTorneioPath$4(torneio.id);
+    if (fs.existsSync(dest)) {
+      return { success: false, exists: true };
+    }
+    fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), "utf-8");
+    return { success: true };
+  });
+  ipcMain.handle("import-tournament-overwrite", (_event, data) => {
+    ensureDirs();
+    if (!data.id || !data.data) {
+      throw new Error("Estrutura inválida");
+    }
+    const atletas = data.atletas ?? [];
+    const atletasDedup = [];
+    for (const a of atletas) {
+      const nomeLower = a.nome.trim().toLowerCase();
+      const exists = atletasDedup.some(
+        (ex) => a.id && ex.id === a.id || ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento
+      );
+      if (!exists) {
+        atletasDedup.push({
+          ...a,
+          id: a.id || crypto.randomUUID(),
+          createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+          updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          nome: nomeLower,
+          equipe: (a.equipe || "").trim().toLowerCase()
+        });
+      }
+    }
+    const torneio = {
+      ...data,
+      atletas: atletasDedup,
+      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    const dest = getTorneioPath$4(torneio.id);
+    fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), "utf-8");
+  });
+  ipcMain.handle("update-tournament", (_event, data) => {
+    ensureDirs();
+    const filePath = getTorneioPath$4(data.id);
+    if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+    const torneio = {
+      ...data,
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    fs.writeFileSync(filePath, JSON.stringify(torneio, null, 2), "utf-8");
+    return torneio;
+  });
+  ipcMain.handle("delete-tournament", (_event, id) => {
+    ensureDirs();
+    const filePath = getTorneioPath$4(id);
+    if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+    fs.unlinkSync(filePath);
+    if (fs.existsSync(ATIVO_FILE)) {
       try {
-        const { id: o } = JSON.parse(u.readFileSync(x, "utf-8"));
-        o === t && u.unlinkSync(x);
+        const { id: activeId } = JSON.parse(fs.readFileSync(ATIVO_FILE, "utf-8"));
+        if (activeId === id) {
+          fs.unlinkSync(ATIVO_FILE);
+        }
       } catch {
       }
-  }), f.handle("read-file", async (e, t) => u.readFileSync(t, "utf-8"));
+    }
+  });
+  ipcMain.handle("read-file", async (_event, filePath) => {
+    return fs.readFileSync(filePath, "utf-8");
+  });
 }
-const ue = [
+const CATEGORIAS_PESO = [
   { peso: "galo", nome: "Galo", masculino: 57.5, feminino: 48.5 },
   { peso: "pluma", nome: "Pluma", masculino: 64, feminino: 53.5 },
   { peso: "pena", nome: "Pena", masculino: 70, feminino: 58.5 },
@@ -139,30 +190,34 @@ const ue = [
   { peso: "pesado", nome: "Pesado", masculino: 94.3, feminino: 79.3 },
   { peso: "super-pesado", nome: "Super Pesado", masculino: 97.5, feminino: null },
   { peso: "pesadissimo", nome: "Pesadíssimo", masculino: null, feminino: null }
-], fe = {
+];
+const kidsLabel = {
   "pre-mirim": "Pré-Mirim",
-  mirim: "Mirim",
+  "mirim": "Mirim",
   "infantil-a": "Infantil A",
   "infantil-b": "Infantil B",
   "infanto-juvenil-a": "Infanto-Juvenil A",
   "infanto-juvenil-b": "Infanto-Juvenil B"
-}, he = {
+};
+const KIDS_PESO_LIMITES = {
   "pre-mirim": { galo: 14.7, pluma: 17.9, pena: 20, leve: 24, medio: 26, "meio-pesado": 29, pesado: 31.2, "super-pesado": 33.2, pesadissimo: null },
-  mirim: { galo: 21, pluma: 24, pena: 27, leve: 30.2, medio: 33.2, "meio-pesado": 36.2, pesado: 39.3, "super-pesado": 42.3, pesadissimo: null },
+  "mirim": { galo: 21, pluma: 24, pena: 27, leve: 30.2, medio: 33.2, "meio-pesado": 36.2, pesado: 39.3, "super-pesado": 42.3, pesadissimo: null },
   "infantil-a": { galo: 27, pluma: 30.2, pena: 33.2, leve: 36.2, medio: 39.3, "meio-pesado": 42.3, pesado: 45.3, "super-pesado": 48.3, pesadissimo: null },
   "infantil-b": { galo: 36.2, pluma: 40.3, pena: 44.3, leve: 48.3, medio: 52.5, "meio-pesado": 56.5, pesado: 60.5, "super-pesado": 65, pesadissimo: null },
   "infanto-juvenil-a": { galo: 40.3, pluma: 44.3, pena: 48.3, leve: 52.5, medio: 56.5, "meio-pesado": 60.5, pesado: 65, "super-pesado": 69.5, pesadissimo: null },
   "infanto-juvenil-b": { galo: 48.3, pluma: 52.5, pena: 56.5, leve: 60.5, medio: 65, "meio-pesado": 69.5, pesado: 74, "super-pesado": 78.5, pesadissimo: null }
 };
-function me(e, t, n) {
-  const o = he[e];
-  if (o)
-    return o[n.peso] ?? null;
-  const r = t === "masculino" ? n.masculino : n.feminino;
-  return n.peso === "pesadissimo" && t === "feminino" ? null : r;
+function getPesoLimite(faixaEtaria, genero, cat) {
+  const kidsLimites = KIDS_PESO_LIMITES[faixaEtaria];
+  if (kidsLimites) {
+    return kidsLimites[cat.peso] ?? null;
+  }
+  const base = genero === "masculino" ? cat.masculino : cat.feminino;
+  if (cat.peso === "pesadissimo" && genero === "feminino") return null;
+  return base;
 }
-function pe() {
-  const e = [
+function gerarCategorias() {
+  const faixasEtarias = [
     "pre-mirim",
     "mirim",
     "infantil-a",
@@ -178,895 +233,1285 @@ function pe() {
     "master5",
     "master6",
     "master7"
-  ], t = ["masculino", "feminino"], n = [];
-  for (const o of e) {
-    const r = fe[o] || o.charAt(0).toUpperCase() + o.slice(1);
-    for (const i of t) {
-      const a = i === "masculino" ? "Masculino" : "Feminino";
-      for (const s of ue) {
-        const c = me(o, i, s);
-        c !== void 0 && n.push({
-          id: `${o}-${i}-${s.peso}`,
-          nome: `${r} ${a} ${s.nome}`,
-          faixaEtaria: o,
-          genero: i,
-          peso: s.peso,
-          pesoMaximoKg: c
+  ];
+  const generos = ["masculino", "feminino"];
+  const result = [];
+  for (const fe of faixasEtarias) {
+    const feLabel = kidsLabel[fe] || fe.charAt(0).toUpperCase() + fe.slice(1);
+    for (const gen of generos) {
+      const genLabel = gen === "masculino" ? "Masculino" : "Feminino";
+      for (const cat of CATEGORIAS_PESO) {
+        const pesoLimite = getPesoLimite(fe, gen, cat);
+        if (pesoLimite === void 0) continue;
+        result.push({
+          id: `${fe}-${gen}-${cat.peso}`,
+          nome: `${feLabel} ${genLabel} ${cat.nome}`,
+          faixaEtaria: fe,
+          genero: gen,
+          peso: cat.peso,
+          pesoMaximoKg: pesoLimite
         });
       }
     }
   }
-  return n;
+  return result;
 }
-const H = pe(), we = {};
-for (const e of H)
-  we[e.id] = e.nome;
-const ve = m.join(A.getPath("userData"), "data"), Ie = m.join(ve, "torneios");
-function z(e) {
-  return m.join(Ie, `${e}.json`);
+const CATEGORIAS_IBJJF = gerarCategorias();
+const categoriaLabels = {};
+for (const c of CATEGORIAS_IBJJF) {
+  categoriaLabels[c.id] = c.nome;
 }
-function N(e) {
-  const t = z(e);
-  if (!u.existsSync(t)) throw new Error("Torneio não encontrado");
-  return JSON.parse(u.readFileSync(t, "utf-8"));
+const DATA_DIR$3 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR$3 = path.join(DATA_DIR$3, "torneios");
+function getTorneioPath$3(torneioId) {
+  return path.join(TORNEIOS_DIR$3, `${torneioId}.json`);
 }
-function P(e) {
-  u.writeFileSync(z(e.id), JSON.stringify(e, null, 2), "utf-8");
+function loadTorneio$3(torneioId) {
+  const filePath = getTorneioPath$3(torneioId);
+  if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
-function V(e) {
-  const t = N(e), n = t.atletas ?? [];
-  let o = !1;
-  for (const r of n)
-    r.id || (r.id = p.randomUUID(), o = !0), r.createdAt || (r.createdAt = (/* @__PURE__ */ new Date()).toISOString(), o = !0), r.updatedAt || (r.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), o = !0);
-  return o && (t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(t)), n;
+function saveTorneio$3(torneio) {
+  fs.writeFileSync(getTorneioPath$3(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
 }
-function ge(e, t) {
-  const n = N(e), o = n.atletas ?? [], r = {
-    ...t,
-    id: t.id || p.randomUUID(),
-    createdAt: t.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
+function loadAthletes(torneioId) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.atletas ?? [];
+  let modified = false;
+  for (const a of list) {
+    if (!a.id) {
+      a.id = crypto.randomUUID();
+      modified = true;
+    }
+    if (!a.createdAt) {
+      a.createdAt = (/* @__PURE__ */ new Date()).toISOString();
+      modified = true;
+    }
+    if (!a.updatedAt) {
+      a.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      modified = true;
+    }
+  }
+  if (modified) {
+    torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    saveTorneio$3(torneio);
+  }
+  return list;
+}
+function saveAthlete(torneioId, athlete) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.atletas ?? [];
+  const data = {
+    ...athlete,
+    id: athlete.id || crypto.randomUUID(),
+    createdAt: athlete.createdAt || (/* @__PURE__ */ new Date()).toISOString(),
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
-  return o.push(r), n.atletas = o, n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(n), o;
+  list.push(data);
+  torneio.atletas = list;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$3(torneio);
+  return list;
 }
-function Se(e, t) {
-  const n = N(e), o = n.atletas ?? [], r = o.findIndex((i) => i.id === t.id);
-  if (r === -1) throw new Error("Atleta não encontrado");
-  return o[r] = t, n.atletas = o, n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(n), o;
+function updateAthlete(torneioId, updated) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.atletas ?? [];
+  const index = list.findIndex((a) => a.id === updated.id);
+  if (index === -1) throw new Error("Atleta não encontrado");
+  list[index] = updated;
+  torneio.atletas = list;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$3(torneio);
+  return list;
 }
-function Ae(e, t) {
-  const n = N(e);
-  let o = n.atletas ?? [];
-  return o = o.filter((r) => r.id !== t), n.atletas = o, n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(n), o;
+function deleteAthlete(torneioId, id) {
+  const torneio = loadTorneio$3(torneioId);
+  let list = torneio.atletas ?? [];
+  list = list.filter((a) => a.id !== id);
+  torneio.atletas = list;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$3(torneio);
+  return list;
 }
-function Oe(e, t) {
-  const n = N(e), o = new Set(t);
-  let r = n.atletas ?? [];
-  return r = r.filter((i) => !o.has(i.id)), n.atletas = r, n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(n), r;
+function deleteAthletes(torneioId, ids) {
+  const torneio = loadTorneio$3(torneioId);
+  const idSet = new Set(ids);
+  let list = torneio.atletas ?? [];
+  list = list.filter((a) => !idSet.has(a.id));
+  torneio.atletas = list;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$3(torneio);
+  return list;
 }
-function be(e, t) {
-  const n = u.readFileSync(t, "utf-8"), o = JSON.parse(n);
-  if (!Array.isArray(o))
+function importAthletesFromFile(torneioId, filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const incoming = JSON.parse(raw);
+  if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de atletas.");
-  const r = new Set(H.map((d) => d.id));
-  for (const d of o) {
-    if (!d.nome || !d.equipe || !d.faixa || !d.anoNascimento || !d.pesoKg || !d.genero || !d.categoria)
-      throw new Error(`Atleta inválido no arquivo: "${d.nome || "sem nome"}" — campos obrigatórios ausentes (categoria, genero).`);
-    if (!r.has(d.categoria))
-      throw new Error(`Atleta inválido no arquivo: "${d.nome}" — categoria "${d.categoria}" não reconhecida.`);
   }
-  const i = N(e), a = i.atletas ?? [];
-  let s = 0, c = 0;
-  for (const d of o) {
-    const l = d.nome.trim().toLowerCase(), w = d.equipe.trim().toLowerCase();
-    a.some(
-      (g) => d.id && g.id === d.id || g.nome.trim().toLowerCase() === l && g.anoNascimento === d.anoNascimento
-    ) ? c++ : (d.nome = l, d.equipe = w, a.push({
-      ...d,
-      id: d.id || p.randomUUID(),
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    }), s++);
+  const categoriasValidas = new Set(CATEGORIAS_IBJJF.map((c) => c.id));
+  for (const a of incoming) {
+    if (!a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg || !a.genero || !a.categoria) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome || "sem nome"}" — campos obrigatórios ausentes (categoria, genero).`);
+    }
+    if (!categoriasValidas.has(a.categoria)) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome}" — categoria "${a.categoria}" não reconhecida.`);
+    }
   }
-  return i.atletas = a, i.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(i), { imported: s, skipped: c };
+  const torneio = loadTorneio$3(torneioId);
+  const current = torneio.atletas ?? [];
+  let imported = 0;
+  let skipped = 0;
+  for (const a of incoming) {
+    const nomeLower = a.nome.trim().toLowerCase();
+    const equipeLower = a.equipe.trim().toLowerCase();
+    const exists = current.some(
+      (ex) => a.id && ex.id === a.id || ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento
+    );
+    if (!exists) {
+      a.nome = nomeLower;
+      a.equipe = equipeLower;
+      current.push({
+        ...a,
+        id: a.id || crypto.randomUUID(),
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      imported++;
+    } else {
+      skipped++;
+    }
+  }
+  torneio.atletas = current;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$3(torneio);
+  return { imported, skipped };
 }
-async function De() {
-  const e = await E.showOpenDialog({
+async function openAthleteFileDialog() {
+  const result = await dialog.showOpenDialog({
     properties: ["openFile"],
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  return e.canceled || e.filePaths.length === 0 ? null : e.filePaths[0];
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
 }
-async function ye(e) {
-  const t = V(e), n = await E.showSaveDialog({
+async function exportAthletes(torneioId) {
+  const list = loadAthletes(torneioId);
+  const result = await dialog.showSaveDialog({
     title: "Exportar Atletas",
     defaultPath: "atletas.json",
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  !n.canceled && n.filePath && u.writeFileSync(n.filePath, JSON.stringify(t, null, 2), "utf-8");
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(list, null, 2), "utf-8");
+  }
 }
-const Ee = m.join(A.getPath("userData"), "data"), xe = m.join(Ee, "torneios");
-function W(e) {
-  return m.join(xe, `${e}.json`);
+const DATA_DIR$2 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR$2 = path.join(DATA_DIR$2, "torneios");
+function getTorneioPath$2(torneioId) {
+  return path.join(TORNEIOS_DIR$2, `${torneioId}.json`);
 }
-function _(e) {
-  const t = W(e);
-  if (!u.existsSync(t)) throw new Error("Torneio não encontrado");
-  return JSON.parse(u.readFileSync(t, "utf-8"));
+function loadTorneio$2(torneioId) {
+  const filePath = getTorneioPath$2(torneioId);
+  if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
-function j(e) {
-  u.writeFileSync(W(e.id), JSON.stringify(e, null, 2), "utf-8");
+function saveTorneio$2(torneio) {
+  fs.writeFileSync(getTorneioPath$2(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
 }
-function K(e) {
-  return _(e).arbitros ?? [];
+function loadArbitros(torneioId) {
+  const torneio = loadTorneio$2(torneioId);
+  return torneio.arbitros ?? [];
 }
-function Ne(e, t) {
-  const n = _(e), o = n.arbitros ?? [], r = (/* @__PURE__ */ new Date()).toISOString(), i = {
-    id: p.randomUUID(),
-    nome: t.nome.trim().toLowerCase(),
-    equipe: (t.equipe ?? "").trim().toLowerCase(),
-    faixa: t.faixa,
-    chaveIds: t.chaveIds ?? [],
-    createdAt: r,
-    updatedAt: r
+function saveArbitro(torneioId, data) {
+  const torneio = loadTorneio$2(torneioId);
+  const list = torneio.arbitros ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const arbitro = {
+    id: crypto.randomUUID(),
+    nome: data.nome.trim().toLowerCase(),
+    equipe: (data.equipe ?? "").trim().toLowerCase(),
+    faixa: data.faixa,
+    chaveIds: data.chaveIds ?? [],
+    createdAt: now,
+    updatedAt: now
   };
-  return o.push(i), n.arbitros = o, n.updatedAt = r, j(n), i;
+  list.push(arbitro);
+  torneio.arbitros = list;
+  torneio.updatedAt = now;
+  saveTorneio$2(torneio);
+  return arbitro;
 }
-function Pe(e, t) {
-  const n = _(e), o = n.arbitros ?? [], r = o.findIndex((a) => a.id === t.id);
-  if (r === -1) throw new Error("Árbitro não encontrado");
-  const i = (/* @__PURE__ */ new Date()).toISOString();
-  return o[r] = {
-    ...t,
-    nome: t.nome.trim().toLowerCase(),
-    updatedAt: i
-  }, n.arbitros = o, n.updatedAt = i, j(n), o[r];
+function updateArbitro(torneioId, data) {
+  const torneio = loadTorneio$2(torneioId);
+  const list = torneio.arbitros ?? [];
+  const index = list.findIndex((a) => a.id === data.id);
+  if (index === -1) throw new Error("Árbitro não encontrado");
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  list[index] = {
+    ...data,
+    nome: data.nome.trim().toLowerCase(),
+    updatedAt: now
+  };
+  torneio.arbitros = list;
+  torneio.updatedAt = now;
+  saveTorneio$2(torneio);
+  return list[index];
 }
-function _e(e, t) {
-  const n = _(e);
-  n.arbitros = (n.arbitros ?? []).filter((i) => i.id !== t);
-  const r = n.chaves;
-  if (r)
-    for (const i of r)
-      i.arbitroId === t && (i.arbitroId = null);
-  n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), j(n);
+function deleteArbitro(torneioId, arbitroId) {
+  const torneio = loadTorneio$2(torneioId);
+  torneio.arbitros = (torneio.arbitros ?? []).filter((a) => a.id !== arbitroId);
+  const t = torneio;
+  const chaves = t.chaves;
+  if (chaves) {
+    for (const chave of chaves) {
+      if (chave.arbitroId === arbitroId) {
+        chave.arbitroId = null;
+      }
+    }
+  }
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$2(torneio);
 }
-function Te(e, t) {
-  const n = _(e), o = new Set(t);
-  n.arbitros = (n.arbitros ?? []).filter((a) => !o.has(a.id));
-  const i = n.chaves;
-  if (i)
-    for (const a of i)
-      a.arbitroId && o.has(a.arbitroId) && (a.arbitroId = null);
-  n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), j(n);
+function deleteArbitros(torneioId, arbitroIds) {
+  const torneio = loadTorneio$2(torneioId);
+  const idSet = new Set(arbitroIds);
+  torneio.arbitros = (torneio.arbitros ?? []).filter((a) => !idSet.has(a.id));
+  const t = torneio;
+  const chaves = t.chaves;
+  if (chaves) {
+    for (const chave of chaves) {
+      if (chave.arbitroId && idSet.has(chave.arbitroId)) {
+        chave.arbitroId = null;
+      }
+    }
+  }
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$2(torneio);
 }
-async function Le() {
-  const e = await E.showOpenDialog({
+async function openArbitroFileDialog() {
+  const result = await dialog.showOpenDialog({
     properties: ["openFile"],
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  return e.canceled || e.filePaths.length === 0 ? null : e.filePaths[0];
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
 }
-function je(e, t) {
-  const n = u.readFileSync(t, "utf-8"), o = JSON.parse(n);
-  if (!Array.isArray(o))
+function importArbitrosFromFile(torneioId, filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const incoming = JSON.parse(raw);
+  if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de árbitros.");
-  const r = /* @__PURE__ */ new Set(["roxa", "marrom", "preta"]);
-  for (const d of o) {
-    const l = d;
-    if (!l.nome || typeof l.nome != "string" || l.nome.trim().length < 2)
-      throw new Error(`Árbitro inválido no arquivo: "${l.nome || "sem nome"}" — nome deve ter ao menos 2 caracteres.`);
-    if (!l.faixa || typeof l.faixa != "string" || !r.has(l.faixa))
-      throw new Error(`Árbitro inválido no arquivo: "${l.nome}" — faixa inválida.`);
-    if (l.equipe !== void 0 && (typeof l.equipe != "string" || l.equipe.trim().length < 2))
-      throw new Error(`Árbitro inválido no arquivo: "${l.nome}" — equipe deve ter ao menos 2 caracteres se informada.`);
   }
-  const i = _(e), a = i.arbitros ?? [];
-  let s = 0, c = 0;
-  for (const d of o) {
-    const l = d, w = l.nome.trim().toLowerCase();
-    a.some((g) => g.nome.trim().toLowerCase() === w) ? c++ : (a.push({
-      ...l,
-      id: l.id || p.randomUUID(),
-      nome: w,
-      equipe: l.equipe && typeof l.equipe == "string" ? l.equipe.trim().toLowerCase() : "",
-      faixa: l.faixa,
-      chaveIds: l.chaveIds ?? [],
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-    }), s++);
+  const faixasValidas = /* @__PURE__ */ new Set(["roxa", "marrom", "preta"]);
+  for (const item of incoming) {
+    const a = item;
+    if (!a.nome || typeof a.nome !== "string" || a.nome.trim().length < 2) {
+      throw new Error(`Árbitro inválido no arquivo: "${a.nome || "sem nome"}" — nome deve ter ao menos 2 caracteres.`);
+    }
+    if (!a.faixa || typeof a.faixa !== "string" || !faixasValidas.has(a.faixa)) {
+      throw new Error(`Árbitro inválido no arquivo: "${a.nome}" — faixa inválida.`);
+    }
+    if (a.equipe !== void 0 && (typeof a.equipe !== "string" || a.equipe.trim().length < 2)) {
+      throw new Error(`Árbitro inválido no arquivo: "${a.nome}" — equipe deve ter ao menos 2 caracteres se informada.`);
+    }
   }
-  return i.arbitros = a, i.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), j(i), { imported: s, skipped: c };
+  const torneio = loadTorneio$2(torneioId);
+  const current = torneio.arbitros ?? [];
+  let imported = 0;
+  let skipped = 0;
+  for (const item of incoming) {
+    const a = item;
+    const nomeLower = a.nome.trim().toLowerCase();
+    const exists = current.some((ex) => ex.nome.trim().toLowerCase() === nomeLower);
+    if (!exists) {
+      current.push({
+        ...a,
+        id: a.id || crypto.randomUUID(),
+        nome: nomeLower,
+        equipe: a.equipe && typeof a.equipe === "string" ? a.equipe.trim().toLowerCase() : "",
+        faixa: a.faixa,
+        chaveIds: a.chaveIds ?? [],
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      imported++;
+    } else {
+      skipped++;
+    }
+  }
+  torneio.arbitros = current;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$2(torneio);
+  return { imported, skipped };
 }
-async function Fe(e) {
-  const t = K(e), n = await E.showSaveDialog({
+async function exportArbitros(torneioId) {
+  const list = loadArbitros(torneioId);
+  const result = await dialog.showSaveDialog({
     title: "Exportar Árbitros",
     defaultPath: "arbitros.json",
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  !n.canceled && n.filePath && u.writeFileSync(n.filePath, JSON.stringify(t, null, 2), "utf-8");
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(list, null, 2), "utf-8");
+  }
 }
-const Re = m.join(A.getPath("userData"), "data"), Ce = m.join(Re, "torneios");
-function G(e) {
-  return m.join(Ce, `${e}.json`);
+const DATA_DIR$1 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR$1 = path.join(DATA_DIR$1, "torneios");
+function getTorneioPath$1(torneioId) {
+  return path.join(TORNEIOS_DIR$1, `${torneioId}.json`);
 }
-function F(e) {
-  const t = G(e);
-  if (!u.existsSync(t)) throw new Error("Torneio não encontrado");
-  return JSON.parse(u.readFileSync(t, "utf-8"));
+function loadTorneio$1(torneioId) {
+  const filePath = getTorneioPath$1(torneioId);
+  if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
-function J(e) {
-  u.writeFileSync(G(e.id), JSON.stringify(e, null, 2), "utf-8");
+function saveTorneio$1(torneio) {
+  fs.writeFileSync(getTorneioPath$1(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
 }
-function Je(e) {
+function normalizeArea(area) {
   return {
-    id: e.id,
-    nome: e.nome ?? "",
-    arbitroIds: Array.isArray(e.arbitroIds) ? e.arbitroIds.filter(Boolean) : e.arbitroId ? [e.arbitroId] : [],
-    createdAt: e.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-    updatedAt: e.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
+    id: area.id,
+    nome: area.nome ?? "",
+    arbitroIds: Array.isArray(area.arbitroIds) ? area.arbitroIds.filter(Boolean) : area.arbitroId ? [area.arbitroId] : [],
+    createdAt: area.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+    updatedAt: area.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
   };
 }
-function R(e) {
-  return (F(e).areas ?? []).map((n) => Je(n));
+function loadAreas(torneioId) {
+  const torneio = loadTorneio$1(torneioId);
+  return (torneio.areas ?? []).map((a) => normalizeArea(a));
 }
-function X(e, t, n) {
-  const o = t ?? [];
-  if (o.length === 0) return;
-  const r = R(e), i = /* @__PURE__ */ new Set();
-  for (const s of r)
-    if (s.id !== n)
-      for (const c of s.arbitroIds)
-        i.add(c);
-  if (o.filter((s) => s && i.has(s)).length > 0)
+function checkRefereeNotInUse(torneioId, arbitroIds, excludeAreaId) {
+  const ids = arbitroIds ?? [];
+  if (ids.length === 0) return;
+  const areas = loadAreas(torneioId);
+  const assigned = /* @__PURE__ */ new Set();
+  for (const area of areas) {
+    if (area.id === excludeAreaId) continue;
+    for (const rid of area.arbitroIds) {
+      assigned.add(rid);
+    }
+  }
+  const conflict = ids.filter((rid) => rid && assigned.has(rid));
+  if (conflict.length > 0) {
     throw new Error("Um ou mais árbitros já estão atribuídos a outra área de luta.");
+  }
 }
-function qe(e, t) {
-  const n = t.arbitroIds ?? [];
-  X(e, n);
-  const o = F(e), r = R(e), i = (/* @__PURE__ */ new Date()).toISOString(), a = {
-    id: p.randomUUID(),
-    nome: t.nome.trim(),
-    arbitroIds: n.filter(Boolean),
-    createdAt: i,
-    updatedAt: i
+function saveArea(torneioId, data) {
+  const arbitroIds = data.arbitroIds ?? [];
+  checkRefereeNotInUse(torneioId, arbitroIds);
+  const torneio = loadTorneio$1(torneioId);
+  const list = loadAreas(torneioId);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const area = {
+    id: crypto.randomUUID(),
+    nome: data.nome.trim(),
+    arbitroIds: arbitroIds.filter(Boolean),
+    createdAt: now,
+    updatedAt: now
   };
-  return r.push(a), o.areas = r, o.updatedAt = i, J(o), a;
+  list.push(area);
+  torneio.areas = list;
+  torneio.updatedAt = now;
+  saveTorneio$1(torneio);
+  return area;
 }
-function Ue(e, t) {
-  const n = t.arbitroIds ?? [];
-  X(e, n, t.id);
-  const o = F(e), r = R(e), i = r.findIndex((s) => s.id === t.id);
-  if (i === -1) throw new Error("Área de luta não encontrada");
-  const a = (/* @__PURE__ */ new Date()).toISOString();
-  return r[i] = {
-    ...t,
-    nome: t.nome.trim(),
-    arbitroIds: n.filter(Boolean),
-    updatedAt: a
-  }, o.areas = r, o.updatedAt = a, J(o), r[i];
+function updateArea(torneioId, data) {
+  const arbitroIds = data.arbitroIds ?? [];
+  checkRefereeNotInUse(torneioId, arbitroIds, data.id);
+  const torneio = loadTorneio$1(torneioId);
+  const list = loadAreas(torneioId);
+  const index = list.findIndex((a) => a.id === data.id);
+  if (index === -1) throw new Error("Área de luta não encontrada");
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  list[index] = {
+    ...data,
+    nome: data.nome.trim(),
+    arbitroIds: arbitroIds.filter(Boolean),
+    updatedAt: now
+  };
+  torneio.areas = list;
+  torneio.updatedAt = now;
+  saveTorneio$1(torneio);
+  return list[index];
 }
-function $e(e, t) {
-  const n = F(e);
-  n.areas = (n.areas ?? []).filter((o) => o.id !== t), n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), J(n);
+function deleteArea(torneioId, areaId) {
+  const torneio = loadTorneio$1(torneioId);
+  torneio.areas = (torneio.areas ?? []).filter((a) => a.id !== areaId);
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$1(torneio);
 }
-function Be(e, t) {
-  const n = F(e), o = new Set(t);
-  n.areas = (n.areas ?? []).filter((r) => !o.has(r.id)), n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), J(n);
+function deleteAreas(torneioId, areaIds) {
+  const torneio = loadTorneio$1(torneioId);
+  const idSet = new Set(areaIds);
+  torneio.areas = (torneio.areas ?? []).filter((a) => !idSet.has(a.id));
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$1(torneio);
 }
-const Me = m.join(A.getPath("userData"), "data"), ke = m.join(Me, "torneios");
-function Y(e) {
-  return m.join(ke, `${e}.json`);
+const DATA_DIR = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR = path.join(DATA_DIR, "torneios");
+function getTorneioPath(torneioId) {
+  return path.join(TORNEIOS_DIR, `${torneioId}.json`);
 }
-function S(e) {
-  const t = Y(e);
-  if (!u.existsSync(t)) throw new Error("Torneio não encontrado");
-  return JSON.parse(u.readFileSync(t, "utf-8"));
+function loadTorneio(torneioId) {
+  const filePath = getTorneioPath(torneioId);
+  if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
-function T(e) {
-  u.writeFileSync(Y(e.id), JSON.stringify(e, null, 2), "utf-8");
+function saveTorneio(torneio) {
+  fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
 }
-function Z(e) {
-  return [...e].sort((t, n) => {
-    if (t.pesoKg !== n.pesoKg) return n.pesoKg - t.pesoKg;
-    const o = (/* @__PURE__ */ new Date()).getFullYear() - t.anoNascimento, r = (/* @__PURE__ */ new Date()).getFullYear() - n.anoNascimento;
-    return o !== r ? r - o : t.nome.localeCompare(n.nome);
+function sortAtletas(atletas) {
+  return [...atletas].sort((a, b) => {
+    if (a.pesoKg !== b.pesoKg) return b.pesoKg - a.pesoKg;
+    const idadeA = (/* @__PURE__ */ new Date()).getFullYear() - a.anoNascimento;
+    const idadeB = (/* @__PURE__ */ new Date()).getFullYear() - b.anoNascimento;
+    if (idadeA !== idadeB) return idadeB - idadeA;
+    return a.nome.localeCompare(b.nome);
   });
 }
-function He(e) {
-  const t = Z(e), n = t.length;
-  if (n <= 2) return t;
-  let o, r;
-  n === 3 ? (o = [0], r = [1, 2]) : n === 4 ? (o = [0, 3], r = [1, 2]) : (o = [0, 3, 4], r = [1, 2]);
-  for (const i of [o, r]) {
-    const a = /* @__PURE__ */ new Set();
-    for (const s of i) {
-      const c = t[s].equipe;
-      if (c) {
-        if (a.has(c)) {
-          const d = i === o ? r : o;
-          for (const l of d) {
-            const w = t[l].equipe;
-            if (w !== c && !a.has(w)) {
-              [t[s], t[l]] = [t[l], t[s]];
-              break;
-            }
+function aplicarSeedSorting(atletas) {
+  const sorted = sortAtletas(atletas);
+  const n = sorted.length;
+  if (n <= 2) return sorted;
+  let sideA, sideB;
+  if (n === 3) {
+    sideA = [0];
+    sideB = [1, 2];
+  } else if (n === 4) {
+    sideA = [0, 3];
+    sideB = [1, 2];
+  } else {
+    sideA = [0, 3, 4];
+    sideB = [1, 2];
+  }
+  for (const side of [sideA, sideB]) {
+    const seen = /* @__PURE__ */ new Set();
+    for (const idx of side) {
+      const team = sorted[idx].equipe;
+      if (!team) continue;
+      if (seen.has(team)) {
+        const otherSide = side === sideA ? sideB : sideA;
+        for (const oi of otherSide) {
+          const otherTeam = sorted[oi].equipe;
+          if (otherTeam !== team && !seen.has(otherTeam)) {
+            [sorted[idx], sorted[oi]] = [sorted[oi], sorted[idx]];
+            break;
           }
         }
-        a.add(t[s].equipe);
       }
+      seen.add(sorted[idx].equipe);
     }
   }
-  return t;
+  return sorted;
 }
-function Q(e) {
-  const t = Z(e), n = t.slice(0, 8), o = t.slice(8, 16);
-  for (const r of [n, o]) {
-    const i = /* @__PURE__ */ new Map();
-    r.forEach((a, s) => {
+function aplicarSeedSorting16(atletas) {
+  const sorted = sortAtletas(atletas);
+  const sideA = sorted.slice(0, 8);
+  const sideB = sorted.slice(8, 16);
+  for (const side of [sideA, sideB]) {
+    const seen = /* @__PURE__ */ new Map();
+    side.forEach((a, idx) => {
       if (a.equipe) {
-        const c = i.get(a.equipe) ?? [];
-        c.push(s), i.set(a.equipe, c);
+        const list = seen.get(a.equipe) ?? [];
+        list.push(idx);
+        seen.set(a.equipe, list);
       }
     });
-    for (const [a, s] of i) {
-      if (s.length < 2) continue;
-      const c = r === n ? o : n;
-      for (let d = 1; d < s.length; d++) {
-        const l = c.findIndex((w) => w.equipe !== a);
-        l >= 0 && ([r[s[d]], c[l]] = [c[l], r[s[d]]]);
+    for (const [team, indices] of seen) {
+      if (indices.length < 2) continue;
+      const otherSide = side === sideA ? sideB : sideA;
+      for (let i = 1; i < indices.length; i++) {
+        const swapIdx = otherSide.findIndex((o) => o.equipe !== team);
+        if (swapIdx >= 0) {
+          [side[indices[i]], otherSide[swapIdx]] = [otherSide[swapIdx], side[indices[i]]];
+        }
       }
     }
   }
-  return [...n, ...o];
+  return [...sideA, ...sideB];
 }
-const I = "tbd";
-function v(e, t, n, o) {
-  return { id: p.randomUUID(), ordem: e, rodada: t, atletaAId: n, atletaBId: o, status: "pending", vencedorId: null };
+const TBD = "tbd";
+function criarLuta(ordem, rodada, atletaAId, atletaBId) {
+  return { id: crypto.randomUUID(), ordem, rodada, atletaAId, atletaBId, status: "pending", vencedorId: null };
 }
-function ze(e) {
-  return [v(1, 1, e[0].id, e[1].id)];
+function gerarLutasDois(posicoes) {
+  return [criarLuta(1, 1, posicoes[0].id, posicoes[1].id)];
 }
-function Ve(e) {
+function gerarLutasTres(posicoes) {
   return [
-    v(1, 1, e[0].id, e[1].id),
-    v(2, 2, I, e[2].id),
-    v(3, 3, I, I)
+    criarLuta(1, 1, posicoes[0].id, posicoes[1].id),
+    criarLuta(2, 2, TBD, posicoes[2].id),
+    criarLuta(3, 3, TBD, TBD)
   ];
 }
-function We(e) {
+function gerarLutasQuatro(posicoes) {
   return [
-    v(1, 1, e[0].id, e[3].id),
-    v(2, 1, e[1].id, e[2].id),
-    v(3, 2, I, I)
+    criarLuta(1, 1, posicoes[0].id, posicoes[3].id),
+    criarLuta(2, 1, posicoes[1].id, posicoes[2].id),
+    criarLuta(3, 2, TBD, TBD)
   ];
 }
-function Ke(e) {
+function gerarLutasCinco(posicoes) {
   return [
-    v(1, 1, e[0].id, e[1].id),
-    v(2, 1, e[2].id, e[3].id),
-    v(3, 2, I, e[4].id),
-    v(4, 3, I, I)
+    criarLuta(1, 1, posicoes[0].id, posicoes[1].id),
+    criarLuta(2, 1, posicoes[2].id, posicoes[3].id),
+    criarLuta(3, 2, TBD, posicoes[4].id),
+    criarLuta(4, 3, TBD, TBD)
   ];
 }
-function Ge(e) {
-  return e <= 2 ? 1 : e === 3 ? 3 : e <= 4 ? 2 : e <= 8 ? 3 : 4;
+function getTotalRodadas(totalAtletas) {
+  if (totalAtletas <= 2) return 1;
+  if (totalAtletas === 3) return 3;
+  if (totalAtletas <= 4) return 2;
+  if (totalAtletas <= 8) return 3;
+  return 4;
 }
-function Xe(e) {
-  const t = [];
-  let n = 1;
-  for (let o = 0; o < 8; o++)
-    t.push(v(n++, 1, e[o * 2].id, e[o * 2 + 1].id));
-  for (let o = 0; o < 4; o++)
-    t.push(v(n++, 2, I, I));
-  for (let o = 0; o < 2; o++)
-    t.push(v(n++, 3, I, I));
-  return t.push(v(n++, 4, I, I)), t;
+function gerarLutas16(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  for (let i = 0; i < 8; i++) {
+    lutas.push(criarLuta(ordem++, 1, posicoes[i * 2].id, posicoes[i * 2 + 1].id));
+  }
+  for (let i = 0; i < 4; i++) {
+    lutas.push(criarLuta(ordem++, 2, TBD, TBD));
+  }
+  for (let i = 0; i < 2; i++) {
+    lutas.push(criarLuta(ordem++, 3, TBD, TBD));
+  }
+  lutas.push(criarLuta(ordem++, 4, TBD, TBD));
+  return lutas;
 }
-function ee(e) {
-  switch (e.length) {
+function gerarLutas(posicoes) {
+  switch (posicoes.length) {
     case 2:
-      return ze(e);
+      return gerarLutasDois(posicoes);
     case 3:
-      return Ve(e);
+      return gerarLutasTres(posicoes);
     case 4:
-      return We(e);
+      return gerarLutasQuatro(posicoes);
     case 5:
-      return Ke(e);
+      return gerarLutasCinco(posicoes);
     case 16:
-      return Xe(e);
+      return gerarLutas16(posicoes);
     default:
       throw new Error("Número inválido de atletas");
   }
 }
-const M = {
-  branca: 0,
-  cinza: 1,
-  amarela: 2,
-  laranja: 3,
-  verde: 4,
-  azul: 5,
-  roxa: 6,
-  marrom: 7,
-  preta: 8
-}, te = 16;
-function ne(e, t) {
-  if (t.length < 2 || t.length > te)
+const FAIXA_ORDER = {
+  "branca": 0,
+  "cinza": 1,
+  "amarela": 2,
+  "laranja": 3,
+  "verde": 4,
+  "azul": 5,
+  "roxa": 6,
+  "marrom": 7,
+  "preta": 8
+};
+const MAX_ATLETAS_POR_CHAVE = 16;
+function gerarChave(categoriaId, atletas) {
+  if (atletas.length < 2 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
     throw new Error("A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.");
-  const n = t.length === 16 ? Q(t) : He(t), o = ee(n);
+  }
+  const posicoes = atletas.length === 16 ? aplicarSeedSorting16(atletas) : aplicarSeedSorting(atletas);
+  const lutas = gerarLutas(posicoes);
   return {
-    id: p.randomUUID(),
-    categoriaId: e,
-    lutas: o,
-    posicoesAtletas: n.map((r) => r.id),
+    id: crypto.randomUUID(),
+    categoriaId,
+    lutas,
+    posicoesAtletas: posicoes.map((a) => a.id),
     arbitroId: null,
-    totalAtletas: n.length,
-    totalLutas: o.length,
-    totalRodadas: Ge(n.length),
+    totalAtletas: posicoes.length,
+    totalLutas: lutas.length,
+    totalRodadas: getTotalRodadas(posicoes.length),
     status: "gerada"
   };
 }
-function Ye(e) {
-  const t = e.chaves ?? [], n = e.arbitros ?? [];
-  if (t.length === 0 || n.length === 0) return;
-  for (const i of n)
-    i.chaveIds = [];
-  const o = t.map((i) => {
-    const a = i.posicoesAtletas.map((c) => (e.atletas ?? []).find((d) => d.id === c)).filter((c) => c !== void 0), s = Math.max(...a.map((c) => M[c.faixa] ?? 0), 0);
-    return { chave: i, maxLevel: s };
+function autoAtribuirArbitros(torneio) {
+  const chaves = torneio.chaves ?? [];
+  const arbitros = torneio.arbitros ?? [];
+  if (chaves.length === 0 || arbitros.length === 0) return;
+  for (const r of arbitros) {
+    r.chaveIds = [];
+  }
+  const chaveMaxLevel = chaves.map((chave) => {
+    const atletas = chave.posicoesAtletas.map((id) => (torneio.atletas ?? []).find((a) => a.id === id)).filter((a) => a !== void 0);
+    const maxLevel = Math.max(...atletas.map((a) => FAIXA_ORDER[a.faixa] ?? 0), 0);
+    return { chave, maxLevel };
   });
-  o.sort((i, a) => a.maxLevel - i.maxLevel);
-  const r = /* @__PURE__ */ new Map();
-  for (const i of n) r.set(i.id, 0);
-  for (const { chave: i, maxLevel: a } of o) {
-    const s = n.filter((c) => (M[c.faixa] ?? 0) >= a).sort((c, d) => (r.get(c.id) ?? 0) - (r.get(d.id) ?? 0))[0];
-    s && (i.arbitroId = s.id, r.set(s.id, (r.get(s.id) ?? 0) + 1), s.chaveIds.includes(i.id) || s.chaveIds.push(i.id));
+  chaveMaxLevel.sort((a, b) => b.maxLevel - a.maxLevel);
+  const usage = /* @__PURE__ */ new Map();
+  for (const r of arbitros) usage.set(r.id, 0);
+  for (const { chave, maxLevel } of chaveMaxLevel) {
+    const best = arbitros.filter((r) => (FAIXA_ORDER[r.faixa] ?? 0) >= maxLevel).sort((a, b) => (usage.get(a.id) ?? 0) - (usage.get(b.id) ?? 0))[0];
+    if (best) {
+      chave.arbitroId = best.id;
+      usage.set(best.id, (usage.get(best.id) ?? 0) + 1);
+      if (!best.chaveIds.includes(chave.id)) {
+        best.chaveIds.push(chave.id);
+      }
+    }
   }
 }
-function Ze(e) {
-  const t = e.length;
-  if (t <= 5 || t === 16) return [e];
-  const n = [];
-  for (let o = 0; o < t; o += 5)
-    n.push(e.slice(o, o + 5));
-  return n;
+function splitGrupo(grupo) {
+  const n = grupo.length;
+  if (n <= 5 || n === 16) return [grupo];
+  const subgrupos = [];
+  for (let i = 0; i < n; i += 5) {
+    subgrupos.push(grupo.slice(i, i + 5));
+  }
+  return subgrupos;
 }
-function Qe(e) {
-  const t = S(e), n = t.atletas ?? [], o = [], r = /* @__PURE__ */ new Map();
-  for (const d of n) {
-    if (!d.categoria) {
-      o.push(d.nome);
+function gerarTodasChavesHandler(torneioId) {
+  const torneio = loadTorneio(torneioId);
+  const atletas = torneio.atletas ?? [];
+  const atletasIgnorados = [];
+  const grupos = /* @__PURE__ */ new Map();
+  for (const a of atletas) {
+    if (!a.categoria) {
+      atletasIgnorados.push(a.nome);
       continue;
     }
-    const l = r.get(d.categoria) ?? [];
-    l.push(d), r.set(d.categoria, l);
+    const g = grupos.get(a.categoria) ?? [];
+    g.push(a);
+    grupos.set(a.categoria, g);
   }
-  const i = [], a = [], s = [];
-  for (const [d, l] of r) {
-    if (l.length === 0) continue;
-    if (l.length === 1) {
-      a.push(l[0]), s.push({
-        categoriaId: d,
+  const novasChaves = [];
+  const atletasSemChave = [];
+  const metadados = [];
+  for (const [categoriaId, grupo] of grupos) {
+    if (grupo.length === 0) continue;
+    if (grupo.length === 1) {
+      atletasSemChave.push(grupo[0]);
+      metadados.push({
+        categoriaId,
         totalAtletas: 1,
         chavesGeradas: 0,
-        atletasIgnorados: [...o]
+        atletasIgnorados: [...atletasIgnorados]
       });
       continue;
     }
-    const w = Ze(l);
-    let D = 0;
-    for (const g of w) {
-      if (g.length === 1) {
-        a.push(g[0]);
+    const subgrupos = splitGrupo(grupo);
+    let chavesGeradas = 0;
+    for (const sub of subgrupos) {
+      if (sub.length === 1) {
+        atletasSemChave.push(sub[0]);
         continue;
       }
-      i.push(ne(d, g)), D++;
+      novasChaves.push(gerarChave(categoriaId, sub));
+      chavesGeradas++;
     }
-    s.push({
-      categoriaId: d,
-      totalAtletas: l.length,
-      chavesGeradas: D,
-      atletasIgnorados: [...o]
+    metadados.push({
+      categoriaId,
+      totalAtletas: grupo.length,
+      chavesGeradas,
+      atletasIgnorados: [...atletasIgnorados]
     });
   }
-  t.chaves = i, Ye(t);
-  const c = /* @__PURE__ */ new Set();
-  for (const d of i)
-    for (const l of d.posicoesAtletas)
-      c.add(l);
-  for (const d of t.atletas ?? [])
-    d.emChave = c.has(d.id);
-  return t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(t), { chaves: i, metadados: s, atletasSemChave: a };
+  torneio.chaves = novasChaves;
+  autoAtribuirArbitros(torneio);
+  const atletasEmChaves = /* @__PURE__ */ new Set();
+  for (const chave of novasChaves) {
+    for (const id of chave.posicoesAtletas) {
+      atletasEmChaves.add(id);
+    }
+  }
+  for (const a of torneio.atletas ?? []) {
+    a.emChave = atletasEmChaves.has(a.id);
+  }
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio(torneio);
+  return { chaves: novasChaves, metadados, atletasSemChave };
 }
-function et(e) {
-  var r, i, a;
-  const t = e.length;
-  if (t < 4) return;
-  const n = t === 4 ? [0, 3] : [0, 1], o = t === 4 ? [1, 2] : [2, 3, 4];
-  for (const s of [n, o]) {
-    const c = /* @__PURE__ */ new Set();
-    for (const d of s) {
-      const l = (r = e[d]) == null ? void 0 : r.equipe;
-      if (l) {
-        if (c.has(l)) {
-          const w = s === n ? o : n;
-          for (const D of w)
-            if (((i = e[D]) == null ? void 0 : i.equipe) !== l) {
-              [e[d], e[D]] = [e[D], e[d]];
-              break;
-            }
+function separarEquipes(atletas) {
+  var _a, _b, _c;
+  const n = atletas.length;
+  if (n < 4) return;
+  const sideA = n === 4 ? [0, 3] : [0, 1];
+  const sideB = n === 4 ? [1, 2] : [2, 3, 4];
+  for (const side of [sideA, sideB]) {
+    const seenTeams = /* @__PURE__ */ new Set();
+    for (const idx of side) {
+      const team = (_a = atletas[idx]) == null ? void 0 : _a.equipe;
+      if (!team) continue;
+      if (seenTeams.has(team)) {
+        const otherSide = side === sideA ? sideB : sideA;
+        for (const oi of otherSide) {
+          const otherTeam = (_b = atletas[oi]) == null ? void 0 : _b.equipe;
+          if (otherTeam !== team) {
+            [atletas[idx], atletas[oi]] = [atletas[oi], atletas[idx]];
+            break;
+          }
         }
-        (a = e[d]) != null && a.equipe && c.add(e[d].equipe);
       }
+      if ((_c = atletas[idx]) == null ? void 0 : _c.equipe) seenTeams.add(atletas[idx].equipe);
     }
   }
 }
-function tt(e, t) {
-  const n = S(e), o = n.chaves ?? [], r = o.findIndex((c) => c.id === t.chaveId);
-  if (r < 0) throw new Error("Chave não encontrada");
-  const i = o[r], a = [...i.posicoesAtletas];
-  for (let c = a.length - 1; c > 0; c--) {
-    const d = Math.floor(Math.random() * (c + 1));
-    [a[c], a[d]] = [a[d], a[c]];
+function randomizarChaveHandler(torneioId, data) {
+  const torneio = loadTorneio(torneioId);
+  const chaves = torneio.chaves ?? [];
+  const index = chaves.findIndex((c) => c.id === data.chaveId);
+  if (index < 0) throw new Error("Chave não encontrada");
+  const chave = chaves[index];
+  const shuffled = [...chave.posicoesAtletas];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  const s = a.map((c) => (n.atletas ?? []).find((d) => d.id === c)).filter((c) => c !== void 0);
-  if (s.length === 16) {
-    const c = Q(s);
-    i.posicoesAtletas = c.map((d) => d.id);
-  } else
-    et(s), i.posicoesAtletas = s.map((c) => c.id);
-  i.lutas = ee(s), o[r] = i, n.chaves = o;
-  for (const c of n.atletas ?? [])
-    i.posicoesAtletas.includes(c.id) && (c.emChave = !0);
-  return n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(n), i;
+  const atletas = shuffled.map((id) => (torneio.atletas ?? []).find((a) => a.id === id)).filter((a) => a !== void 0);
+  if (atletas.length === 16) {
+    const sorted = aplicarSeedSorting16(atletas);
+    chave.posicoesAtletas = sorted.map((a) => a.id);
+  } else {
+    separarEquipes(atletas);
+    chave.posicoesAtletas = atletas.map((a) => a.id);
+  }
+  chave.lutas = gerarLutas(atletas);
+  chaves[index] = chave;
+  torneio.chaves = chaves;
+  for (const a of torneio.atletas ?? []) {
+    if (chave.posicoesAtletas.includes(a.id)) {
+      a.emChave = true;
+    }
+  }
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio(torneio);
+  return chave;
 }
-function nt(e, t) {
-  const n = S(e), o = n.chaves ?? [], r = o.findIndex((s) => s.id === t.chaveId);
-  if (r < 0) throw new Error("Chave não encontrada");
-  const i = o[r], a = i.arbitroId;
-  if (a) {
-    const s = (n.arbitros ?? []).find((c) => c.id === a);
-    s && (s.chaveIds = s.chaveIds.filter((c) => c !== t.chaveId));
+function atribuirArbitroHandler(torneioId, data) {
+  const torneio = loadTorneio(torneioId);
+  const chaves = torneio.chaves ?? [];
+  const chaveIndex = chaves.findIndex((c) => c.id === data.chaveId);
+  if (chaveIndex < 0) throw new Error("Chave não encontrada");
+  const chave = chaves[chaveIndex];
+  const oldArbitroId = chave.arbitroId;
+  if (oldArbitroId) {
+    const oldArbitro = (torneio.arbitros ?? []).find((r) => r.id === oldArbitroId);
+    if (oldArbitro) {
+      oldArbitro.chaveIds = oldArbitro.chaveIds.filter((id) => id !== data.chaveId);
+    }
   }
-  if (t.arbitroId) {
-    const s = (n.arbitros ?? []).find((c) => c.id === t.arbitroId);
-    if (!s) throw new Error("Árbitro não encontrado no torneio.");
-    s.chaveIds.includes(t.chaveId) || s.chaveIds.push(t.chaveId);
+  if (data.arbitroId) {
+    const newArbitro = (torneio.arbitros ?? []).find((r) => r.id === data.arbitroId);
+    if (!newArbitro) throw new Error("Árbitro não encontrado no torneio.");
+    if (!newArbitro.chaveIds.includes(data.chaveId)) {
+      newArbitro.chaveIds.push(data.chaveId);
+    }
   }
-  return i.arbitroId = t.arbitroId, o[r] = i, n.chaves = o, n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(n), i;
+  chave.arbitroId = data.arbitroId;
+  chaves[chaveIndex] = chave;
+  torneio.chaves = chaves;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio(torneio);
+  return chave;
 }
-async function ot() {
-  const e = await E.showOpenDialog({
+async function openBracketFileDialog() {
+  const result = await dialog.showOpenDialog({
     properties: ["openFile"],
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  return e.canceled || e.filePaths.length === 0 ? null : e.filePaths[0];
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
 }
-function rt(e, t) {
-  const n = u.readFileSync(t, "utf-8"), o = JSON.parse(n);
-  if (!Array.isArray(o))
+function importChavesFromFile(torneioId, filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const incoming = JSON.parse(raw);
+  if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de chaves.");
-  const r = S(e), i = o.map((s) => {
-    if (!s.categoriaId || !Array.isArray(s.lutas))
+  }
+  const torneio = loadTorneio(torneioId);
+  const chaves = incoming.map((c) => {
+    if (!c.categoriaId || !Array.isArray(c.lutas)) {
       throw new Error("Estrutura de chave inválida no arquivo.");
+    }
     return {
-      ...s,
-      id: s.id || p.randomUUID()
+      ...c,
+      id: c.id || crypto.randomUUID()
     };
   });
-  r.chaves = i;
-  const a = /* @__PURE__ */ new Set();
-  for (const s of i)
-    for (const c of s.posicoesAtletas)
-      a.add(c);
-  for (const s of r.atletas ?? [])
-    s.emChave = a.has(s.id);
-  return r.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(r), { imported: o.length };
+  torneio.chaves = chaves;
+  const atletasEmChaves = /* @__PURE__ */ new Set();
+  for (const chave of chaves) {
+    for (const id of chave.posicoesAtletas) {
+      atletasEmChaves.add(id);
+    }
+  }
+  for (const a of torneio.atletas ?? []) {
+    a.emChave = atletasEmChaves.has(a.id);
+  }
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio(torneio);
+  return { imported: incoming.length };
 }
-async function it(e) {
-  const t = S(e), n = t.chaves ?? [], o = await E.showSaveDialog({
+async function exportChavesToFile(torneioId) {
+  const torneio = loadTorneio(torneioId);
+  const chaves = torneio.chaves ?? [];
+  const result = await dialog.showSaveDialog({
     title: "Exportar Chaves",
-    defaultPath: `${(t.nome || "torneio").replace(/[^a-zA-Z0-9]/g, "_")}_chaves.json`,
+    defaultPath: `${(torneio.nome || "torneio").replace(/[^a-zA-Z0-9]/g, "_")}_chaves.json`,
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  !o.canceled && o.filePath && u.writeFileSync(o.filePath, JSON.stringify(n, null, 2), "utf-8");
-}
-function at(e) {
-  return {
-    id: e.id,
-    ordem: e.ordem ?? 0,
-    rodada: e.rodada ?? 1,
-    atletaAId: e.atletaAId ?? "",
-    atletaBId: e.atletaBId ?? "",
-    status: e.status ?? "pending",
-    vencedorId: e.vencedorId ?? null,
-    placarA: e.placarA ?? void 0,
-    placarB: e.placarB ?? void 0,
-    finalizacao: e.finalizacao ?? void 0,
-    desclassificacao: e.desclassificacao ?? void 0,
-    desempateArbitro: e.desempateArbitro ?? void 0
-  };
-}
-function q(e) {
-  const t = (e.lutas ?? []).map(at);
-  return {
-    id: e.id,
-    categoriaId: e.categoriaId ?? "",
-    lutas: t,
-    posicoesAtletas: e.posicoesAtletas ?? [],
-    arbitroId: e.arbitroId ?? null,
-    totalAtletas: e.totalAtletas ?? 0,
-    totalLutas: e.totalLutas ?? 0,
-    totalRodadas: e.totalRodadas ?? (t.length > 0 ? Math.max(...t.map((n) => n.rodada)) : 1),
-    status: e.status ?? "gerada"
-  };
-}
-function st(e, t) {
-  const n = S(e), r = R(e).find((a) => a.id === t);
-  if (!r) return [];
-  const i = new Set(r.arbitroIds);
-  return (n.chaves ?? []).map((a) => q(a)).filter((a) => a.arbitroId && i.has(a.arbitroId));
-}
-function U(e, t, n) {
-  for (const o of e.lutas)
-    o.rodada <= t || (o.atletaAId === n && (o.atletaAId = "tbd", o.vencedorId = null, (o.status === "completed" || o.status === "wo") && (o.status = "pending"), U(e, o.rodada, n)), o.atletaBId === n && (o.atletaBId = "tbd", o.vencedorId = null, (o.status === "completed" || o.status === "wo") && (o.status = "pending"), U(e, o.rodada, n)));
-}
-function dt(e, t) {
-  const o = e.lutas.filter((i) => i.rodada === t.rodada).indexOf(t);
-  if (o < 0) return;
-  let r = t.rodada + 1;
-  for (; r <= (e.totalRodadas || 3); ) {
-    const i = e.lutas.filter((w) => w.rodada === r);
-    if (i.length === 0) return;
-    const a = Math.pow(2, r - t.rodada - 1), s = Math.floor(o / a);
-    if (s >= i.length) return;
-    const c = i[s], d = o % Math.pow(2, r - t.rodada), l = Math.floor(d / a);
-    if (l === 0 && (c.atletaAId === "tbd" || c.atletaAId === "")) {
-      c.atletaAId = t.vencedorId;
-      return;
-    }
-    if (l === 1 && (c.atletaBId === "tbd" || c.atletaBId === "")) {
-      c.atletaBId = t.vencedorId;
-      return;
-    }
-    r++;
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(chaves, null, 2), "utf-8");
   }
 }
-function ct(e, t) {
-  const n = t.vencedorId;
-  if (!n) return;
-  const o = e.lutas.indexOf(t);
-  if (!(o < 0)) {
-    if (t.rodada === 1) {
-      const r = 8 + Math.floor(o / 2), i = o % 2 === 0, a = e.lutas[r];
-      a && (i ? a.atletaAId = n : a.atletaBId = n);
-    } else if (t.rodada === 2) {
-      const r = o - 8, i = 12 + Math.floor(r / 2), a = r % 2 === 0, s = e.lutas[i];
-      s && (a ? s.atletaAId = n : s.atletaBId = n);
-    } else if (t.rodada === 3) {
-      const r = e.lutas[14];
-      r && (o - 12 === 0 ? r.atletaAId = n : r.atletaBId = n);
+function normalizeLuta(luta) {
+  return {
+    id: luta.id,
+    ordem: luta.ordem ?? 0,
+    rodada: luta.rodada ?? 1,
+    atletaAId: luta.atletaAId ?? "",
+    atletaBId: luta.atletaBId ?? "",
+    status: luta.status ?? "pending",
+    vencedorId: luta.vencedorId ?? null,
+    placarA: luta.placarA ?? void 0,
+    placarB: luta.placarB ?? void 0,
+    finalizacao: luta.finalizacao ?? void 0,
+    desclassificacao: luta.desclassificacao ?? void 0,
+    desclassificadoId: luta.desclassificadoId ?? void 0,
+    desempateArbitro: luta.desempateArbitro ?? void 0
+  };
+}
+function normalizeChave(chave) {
+  const lutas = (chave.lutas ?? []).map(normalizeLuta);
+  return {
+    id: chave.id,
+    categoriaId: chave.categoriaId ?? "",
+    lutas,
+    posicoesAtletas: chave.posicoesAtletas ?? [],
+    arbitroId: chave.arbitroId ?? null,
+    totalAtletas: chave.totalAtletas ?? 0,
+    totalLutas: chave.totalLutas ?? 0,
+    totalRodadas: chave.totalRodadas ?? (lutas.length > 0 ? Math.max(...lutas.map((l) => l.rodada)) : 1),
+    status: chave.status ?? "gerada"
+  };
+}
+function loadChavesPorAreaHandler(torneioId, areaId) {
+  const torneio = loadTorneio(torneioId);
+  const areas = loadAreas(torneioId);
+  const area = areas.find((a) => a.id === areaId);
+  if (!area) return [];
+  const arbitroIds = new Set(area.arbitroIds);
+  return (torneio.chaves ?? []).map((c) => normalizeChave(c)).filter((c) => c.arbitroId && arbitroIds.has(c.arbitroId));
+}
+function clearWinnerFromLaterRounds(chave, rodada, atletaId) {
+  for (const l of chave.lutas) {
+    if (l.rodada <= rodada) continue;
+    if (l.atletaAId === atletaId) {
+      l.atletaAId = "tbd";
+      l.vencedorId = null;
+      if (l.status === "completed" || l.status === "wo") l.status = "pending";
+      clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
+    }
+    if (l.atletaBId === atletaId) {
+      l.atletaBId = "tbd";
+      l.vencedorId = null;
+      if (l.status === "completed" || l.status === "wo") l.status = "pending";
+      clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
     }
   }
 }
-function lt(e, t) {
-  const n = S(e), o = [...n.chaves ?? []], r = o.findIndex((c) => c.id === t.chaveId);
-  if (r < 0) throw new Error("Chave não encontrada");
-  const i = JSON.parse(JSON.stringify(o[r])), a = i.lutas.find((c) => c.id === t.lutaId);
-  if (!a) throw new Error("Luta não encontrada");
-  const s = a.vencedorId;
-  if (s && s !== t.vencedorId && U(i, a.rodada, s), a.vencedorId = t.vencedorId, a.status = t.status === "wo" ? "wo" : "completed", a.placarA = t.placarA, a.placarB = t.placarB, a.finalizacao = t.finalizacao ?? !1, a.desclassificacao = t.desclassificacao ?? !1, a.desempateArbitro = t.desempateArbitro ?? !1, i.totalAtletas === 3) {
-    const c = i.lutas.find((l) => l.rodada === 2), d = i.lutas.find((l) => l.rodada === 3);
-    if (a.rodada === 1) {
-      const l = a.vencedorId === a.atletaAId ? a.atletaBId : a.atletaAId;
-      c && (c.atletaAId = l, c.vencedorId = null, c.status = "pending"), d && (d.atletaAId = a.vencedorId, d.atletaBId = "tbd", d.vencedorId = null, d.status = "pending");
-    } else a.rodada === 2 && d && d.atletaBId === "tbd" && (d.atletaBId = a.vencedorId, d.status = "pending");
-  } else i.totalAtletas === 16 ? ct(i, a) : dt(i, a);
-  return o[r] = i, n.chaves = o, n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(n), i;
+function advanceWinnerInChave(chave, luta) {
+  const currentRoundLutas = chave.lutas.filter((l) => l.rodada === luta.rodada);
+  const matchIndex = currentRoundLutas.indexOf(luta);
+  if (matchIndex < 0) return;
+  let targetRodada = luta.rodada + 1;
+  while (targetRodada <= (chave.totalRodadas || 3)) {
+    const nextRoundLutas = chave.lutas.filter((l) => l.rodada === targetRodada);
+    if (nextRoundLutas.length === 0) return;
+    const pairsPerMatch = Math.pow(2, targetRodada - luta.rodada - 1);
+    const nextMatchIndex = Math.floor(matchIndex / pairsPerMatch);
+    if (nextMatchIndex >= nextRoundLutas.length) return;
+    const nextLuta = nextRoundLutas[nextMatchIndex];
+    const slotIndex = matchIndex % Math.pow(2, targetRodada - luta.rodada);
+    const firstSlotAt = Math.floor(slotIndex / pairsPerMatch);
+    if (firstSlotAt === 0 && (nextLuta.atletaAId === "tbd" || nextLuta.atletaAId === "")) {
+      nextLuta.atletaAId = luta.vencedorId;
+      return;
+    }
+    if (firstSlotAt === 1 && (nextLuta.atletaBId === "tbd" || nextLuta.atletaBId === "")) {
+      nextLuta.atletaBId = luta.vencedorId;
+      return;
+    }
+    targetRodada++;
+  }
 }
-function ut() {
-  f.handle("gerar-todas-chaves", () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return Qe(e);
-  }), f.handle("gerar-chave", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    const o = S(n), r = (o.atletas ?? []).filter((s) => s.categoria === t.categoriaId);
-    if (r.length < 2 || r.length > te)
+function advanceWinner16(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const lutaIndex = chave.lutas.indexOf(luta);
+  if (lutaIndex < 0) return;
+  if (luta.rodada === 1) {
+    const r2Index = 8 + Math.floor(lutaIndex / 2);
+    const isFirst = lutaIndex % 2 === 0;
+    const r2Luta = chave.lutas[r2Index];
+    if (r2Luta) {
+      if (isFirst) r2Luta.atletaAId = winnerId;
+      else r2Luta.atletaBId = winnerId;
+    }
+  } else if (luta.rodada === 2) {
+    const adjIdx = lutaIndex - 8;
+    const r3Index = 12 + Math.floor(adjIdx / 2);
+    const isFirst = adjIdx % 2 === 0;
+    const r3Luta = chave.lutas[r3Index];
+    if (r3Luta) {
+      if (isFirst) r3Luta.atletaAId = winnerId;
+      else r3Luta.atletaBId = winnerId;
+    }
+  } else if (luta.rodada === 3) {
+    const r4Luta = chave.lutas[14];
+    if (r4Luta) {
+      const isFirst = lutaIndex - 12 === 0;
+      if (isFirst) r4Luta.atletaAId = winnerId;
+      else r4Luta.atletaBId = winnerId;
+    }
+  }
+}
+function registrarResultadoHandler(torneioId, data) {
+  const torneio = loadTorneio(torneioId);
+  const chaves = [...torneio.chaves ?? []];
+  const chaveIndex = chaves.findIndex((c) => c.id === data.chaveId);
+  if (chaveIndex < 0) throw new Error("Chave não encontrada");
+  const chave = JSON.parse(JSON.stringify(chaves[chaveIndex]));
+  const luta = chave.lutas.find((l) => l.id === data.lutaId);
+  if (!luta) throw new Error("Luta não encontrada");
+  const oldWinnerId = luta.vencedorId;
+  if (oldWinnerId && oldWinnerId !== data.vencedorId) {
+    clearWinnerFromLaterRounds(chave, luta.rodada, oldWinnerId);
+  }
+  luta.vencedorId = data.vencedorId;
+  luta.status = data.status === "wo" ? "wo" : "completed";
+  luta.placarA = data.placarA;
+  luta.placarB = data.placarB;
+  luta.finalizacao = data.finalizacao ?? false;
+  luta.desclassificacao = data.desclassificacao ?? false;
+  luta.desempateArbitro = data.desempateArbitro ?? false;
+  if (data.desclassificacao && luta.vencedorId) {
+    luta.desclassificadoId = luta.atletaAId === luta.vencedorId ? luta.atletaBId : luta.atletaAId;
+  } else {
+    luta.desclassificadoId = void 0;
+  }
+  if (chave.totalAtletas === 3) {
+    const r2 = chave.lutas.find((l) => l.rodada === 2);
+    const r3 = chave.lutas.find((l) => l.rodada === 3);
+    if (luta.rodada === 1) {
+      const loserId = luta.vencedorId === luta.atletaAId ? luta.atletaBId : luta.atletaAId;
+      if (data.desclassificacao) {
+        if (r2 && r3) {
+          r2.atletaAId = r2.atletaBId;
+          r2.vencedorId = r2.atletaBId;
+          r2.status = "wo";
+          r3.atletaAId = luta.vencedorId;
+          r3.atletaBId = r2.atletaBId;
+          r3.vencedorId = null;
+          r3.status = "pending";
+        }
+      } else {
+        if (r2) {
+          r2.atletaAId = loserId;
+          r2.vencedorId = null;
+          r2.status = "pending";
+        }
+        if (r3) {
+          r3.atletaAId = luta.vencedorId;
+          r3.atletaBId = "tbd";
+          r3.vencedorId = null;
+          r3.status = "pending";
+        }
+      }
+    } else if (luta.rodada === 2) {
+      if (r3 && r3.atletaBId === "tbd") {
+        r3.atletaBId = luta.vencedorId;
+        r3.status = "pending";
+      }
+    }
+  } else if (chave.totalAtletas === 16) {
+    advanceWinner16(chave, luta);
+  } else {
+    advanceWinnerInChave(chave, luta);
+  }
+  chaves[chaveIndex] = chave;
+  torneio.chaves = chaves;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio(torneio);
+  return chave;
+}
+function registerBracketHandlers() {
+  ipcMain.handle("gerar-todas-chaves", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return gerarTodasChavesHandler(torneioId);
+  });
+  ipcMain.handle("gerar-chave", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const torneio = loadTorneio(torneioId);
+    const atletas = (torneio.atletas ?? []).filter((a) => a.categoria === data.categoriaId);
+    if (atletas.length < 2 || atletas.length > MAX_ATLETAS_POR_CHAVE) {
       throw new Error("A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.");
-    const i = o.chaves ?? [];
-    if (i.some((s) => s.categoriaId === t.categoriaId))
-      throw new Error("Chave já existe para esta categoria.");
-    const a = ne(t.categoriaId, r);
-    o.chaves = [...i, a];
-    for (const s of o.atletas ?? [])
-      a.posicoesAtletas.includes(s.id) && (s.emChave = !0);
-    return o.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(o), a;
-  }), f.handle("load-chaves", () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return (S(e).chaves ?? []).map((t) => q(t));
-  }), f.handle("load-chave-por-categoria", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return (S(n).chaves ?? []).map((r) => q(r)).find((r) => r.categoriaId === t) ?? null;
-  }), f.handle("randomizar-chave", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return tt(n, t);
-  }), f.handle("atribuir-arbitro-chave", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return nt(n, t);
-  }), f.handle("import-chaves", async () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    const t = await ot();
-    return t ? rt(e, t) : { imported: 0 };
-  }), f.handle("export-chaves", async () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return it(e);
-  }), f.handle("load-chaves-por-area", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return st(n, t);
-  }), f.handle("registrar-resultado", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return lt(n, t);
-  });
-}
-const B = process.env.MASTER_PASSWORD_HASH || "57a8d2d84be94e9bdae407ad8352065346269c6997b0be31ff32101fc51e7c3e", ft = "activation.json";
-function oe() {
-  return m.join(A.getPath("userData"), ft);
-}
-function re() {
-  try {
-    return ce("wmic csproduct get uuid", { encoding: "utf-8" }).split(`
-`).map((n) => n.trim()).filter(Boolean)[1] || p.randomUUID();
-  } catch {
-    return p.randomUUID();
-  }
-}
-function ht() {
-  try {
-    const e = oe();
-    if (!u.existsSync(e)) return !1;
-    const t = JSON.parse(u.readFileSync(e, "utf-8")), n = re(), o = p.createHmac("sha256", B).update(n).digest("hex");
-    return t.token === o;
-  } catch {
-    return !1;
-  }
-}
-function mt(e) {
-  return p.createHash("sha256").update(e).digest("hex") === B;
-}
-function pt() {
-  try {
-    const e = re(), t = p.createHmac("sha256", B).update(e).digest("hex"), n = oe();
-    return u.writeFileSync(n, JSON.stringify({ token: t, activatedAt: (/* @__PURE__ */ new Date()).toISOString() }), "utf-8"), !0;
-  } catch {
-    return !1;
-  }
-}
-const ie = m.dirname(de(import.meta.url));
-process.env.APP_ROOT = m.join(ie, "..");
-const $ = process.env.VITE_DEV_SERVER_URL, Et = m.join(process.env.APP_ROOT, "dist-electron"), ae = m.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = $ ? m.join(process.env.APP_ROOT, "public") : ae;
-let b;
-function se() {
-  b = new k({
-    icon: m.join(process.env.VITE_PUBLIC, "favicon.svg"),
-    webPreferences: {
-      preload: m.join(ie, "preload.mjs")
     }
-  }), b.maximize(), b.webContents.on("did-finish-load", () => {
-    b == null || b.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), $ ? b.loadURL($) : b.loadFile(m.join(ae, "index.html"));
+    const chaves = torneio.chaves ?? [];
+    if (chaves.some((c) => c.categoriaId === data.categoriaId)) {
+      throw new Error("Chave já existe para esta categoria.");
+    }
+    const chave = gerarChave(data.categoriaId, atletas);
+    torneio.chaves = [...chaves, chave];
+    for (const a of torneio.atletas ?? []) {
+      if (chave.posicoesAtletas.includes(a.id)) {
+        a.emChave = true;
+      }
+    }
+    torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    saveTorneio(torneio);
+    return chave;
+  });
+  ipcMain.handle("load-chaves", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return (loadTorneio(torneioId).chaves ?? []).map((c) => normalizeChave(c));
+  });
+  ipcMain.handle("load-chave-por-categoria", (_event, categoriaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const chaves = (loadTorneio(torneioId).chaves ?? []).map((c) => normalizeChave(c));
+    return chaves.find((c) => c.categoriaId === categoriaId) ?? null;
+  });
+  ipcMain.handle("randomizar-chave", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return randomizarChaveHandler(torneioId, data);
+  });
+  ipcMain.handle("atribuir-arbitro-chave", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return atribuirArbitroHandler(torneioId, data);
+  });
+  ipcMain.handle("import-chaves", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const filePath = await openBracketFileDialog();
+    if (!filePath) return { imported: 0 };
+    return importChavesFromFile(torneioId, filePath);
+  });
+  ipcMain.handle("export-chaves", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return exportChavesToFile(torneioId);
+  });
+  ipcMain.handle("load-chaves-por-area", (_event, areaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadChavesPorAreaHandler(torneioId, areaId);
+  });
+  ipcMain.handle("registrar-resultado", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return registrarResultadoHandler(torneioId, data);
+  });
 }
-A.on("window-all-closed", () => {
-  process.platform !== "darwin" && (A.quit(), b = null);
+const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "57a8d2d84be94e9bdae407ad8352065346269c6997b0be31ff32101fc51e7c3e";
+const ACTIVATION_FILE = "activation.json";
+function getActivationPath() {
+  return path.join(app.getPath("userData"), ACTIVATION_FILE);
+}
+function getMachineId() {
+  try {
+    const uuid = execSync("wmic csproduct get uuid", { encoding: "utf-8" });
+    const lines = uuid.split("\n").map((l) => l.trim()).filter(Boolean);
+    return lines[1] || crypto.randomUUID();
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+function checkActivation() {
+  try {
+    const filePath = getActivationPath();
+    if (!fs.existsSync(filePath)) return false;
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const machineId = getMachineId();
+    const expectedToken = crypto.createHmac("sha256", MASTER_PASSWORD_HASH).update(machineId).digest("hex");
+    return data.token === expectedToken;
+  } catch {
+    return false;
+  }
+}
+function validatePassword(password) {
+  const hash = crypto.createHash("sha256").update(password).digest("hex");
+  return hash === MASTER_PASSWORD_HASH;
+}
+function activateLicense() {
+  try {
+    const machineId = getMachineId();
+    const token = crypto.createHmac("sha256", MASTER_PASSWORD_HASH).update(machineId).digest("hex");
+    const filePath = getActivationPath();
+    fs.writeFileSync(filePath, JSON.stringify({ token, activatedAt: (/* @__PURE__ */ new Date()).toISOString() }), "utf-8");
+    return true;
+  } catch {
+    return false;
+  }
+}
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  win = new BrowserWindow({
+    icon: path.join(process.env.VITE_PUBLIC, "favicon.svg"),
+    webPreferences: {
+      preload: path.join(__dirname$1, "preload.mjs")
+    }
+  });
+  win.maximize();
+  win.webContents.on("did-finish-load", () => {
+    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, "index.html"));
+  }
+}
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
 });
-A.on("activate", () => {
-  k.getAllWindows().length === 0 && se();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
-function wt() {
-  f.handle("load-athletes", () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return V(e);
-  }), f.handle("save-athlete", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return ge(n, t);
-  }), f.handle("update-athlete", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return Se(n, t);
-  }), f.handle("delete-athlete", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return Ae(n, t);
-  }), f.handle("delete-athletes", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return Oe(n, t);
-  }), f.handle("import-athletes", async () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    const t = await De();
-    return t ? be(e, t) : { imported: 0, skipped: 0 };
-  }), f.handle("export-athletes", async () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return ye(e);
+function registerAthleteHandlers() {
+  ipcMain.handle("load-athletes", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadAthletes(torneioId);
+  });
+  ipcMain.handle("save-athlete", (_event, athlete) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return saveAthlete(torneioId, athlete);
+  });
+  ipcMain.handle("update-athlete", (_event, athlete) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return updateAthlete(torneioId, athlete);
+  });
+  ipcMain.handle("delete-athlete", (_event, id) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteAthlete(torneioId, id);
+  });
+  ipcMain.handle("delete-athletes", (_event, ids) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteAthletes(torneioId, ids);
+  });
+  ipcMain.handle("import-athletes", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const filePath = await openAthleteFileDialog();
+    if (!filePath) return { imported: 0, skipped: 0 };
+    return importAthletesFromFile(torneioId, filePath);
+  });
+  ipcMain.handle("export-athletes", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return exportAthletes(torneioId);
   });
 }
-function vt() {
-  f.handle("save-arbitro", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return Ne(n, t);
-  }), f.handle("update-arbitro", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return Pe(n, t);
-  }), f.handle("delete-arbitro", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return _e(n, t);
-  }), f.handle("delete-arbitros", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return Te(n, t);
-  }), f.handle("load-arbitros", () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return K(e);
-  }), f.handle("import-arbitros", async () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    const t = await Le();
-    return t ? je(e, t) : { imported: 0, skipped: 0 };
-  }), f.handle("export-arbitros", async () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return Fe(e);
+function registerRefereeHandlers() {
+  ipcMain.handle("save-arbitro", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return saveArbitro(torneioId, data);
+  });
+  ipcMain.handle("update-arbitro", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return updateArbitro(torneioId, data);
+  });
+  ipcMain.handle("delete-arbitro", (_event, arbitroId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteArbitro(torneioId, arbitroId);
+  });
+  ipcMain.handle("delete-arbitros", (_event, arbitroIds) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteArbitros(torneioId, arbitroIds);
+  });
+  ipcMain.handle("load-arbitros", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadArbitros(torneioId);
+  });
+  ipcMain.handle("import-arbitros", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const filePath = await openArbitroFileDialog();
+    if (!filePath) return { imported: 0, skipped: 0 };
+    return importArbitrosFromFile(torneioId, filePath);
+  });
+  ipcMain.handle("export-arbitros", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return exportArbitros(torneioId);
   });
 }
-function It() {
-  f.handle("load-areas", () => {
-    const e = h();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return R(e);
-  }), f.handle("save-area", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return qe(n, t);
-  }), f.handle("update-area", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return Ue(n, t);
-  }), f.handle("delete-area", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return $e(n, t);
-  }), f.handle("delete-areas", (e, t) => {
-    const n = h();
-    if (!n) throw new Error("Nenhum torneio ativo");
-    return Be(n, t);
+function registerAreaHandlers() {
+  ipcMain.handle("load-areas", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadAreas(torneioId);
+  });
+  ipcMain.handle("save-area", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return saveArea(torneioId, data);
+  });
+  ipcMain.handle("update-area", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return updateArea(torneioId, data);
+  });
+  ipcMain.handle("delete-area", (_event, areaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteArea(torneioId, areaId);
+  });
+  ipcMain.handle("delete-areas", (_event, areaIds) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteAreas(torneioId, areaIds);
   });
 }
-function gt() {
-  f.handle("check-activation", () => ht()), f.handle("validate-password", (e, t) => mt(t)), f.handle("activate-license", () => pt());
+function registerActivationHandlers() {
+  ipcMain.handle("check-activation", () => {
+    return checkActivation();
+  });
+  ipcMain.handle("validate-password", (_event, password) => {
+    return validatePassword(password);
+  });
+  ipcMain.handle("activate-license", () => {
+    return activateLicense();
+  });
 }
-A.whenReady().then(() => {
-  le(), wt(), vt(), ut(), It(), gt(), se();
+app.whenReady().then(() => {
+  registerTournamentHandlers();
+  registerAthleteHandlers();
+  registerRefereeHandlers();
+  registerBracketHandlers();
+  registerAreaHandlers();
+  registerActivationHandlers();
+  createWindow();
 });
 export {
-  Et as MAIN_DIST,
-  ae as RENDERER_DIST,
-  $ as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };

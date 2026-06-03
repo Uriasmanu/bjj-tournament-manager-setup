@@ -482,6 +482,7 @@ function Card({ luta, id, getAtletaNome, onSelectWinner, theme }: CardProps) {
         const slotId = slot === 1 ? luta.atletaAId : luta.atletaBId;
         const placeholder = isPlaceholder(slotId);
         const isWinner = !!luta.vencedorId && slotId === luta.vencedorId;
+        const isDisqualified = !!luta.desclassificadoId && slotId === luta.desclassificadoId && luta.status !== 'pending';
         const nome = placeholder ? 'A definir...' : getAtletaNome(slotId);
         return (
           <div
@@ -493,7 +494,7 @@ function Card({ luta, id, getAtletaNome, onSelectWinner, theme }: CardProps) {
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              backgroundColor: isWinner ? theme.colors.green[1] : theme.colors.gray[0],
+              backgroundColor: isDisqualified ? theme.colors.red[1] : isWinner ? theme.colors.green[1] : theme.colors.gray[0],
               cursor: !placeholder && slotId && onSelectWinner ? 'pointer' : 'default',
             }}
             onClick={() => {
@@ -509,6 +510,9 @@ function Card({ luta, id, getAtletaNome, onSelectWinner, theme }: CardProps) {
             </div>
             {isWinner && (
               <span style={{ color: theme.colors.green[7], fontSize: 10, fontWeight: 700, flexShrink: 0 }}>VENCEU</span>
+            )}
+            {isDisqualified && (
+              <span style={{ color: theme.colors.red[7], fontSize: 10, fontWeight: 700, flexShrink: 0 }}>DESCLASSIFICADO</span>
             )}
           </div>
         );
