@@ -2,45 +2,7 @@
 
 ## Feature 
 
-cada atleta ocupa o seu proprio card
-O formato é 8 atletas de um lado e 8 atletas do outro 
 
-Sempre tem que renderizar os cards
-
-Quando começa tem que ter a luta da 1° e da segunda rodada
-Quando acaba a luta da 1° rodada é criado a luta da 3° rodada
-Com uma chave de 16 atletas, o campeonato funciona em um formato de eliminação simples (conhecido popularmente como mata-mata). O topo e a base da chave vão se afunilando a cada rodada.
-
-⚠️ **Nota sobre o seu exemplo:** No formato de 16 atletas, a divisão matemática precisa fechar em potências de 2 (16, depois 8, depois 4, depois 2). No exemplo enviado, a contagem de atletas e o avanço das letras tinham alguns errinhos numéricos e de lógica nas rodadas seguintes.
-
-Abaixo está a estrutura exata e corrigida de como uma chave de 16 atletas se desenvolve em um torneio da IBJJF:
-
-PRIMEIRA RODADA (Oitavas de Final)
-1x2 vencedor = A
-3x4 vencedor = B
-5x6 vencedor = C
-7x8 vencedor = D
-9x10 vencedor = E
-11x12 vencedor = F
-13x14 vencedor = G
-15x16 vencedor = H
-
-SEGUNDA RODADA (Quartas de Final)
-AxB vencedor = I
-CxD vencedor = J
-ExF vencedor = K
-GxH vencedor = L
-
-TERCEIRA RODADA (Semifinal)
-IxJ vencedor = M
-KxL vencedor = N
-
-QUARTA RODADA (Final)
-MxN vencedor = Campeão
-
----
-
-> No Jiu-Jitsu da IBJJF, geralmente não há luta pelo terceiro lugar. Os dois atletas que perdem na Terceira Rodada (as semifinais) dividem automaticamente a terceira colocação do pódio e ganham a medalha de bronze.
 
 # Guia de Spec para Implementação de Features
 
