@@ -842,11 +842,20 @@ const FAIXA_ORDER = {
   "marrom": 7,
   "preta": 8
 };
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 function gerarChave(categoriaId, atletas) {
   if (atletas.length < 2 || atletas.length > 16) {
     throw new Error("A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.");
   }
-  const posicoes = atletas.length === 16 ? aplicarSeedSorting16(atletas) : aplicarSeedSorting(atletas);
+  const embaralhados = shuffleArray(atletas);
+  const posicoes = embaralhados.length === 16 ? aplicarSeedSorting16(embaralhados) : aplicarSeedSorting(embaralhados);
   const lutas = gerarLutas(posicoes);
   return {
     id: crypto.randomUUID(),
@@ -912,6 +921,7 @@ function splitGrupo(grupo, maxPorChave) {
 function gerarTodasChavesHandler(torneioId, maxPorChave = 16) {
   const torneio = loadTorneio(torneioId);
   const atletas = torneio.atletas ?? [];
+  torneio.chaves = [];
   const atletasIgnorados = [];
   const grupos = /* @__PURE__ */ new Map();
   for (const a of atletas) {

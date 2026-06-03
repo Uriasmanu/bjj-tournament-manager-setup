@@ -222,12 +222,22 @@ const FAIXA_ORDER: Record<string, number> = {
   'verde': 4, 'azul': 5, 'roxa': 6, 'marrom': 7, 'preta': 8,
 };
 
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 function gerarChave(categoriaId: string, atletas: Atleta[]): Chave {
   if (atletas.length < 2 || atletas.length > 16) {
     throw new Error('A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.');
   }
 
-  const posicoes = atletas.length === 16 ? aplicarSeedSorting16(atletas) : aplicarSeedSorting(atletas);
+  const embaralhados = shuffleArray(atletas);
+  const posicoes = embaralhados.length === 16 ? aplicarSeedSorting16(embaralhados) : aplicarSeedSorting(embaralhados);
   const lutas = gerarLutas(posicoes);
 
   return {
@@ -316,6 +326,8 @@ interface GerarTodasResult {
 function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16): GerarTodasResult {
   const torneio = loadTorneio(torneioId);
   const atletas = torneio.atletas ?? [];
+
+  torneio.chaves = [];
 
   const atletasIgnorados: string[] = [];
   const grupos = new Map<string, Atleta[]>();

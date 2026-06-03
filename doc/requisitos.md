@@ -208,6 +208,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 ### 3.11. Geração de Chaves (Implementado)
 
 - **Máximo configurável de atletas por chave:** O organizador pode definir o limite de atletas por chave (valores de 2 a 16) antes de gerar as chaves. O valor padrão é 16. O campo "Máximo de atletas por chave" é exibido na tela "Gerenciar Chaves" antes do botão "Gerar Chaves".
+- **Reset ao gerar:** Ao clicar em "Gerar Chaves" (tanto na geração inicial quanto na regeneração), o array `chaves` do torneio é completamente resetado para `[]` antes de gerar as novas chaves. Todos os dados anteriores (resultados de lutas, vencedores, status) são descartados. Os flags `emChave` dos atletas também são recalculados do zero.
 - **Distribuição automática:** O sistema preenche cada chave até atingir o limite configurado, criando novas chaves conforme necessário. A última chave pode ter menos atletas, however não pode ficar com apenas 1 atleta. Se a última chave resultar com apenas 1 atleta, o sistema remove 1 atleta da chave anterior e move para a última, garantindo que nenhuma chave tenha apenas 1 atleta e que nenhuma ultrapasse o limite máximo definido.
   - Exemplos (limite = 6): 15 atletas → [6, 6, 3]; 13 atletas → [6, 5, 2] (ajuste automático); 19 atletas → [6, 6, 5, 2] (ajuste automático).
 - **Tamanhos suportados:** O gerador aceita chaves com 2 a 16 atletas. Estruturas: 2 (1 luta), 3 (3 lutas, repescagem), 4 (3 lutas), 5 (6 lutas), 6-15 (geral, eliminação simples com byes automáticos), 16 (15 lutas). Para tamanhos 6-15, o sistema usa `gerarLutasGeral()` que gera uma bracket de eliminação simples com byes automáticos. Funções dedicadas de propagação existem para 3 (`advanceWinnerInChave` com lógica de repescagem), 5 (`advanceWinner5`), 6 (`advanceWinner6`) e 16 (`advanceWinner16`) atletas.
@@ -529,7 +530,7 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Tela de seleção de área (`/admin/placar`):** `PlacarMenu` exibe `Select` com as áreas de luta cadastradas. Botão "Acessar" navega para `/admin/placar/chaves/:areaId`.
 - **Tela de chaves da área (`/admin/placar/chaves/:areaId`):** `PlacarChaves` lista as chaves alocadas na área como cards clicáveis. Exibe faixa, peso, quantidade de atletas e árbitro responsável. Suporta busca textual por título da chave. Cada card exibe badge de status no canto superior direito:
   - **"ENCERRADO"** (amarelo gold): quando a luta da última rodada da chave possui vencedor definido (chave finalizada com campeão).
-  - **"EM ANDAMENTO"** (ciano): quando a chave possui pelo menos uma luta concluída (`completed` ou `wo`) mas a última rodada ainda não possui vencedor.
+  - **"EM ANDAMENTO"** (ciano): quando a chave possui pelo menos uma luta finalizada pelo operador (`status: 'completed'`) mas a última rodada ainda não possui vencedor. Lutas com `status: 'wo'` (BYEs auto-resolvidos na geração) não são consideradas.
   - Sem badge: quando nenhuma luta da chave foi iniciada.
   - Badge de contagem de lutas usa cor azul (padrão visual `#1565C0`).
 - **Tela do bracket (`/admin/placar/chave/:areaId/:chaveId`):** `PlacarBracket` renderiza a árvore do bracket (`BracketTree`) e abaixo uma tabela "Lutas para Iniciar" com botão "Iniciar" para cada luta válida.

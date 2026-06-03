@@ -1,10 +1,8 @@
 ## Problema 
-
+Na chave com 7 atletas o atleta que esta no bye deveria esta na LUTA #6, mas ele esta ficando parado no LUTA #4
 
 ## Feature 
 
-Quando uma chave tem um vencedor ele recebe uma tag no card em Placar - Area 1
-tire a cor roxa, siga o que requisitos manda
 
 
 # Guia de Spec para Implementação de Features

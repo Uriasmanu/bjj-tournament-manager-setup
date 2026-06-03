@@ -40,7 +40,7 @@ Cenários alternativos:
 ## 4. Requisitos Funcionais
 
 - [ ] RF-01: O card de chave em PlacarChaves exibe badge "ENCERRADO" no canto superior direito, em amarelo gold, quando a chave possui um campeão definido (última rodada com vencedor)
-- [ ] RF-06: O card de chave em PlacarChaves exibe badge "EM ANDAMENTO" no canto superior direito, em ciano, quando a chave possui pelo menos uma luta concluída (`completed` ou `wo`) mas ainda não possui campeão
+- [ ] RF-06: O card de chave em PlacarChaves exibe badge "EM ANDAMENTO" no canto superior direito, em ciano, quando a chave possui pelo menos uma luta finalizada pelo operador (`status: 'completed'`) mas ainda não possui campeão. BYEs auto-resolvidos (`status: 'wo'`) não são considerados.
 - [ ] RF-02: O badge de contagem de lutas em PlacarChaves usa cor azul (`blue`) em vez de grape
 - [ ] RF-03: O badge de contagem de lutas em GerenciarChaves usa cor azul (`blue`) em vez de grape
 - [ ] RF-04: O texto de confirmação de finalização em PlacarLuta usa cor azul (`blue`) em vez de grape
@@ -79,7 +79,7 @@ Cenários alternativos:
 ## 8. Problemas e Impedimentos
 
 ### 8.1 Problemas Tecnicos
-- Nenhum identificado
+- **Reset de chaves:** O array `chaves` no JSON do torneio não estava sendo explicitamente resetado antes da geração. Embora `gerarTodasChavesHandler` substituísse o array com `novasChaves`, a adição de `torneio.chaves = []` no início da função garante que dados anteriores sejam descartados de forma explícita e segura.
 
 ### 8.2 Ambiguidades nos Requisitos
 - "Placar - Area 1" pode se referir à primeira área ou à tela de PlacarChaves em geral. Adotado como PlacarChaves (lista de chaves da área selecionada).
@@ -92,7 +92,7 @@ Cenários alternativos:
 ## 9. Criterios de Aceite
 
 - [ ] CA-01: Dado uma chave com campeão definido, quando o operador acessa PlacarChaves, então o card exibe badge "ENCERRADO" no canto superior direito, em amarelo gold
-- [ ] CA-02: Dado uma chave com pelo menos uma luta concluída mas sem campeão, quando o operador acessa PlacarChaves, então o card exibe badge "EM ANDAMENTO" no canto superior direito, em ciano
+- [ ] CA-02: Dado uma chave com pelo menos uma luta finalizada pelo operador mas sem campeão, quando o operador acessa PlacarChaves, então o card exibe badge "EM ANDAMENTO" no canto superior direito, em ciano
 - [ ] CA-03: Dado uma chave sem lutas concluídas, quando o operador acessa PlacarChaves, então o card não exibe badge de status
 - [ ] CA-03: Dado qualquer badge de contagem de lutas (PlacarChaves ou GerenciarChaves), quando renderizado, então a cor do badge é azul (não grape)
 - [ ] CA-04: Dado o modal de confirmação de finalização por finalização em PlacarLuta, quando exibido, então o nome do atleta é exibido em azul (não grape)

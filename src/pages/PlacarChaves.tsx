@@ -150,7 +150,7 @@ export function PlacarChaves() {
                   {(() => {
                     const maxRodada = Math.max(...chave.lutas.map(l => l.rodada));
                     const isEncerrado = chave.lutas.some(l => l.rodada === maxRodada && l.vencedorId);
-                    const isEmAndamento = !isEncerrado && chave.lutas.some(l => l.status === 'completed' || l.status === 'wo');
+                    const isEmAndamento = !isEncerrado && chave.lutas.some(l => l.status === 'completed');
                     if (isEncerrado) {
                       return (
                         <Badge size="sm" color="yellow" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
