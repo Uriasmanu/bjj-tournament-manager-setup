@@ -1,13 +1,7 @@
 ## Feature 
 
 ## Problema 
-Por que o botão de finalizar a lota por desclassificação não esta habilitado, quando deveria ser possivel de selecionar e depois escolher quem foi desclassificado e depois aparecer uma mensagem no centro da tela pedindo parar confirma se realmente tem certeza que o atleta foi desclassificado
-
-Existe a possibilidade de um atleta ser desclassificado por ter feito um golpe proibido, não usarei a regra de dupla desclassificação
-
-Todas as opção de finalização da luta devem estar habilitadas e pedir uma segunda confirmação antes de salvar
-
-Não precisa mostrar no modal o qual falg sera salva no JSON quando escolher o resultado da luta
+Regra exclusiva para chaves com o total de 3 atletas, quando acabar a primeira luta, deve ser geradad a luta seguinte que é atleta perdedor x atleta que tava na chave com bye
 
 # Guia de Spec para Implementação de Features
 

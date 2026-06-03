@@ -462,12 +462,12 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
   - Contadores de pontos 2/3/4 (com + e −) por atleta; total acumulado = 2×qtd2 + 3×qtd3 + 4×qtd4.
   - Contadores de vantagens e punições (0–4) por atleta.
   - Alerta visual de "Desclassificação" ao atingir 4 punições.
-  - Botão "Finalizar Luta" → modal com tipo (Pontos, Finalização, DQ, Desempate) e vencedor; ao confirmar persiste no JSON e propaga vencedor para próxima rodada.
+  - Botão "Finalizar Luta" → modal com tipo (Pontos, Finalização, DQ, Desempate) e vencedor. Todas as opções de resultado estão sempre habilitadas (sem restrição por estado da luta). O modal não exibe detalhes de implementação (flags do JSON). Ao clicar em "Confirmar", um segundo modal centralizado de confirmação aparece (com texto dinâmico por tipo e botão "Confirmar desclassificação" para DQ). Somente após essa segunda confirmação o resultado é persistido e o vencedor é propagado para a próxima rodada.
   - Botão "Voltar sem finalizar" → retorna para o `PlacarBracket` da chave (rota `/admin/placar/chave/:areaId/:chaveId`).
-- **Persistência:** Ao confirmar resultado, a `Luta` recebe `vencedorId`, `status` (`completed` ou `wo`), `placarA`, `placarB`, `finalizacao`, `desclassificacao`, `desempateArbitro`. O vencedor é propagado para a próxima rodada (slot `tbd`) pela função `advanceWinnerInChave`.
+- **Persistência:** Após a segunda confirmação, a `Luta` recebe `vencedorId`, `status` (`completed` ou `wo` — `wo` para DQ), `placarA`, `placarB`, `finalizacao`, `desclassificacao`, `desempateArbitro`. O vencedor é propagado para a próxima rodada (slot `tbd`) pela função `advanceWinnerInChave`. O sistema não implementa regra automática de dupla desclassificação — o operador sempre declara um vencedor.
 - **Normalização retroativa:** Chaves legadas sem `placarA`/`placarB` carregam sem erro; `normalizeLuta` adiciona defaults.
 - **Estado bloqueado:** Lutas com `tbd`/`bye` ou `completed`/`wo` exibem placar congelado e desabilitam controles e "Finalizar Luta".
-- **Especificação detalhada:** Ver `spec/placar.md` (fluxo), `spec/placar-jiu-jitsu.md` (placar funcional) e `spec/placar-voltar-bracket.md` (correção do botão Voltar — navegação para `PlacarBracket`).
+- **Especificação detalhada:** Ver `spec/placar.md` (fluxo), `spec/placar-jiu-jitsu.md` (placar funcional), `spec/placar-voltar-bracket.md` (correção do botão Voltar) e `spec/finalizar-luta-desclassificacao.md` (confirmação de resultado e habilitação de opções).
 
 ---
 
