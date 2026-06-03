@@ -1,9 +1,7 @@
 ## Problema 
 
 ## Feature 
-se um atleta é desclassificado ele deve receber a flag de desclassificado.
-em chaves de 2 o outro atleta é campeão direto
-em chaves de 3, o atleta que venceu luta com o bye pela vitoria
+Se o tempo acaba, maioria das vezes a vitoria é por pontos, então se for marca que é vitoria por pontos o sistema deve olha quem tem mais pontos e mais vantagem, e caso seja escolhido errado ele aparece uma mensagem em vermelho perguntando se tem certeza se esse é o campeão
 
 
 # Guia de Spec para Implementação de Features

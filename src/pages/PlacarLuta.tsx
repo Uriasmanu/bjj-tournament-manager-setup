@@ -287,8 +287,10 @@ export function PlacarLuta() {
 
   const [finalizarOpened, { open: openFinalizar, close: closeFinalizar }] = useDisclosure(false);
   const [confirmarResultadoOpened, { open: openConfirmarResultado, close: closeConfirmarResultado }] = useDisclosure(false);
+  const [avisoPontosOpened, { open: openAvisoPontos, close: closeAvisoPontos }] = useDisclosure(false);
   const [resultadoTipo, setResultadoTipo] = useState<ResultadoTipo>('pontos');
   const [vencedorFinal, setVencedorFinal] = useState<string | null>(null);
+  const [confirmouAvisoPontos, setConfirmouAvisoPontos] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
   const intervalRef = useRef<number | null>(null);
@@ -395,11 +397,25 @@ export function PlacarLuta() {
       setResultadoTipo('pontos');
     }
     setVencedorFinal(null);
+    setConfirmouAvisoPontos(false);
     openFinalizar();
   };
 
   const handleConfirmarFinalizar = () => {
     if (!chave || !luta || !vencedorFinal) return;
+
+    if (resultadoTipo === 'pontos' && !confirmouAvisoPontos) {
+      const vencedorPlacar = vencedorFinal === luta.atletaAId ? placarA : placarB;
+      const perdedorPlacar = vencedorFinal === luta.atletaAId ? placarB : placarA;
+      const vencedorValido = vencedorPlacar.total > perdedorPlacar.total ||
+        (vencedorPlacar.total === perdedorPlacar.total && vencedorPlacar.vantagens > perdedorPlacar.vantagens);
+
+      if (!vencedorValido) {
+        openAvisoPontos();
+        return;
+      }
+    }
+
     closeFinalizar();
     openConfirmarResultado();
   };
@@ -533,7 +549,7 @@ export function PlacarLuta() {
           }}
           aria-label="Cronômetro central — clique para iniciar/pausar"
         >
-          <Center style={{ minHeight: 220 }}>
+          <Center style={{ minHeight: 140 }}>
             <Stack gap="xs" align="center">
               {tempoEsgotado ? (
                 <Text
@@ -723,6 +739,53 @@ export function PlacarLuta() {
               leftSection={resultadoTipo === 'desclassificacao' ? <IconAlertTriangle size={16} /> : <IconFlag size={16} />}
             >
               {resultadoTipo === 'desclassificacao' ? 'Confirmar desclassificação' : 'Confirmar resultado'}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={avisoPontosOpened}
+        onClose={closeAvisoPontos}
+        title="Atenção"
+        size="sm"
+        centered
+        withCloseButton={false}
+        closeOnClickOutside={false}
+        closeOnEscape={false}
+      >
+        <Stack gap="md">
+          <Text ta="center" size="lg" fw={700} c="red">
+            O atleta selecionado não está vencendo no placar. Tem certeza que este é o campeão?
+          </Text>
+          <Text ta="center" size="sm" c="dimmed">
+            Placar: {atletaAInfo.nome} {placarA.total} × {placarB.total} {atletaBInfo.nome}
+            {placarA.vantagens !== placarB.vantagens && (
+              <Text component="span" size="sm" c="dimmed">
+                {' · '}Vantagens: {placarA.vantagens} × {placarB.vantagens}
+              </Text>
+            )}
+          </Text>
+          <Group justify="center" gap="sm" mt="sm">
+            <Button
+              variant="default"
+              onClick={() => { closeAvisoPontos(); }}
+              disabled={salvando}
+            >
+              Voltar
+            </Button>
+            <Button
+              color="red"
+              onClick={() => {
+                closeAvisoPontos();
+                setConfirmouAvisoPontos(true);
+                closeFinalizar();
+                openConfirmarResultado();
+              }}
+              loading={salvando}
+              leftSection={<IconAlertTriangle size={16} />}
+            >
+              Confirmar mesmo assim
             </Button>
           </Group>
         </Stack>
