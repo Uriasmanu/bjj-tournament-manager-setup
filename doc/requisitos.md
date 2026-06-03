@@ -214,7 +214,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - 2 atletas: 1 luta, 1 rodada (Final direta)
   - 3 atletas: 3 lutas, 3 rodadas — rodada 1 (semifinal: seed 1 vs seed 2), rodada 2 (tbd vs seed 3 — repescagem), rodada 3 (final)
   - 4 atletas: 3 lutas, 2 rodadas (2 Semifinais + Final)
-  - 5 atletas: 4 lutas, 3 rodadas — R1 (Quartas: seed1 vs seed2), R2 (Semifinal: vencedor R1 + 3 byes em 2 lutas), R3 (Final)
+  - 5 atletas: 6 lutas, 3 rodadas — R1 (3 lutas: seed1 vs seed2, seed3 vs seed4, seed5 vs BYE auto-resolvido), R2 (2 lutas: vencedor(L2) vs seed5, vencedor(L1) vs BYE auto-resolvido), R3 (Final: vencedor(L4) vs vencedor(L5))
   - 16 atletas: 15 lutas, 4 rodadas (8 lutas R1, 4 lutas R2, 2 lutas R3, 1 luta R4 final)
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
 - **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.
@@ -252,6 +252,11 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - Rodada 1 → Rodada 2: índice `8 + floor(idx / 2)`.
   - Rodada 2 → Rodada 3: índice `12 + floor(adjIdx / 2)`.
   - Rodada 3 → Rodada 4: índice `14`.
+- **Função `advanceWinner5` (chave de 5 atletas):** Propagação manual baseada na ordem da luta:
+  - **Luta 1 vence:** preenche Luta 5 (`atletaAId` = vencedor, `status = 'wo'` já que对面 é BYE) e Luta 6 (`atletaBId` = vencedor).
+  - **Luta 2 vence:** preenche Luta 4 (`atletaAId` = vencedor).
+  - **Luta 4 vence:** preenche Luta 6 (`atletaAId` = vencedor).
+  - A Luta 3 (seed5 × BYE) é auto-resolvida na geração com `status='wo'`, e seed5 já é pré-preenchido no `atletaBId` da Luta 4.
 - **Função `clearWinnerFromLaterRounds`:** Quando uma luta tem seu resultado alterado (reaberta), percorre recursivamente TODAS as rodadas seguintes e limpa o vencedor propagado: seta `atletaAId`/`atletaBId` para `'tbd'`, anula `vencedorId`, reseta `status` para `'pending'` se estava `'completed'` ou `'wo'`.
 - **Constante `tbd`:** Slots de luta vazios são marcados com o valor `'tbd'` (to be determined).
 - **Resultado em chave de 3 atletas com DQ na rodada 1:** Quando `desclassificacao=true` e `luta.rodada === 1`:

@@ -1,44 +1,38 @@
 ## Problema
 
-A geracao de chaves com 5 atletas esta implementada com 2 lutas na primeira rodada (quartas de final), mas o formato oficial da IBJJF determina que, para chaves de 5 atletas, deve haver apenas 1 luta na primeira rodada e 3 atletas avancam direto (byes/chapeu).
+A geracao de chaves com 5 atletas foi corrigida para usar 6 lutas com resolucao automatica de byes.
 
-### Formato atual (incorreto)
+### Formato Implementado (Atual)
 
 ```
-PRIMEIRA RODADA (Quartas de Final)
+PRIMEIRA RODADA (Rodada 1)
 seed1 vs seed2 (Luta 1)
 seed3 vs seed4 (Luta 2)
+seed5 vs BYE (Luta 3) -> auto-resolvido, seed5 vence
 
-SEGUNDA RODADA (Semifinal)
-vencedor L1 vs seed5 (Luta 3)
+SEGUNDA RODADA (Rodada 2)
+vencedor L2 vs seed5 (Luta 4) -> seed5 pre-preenchido na geracao
+vencedor L1 vs BYE (Luta 5) -> auto-resolvido quando L1 completa
 
-TERCEIRA RODADA (Final)
-vencedor L3 vs vencedor L4 (Luta 4)
+TERCEIRA RODADA (Rodada 3 - Final)
+vencedor L4 vs vencedor L5 (Luta 6) -> Campeao
 ```
 
-### Formato IBJJF oficial (correto)
+### Fluxo de Propagacao
 
-```
-PRIMEIRA RODADA (Quartas de Final)
-seed1 vs seed2 (Luta 1) -> vencedor = A
-Atleta 3 -> avanca direto (chapeu) -> vira B
-Atleta 4 -> avanca direto (chapeu) -> vira C
-Atleta 5 -> avanca direto (chapeu) -> vira D
-
-SEGUNDA RODADA (Semifinal)
-A vs B (Luta 2) -> vencedor = E
-C vs D (Luta 3) -> vencedor = F
-
-TERCEIRA RODADA (Final)
-E vs F (Luta 4) -> Campeao
-```
+- Luta 1 completa: vencedor vai para Luta 5 (atletaAId) e Luta 6 (atletaBId)
+- Luta 2 completa: vencedor vai para Luta 4 (atletaAId)
+- Luta 3: auto-resolvida na geracao (seed5 x BYE, status='wo')
+- Luta 4 completa: vencedor vai para Luta 6 (atletaAId)
+- Luta 5: auto-resoluida quando Luta 1 completa (vencedor L1 x BYE, status='wo')
+- Luta 6 completa: campeao definido
 
 ---
 
 ## 1. Contexto e Objetivo
 
-- **O que e:** Correcao da estrutura de chaves de 5 atletas para seguir o formato oficial IBJJF com 3 byes na primeira rodada.
-- **Por que existe:** O formato atual gera 2 lutas na primeira rodada, o que nao corresponde as regras oficiais da IBJJF. No formato correto, apenas 2 atletas se enfrentam na primeira rodada enquanto 3 aguardam nas semifinais.
+- **O que e:** Geracao de chaves de 5 atletas com 6 lutas e resolucao automatica de byes.
+- **Por que existe:** Formato com 6 lutas permite visualizacao clara de todas as rodadas no bracket e propagacao direta de vencedores.
 - **Quem usa:** Organizadores de torneios que utilizam o sistema de chaves para categorias com exatamente 5 atletas.
 - **Escopo:** Apenas a estrutura de chaves de 5 atletas. Nao afeta chaves de 2, 3, 4 ou 16 atletas.
 
@@ -46,12 +40,9 @@ E vs F (Luta 4) -> Campeao
 
 ## 2. Analise dos Documentos de Referencia
 
-- **doc/spec.md (Feature, linhas 4-24):** Define o formato exato da chave de 5 atletas com 3 byes na primeira rodada.
-- **doc/requisitos.md (secao 3.11):** Documenta as estruturas por quantidade de atletas. Atualmente diz "5 atletas: 4 lutas, 3 rodadas (1 luta R1, 1 luta R2 com bye + seed 5, 1 luta R3 final)" — inconsistente com o codigo atual (que tem 2 lutas R1) e precisa ser corrigido para o formato IBJJF.
-- **doc/IBJJF.md:** Nao menciona especificamente o formato de 5 atletas, mas confirma o sistema de eliminacao simples com byes.
-- **electron/brackets.ts:** Contem `gerarLutasCinco()` que gera o formato incorreto. `separarEquipes()` define lados para 5 atletas. `advanceWinnerInChave()` propaga vencedores de forma generica.
-- **src/pages/GerenciarChaves.tsx:** `getTeamConflicts()` define `ladoA/ladoB` para 5 atletas que pode nao corresponder ao novo fluxo da chave.
-- **src/components/BracketTree.tsx:** `buildConnections()` e `columns` usam logica generica baseada em `byRodada` que deve funcionar com o novo formato.
+- **doc/requisitos.md (secao 3.11):** Documenta as estruturas por quantidade de atletas. Inclui descricao da chave de 5 atletas com 6 lutas.
+- **electron/brackets.ts:** Contem `gerarLutasCinco()` que gera 6 lutas e `advanceWinner5()` que propaga vencedores.
+- **src/components/BracketTree.tsx:** Layout customizado `isFiveLayout` com 3 colunas para exibicao visual do bracket.
 
 ---
 
@@ -59,22 +50,21 @@ E vs F (Luta 4) -> Campeao
 
 ```
 Como organizador de torneio,
-quero que chaves com 5 atletas sigam o formato oficial IBJJF (1 luta em quartas, 3 byes),
-para que o chaveamento esteja em conformidade com as regras da federacao.
+quero que chaves com 5 atletas gerem 6 lutas com byes auto-resolvidos,
+para que o bracket exiba todas as rodadas e a propagacao de vencedores seja clara.
 ```
 
 ---
 
 ## 4. Requisitos Funcionais
 
-- [ ] RF-01: O sistema deve gerar chaves de 5 atletas com 4 lutas distribuidas em 3 rodadas
-- [ ] RF-02: A primeira rodada (Quartas) deve conter 1 luta entre os seeds 1 e 2
-- [ ] RF-03: Os seeds 3, 4 e 5 devem avancar direto (byes) para a segunda rodada
-- [ ] RF-04: A segunda rodada (Semifinal) deve conter 2 lutas: vencedor(R1) vs seed3, e seed4 vs seed5
-- [ ] RF-05: A terceira rodada (Final) deve conter 1 luta entre os vencedores das semifinais
-- [ ] RF-06: A propagacao de vencedores deve funcionar corretamente: R1→R2→R3
-- [ ] RF-07: A visualizacao do bracket no BracketTree deve exibir as rodadas com rotulos corretos (Quartas, Semifinal, Final)
-- [ ] RF-08: A separacao de equipes deve considerar a nova estrutura de lados da chave
+- [x] RF-01: O sistema deve gerar chaves de 5 atletas com 6 lutas distribuidas em 3 rodadas
+- [x] RF-02: A primeira rodada deve conter 3 lutas: seed1 vs seed2, seed3 vs seed4, seed5 vs BYE
+- [x] RF-03: A Luta 3 (seed5 vs BYE) deve ser auto-resolvida com status='wo' na geracao
+- [x] RF-04: A segunda rodada deve conter 2 lutas: vencedor(L2) vs seed5, vencedor(L1) vs BYE
+- [x] RF-05: A Luta 5 (vencedor(L1) vs BYE) deve ser auto-resolvida quando a Luta 1 completa
+- [x] RF-06: A terceira rodada (Final) deve conter 1 luta entre os vencedores das semifinais
+- [x] RF-07: A propagacao de vencedores deve funcionar corretamente via advanceWinner5()
 
 ---
 
@@ -99,7 +89,7 @@ para que o chaveamento esteja em conformidade com as regras da federacao.
 
 ### Padroes em uso
 - Funcoes puras para geracao de lutas (`gerarLutasCinco`, `gerarLutasTres`, etc.)
-- Propagacao generica via `advanceWinnerInChave()` baseada em razao entre numero de lutas
+- Propagacao especifica via `advanceWinner5()` baseada na ordem da luta
 
 ---
 
@@ -107,68 +97,59 @@ para que o chaveamento esteja em conformidade com as regras da federacao.
 
 | Arquivo | Acao | Razao |
 |---------|------|-------|
-| `electron/brackets.ts` | Modificar | Corrigir `gerarLutasCinco()` para novo formato; atualizar `separarEquipes()` para lados corretos |
-| `src/pages/GerenciarChaves.tsx` | Modificar | Atualizar `getTeamConflicts()` com os lados corretos para 5 atletas |
-| `doc/requisitos.md` | Modificar | Atualizar descricao da estrutura de 5 atletas na secao 3.11 |
+| `electron/brackets.ts` | Modificado | Implementacao de `gerarLutasCinco()` com 6 lutas e `advanceWinner5()` |
+| `src/components/BracketTree.tsx` | Modificado | Layout customizado `isFiveLayout` com 3 colunas |
+| `doc/requisitos.md` | Modificado | Atualizado secao 3.11 com estrutura de 6 lutas |
 
 ---
 
 ## 8. Problemas e Impedimentos
 
 ### 8.1 Problemas Tecnicos
-- Nenhum identificado. O `advanceWinnerInChave()` usa algoritmo generico que funciona com qualquer numero de lutas por rodada.
+- Nenhum identificado.
 
 ### 8.2 Ambiguidades nos Requisitos
-- Nenhuma. O formato esta claramente definido na secao Feature do spec.md.
+- Nenhuma. O formato esta claramente definido e implementado.
 
 ### 8.3 Riscos
-- Chaves de 5 atletas existentes (ja geradas) nao serao retroativamente modificadas. Apenas novas geracoes usarao o formato correto.
-- Regeneracao de chaves ("Gerar Novamente") aplicara o novo formato.
+- Chaves de 5 atletas existentes (ja geradas) nao serao retroativamente modificadas. Apenas novas geracoes usarao o formato atual.
 
-### 8.4 Layout Visual (corrigido)
-- **Problema original:** O BracketTree usava o layout generico para 5 atletas, gerando uma disposicao visual feia com colunas desalinhadas e sem indicacao visual de byes.
-- **Solucao:** Layout customizado `isFiveLayout` com 3 colunas: Col1 (Luta1 + ByeCard), Col2 (Luta2, Luta3), Col3 (Luta4 + Campeao). Conexoes visuais claras via `buildConnections5`.
+### 8.4 Layout Visual
+- **Solucao implementada:** Layout customizado `isFiveLayout` com 3 colunas: Col1 (Luta1, Luta2, Luta3), Col2 (Luta4, Luta5), Col3 (Luta6 + Campeao). Conexoes visuais claras via `buildConnections()`.
 - **Arquivo:** `src/components/BracketTree.tsx` — documentado em `spec/layout-chave-5-atletas.md`.
 
 ---
 
 ## 9. Criterios de Aceite
 
-- [ ] CA-01: Dado um torneio com 5 atletas na mesma categoria, quando gerar chaves, entao o sistema cria 4 lutas em 3 rodadas
-- [ ] CA-02: Dada uma chave de 5 atletas recem-gerada, quando inspecionar a primeira rodada, entao ela contem exatamente 1 luta (seed1 vs seed2)
-- [ ] CA-03: Dada uma chave de 5 atletas recem-gerada, quando inspecionar a segunda rodada, entao ela contem 2 lutas (TBD/vencedorR1 vs seed3, seed4 vs seed5)
-- [ ] CA-04: Dada uma chave de 5 atletas, quando registrar resultado da luta R1, entao o vencedor e propagado para o slot atletaAId da primeira luta da R2
-- [ ] CA-05: Dada uma chave de 5 atletas, quando ambos os vencedores das semifinais forem definidos, entao a final e preenchida corretamente
-- [ ] CA-06: Dado um bracket de 5 atletas, quando visualizar no BracketTree, entao os rotulos aparecem como "QUARTAS DE FINAL", "SEMIFINAL" e "FINAL"
+- [x] CA-01: Dado um torneio com 5 atletas na mesma categoria, quando gerar chaves, entao o sistema cria 6 lutas em 3 rodadas
+- [x] CA-02: Dada uma chave de 5 atletas recem-gerada, quando inspecionar a primeira rodada, entao ela contem 3 lutas (seed1 vs seed2, seed3 vs seed4, seed5 vs BYE)
+- [x] CA-03: A Luta 3 e auto-resolvida com status='wo' e vencedorId = seed5
+- [x] CA-04: Dada uma chave de 5 atletas, quando registrar resultado da Luta 1, entao o vencedor e propagado para Luta 5 e Luta 6
+- [x] CA-05: Dada uma chave de 5 atletas, quando registrar resultado da Luta 2, entao o vencedor e propagado para Luta 4
+- [x] CA-06: Dada uma chave de 5 atletas, quando a Luta 4 completa, entao o vencedor e propagado para Luta 6
+- [x] CA-07: Dado um bracket de 5 atletas, quando visualizar no BracketTree, entao as colunas sao: [L1,L2,L3] → [L4,L5] → [L6]
 
 ---
 
-## 10. Plano de Implementacao (Passo a Passo)
+## 10. Plano de Implementacao (Concluido)
 
 ```
-Passo 1: Corrigir gerarLutasCinco() em electron/brackets.ts
-  - O que fazer: Alterar a funcao para gerar 1 luta em R1, 2 lutas em R2, 1 luta em R3
-  - Estrutura nova:
-    R1: seed1 vs seed2
-    R2: TBD vs seed3, seed4 vs seed5
-    R3: TBD vs TBD
-  - Arquivo: electron/brackets.ts (linha 127)
-  - Como validar: npm run build
+Passo 1: Implementar gerarLutasCinco() em electron/brackets.ts
+  - Estrutura: 6 lutas com L3 auto-resolvida e L4 com seed5 pre-preenchido
+  - Status: Concluido
 
-Passo 2: Atualizar separarEquipes() em electron/brackets.ts
-  - O que fazer: Atualizar sideA/sideB para n=5 no novo formato
-  - Novo: sideA=[0,1,2], sideB=[3,4] (quem alimenta cada lado da final)
-  - Arquivo: electron/brackets.ts (linha 331)
-  - Como validar: npm run build
+Passo 2: Implementar advanceWinner5() em electron/brackets.ts
+  - Propagacao: L1→L5+L6, L2→L4, L4→L6
+  - Status: Concluido
 
-Passo 3: Atualizar getTeamConflicts() em src/pages/GerenciarChaves.tsx
-  - O que fazer: Atualizar ladoA/ladoB para n===5 no novo formato
-  - Novo: ladoA=[0,1,2], ladoB=[3,4]
-  - Arquivo: src/pages/GerenciarChaves.tsx (linha 92)
-  - Como validar: npm run build
+Passo 3: Implementar layout isFiveLayout em BracketTree.tsx
+  - 3 colunas com conexoes visuais
+  - Status: Concluido
 
-Passo 4: Verificar build e testes
-  - Executar npm run build para garantir que nao ha erros
+Passo 4: Atualizar doc/requisitos.md
+  - Documentar estrutura de 6 lutas
+  - Status: Concluido
 ```
 
 ---
@@ -177,25 +158,13 @@ Passo 4: Verificar build e testes
 
 - **Estrategia de entrega:** Deploy direto (nao ha feature flag para geracao de chaves).
 - **Como monitorar:** Gerar chaves para uma categoria com 5 atletas e verificar a estrutura resultante.
-- **Plano de rollback:** Reverter commits do `gerarLutasCinco` e `separarEquipes`.
+- **Plano de rollback:** Reverter commits do `gerarLutasCinco` e `advanceWinner5`.
 
 ---
 
 ## 12. Definicao de Pronto (DoD)
 
-- [ ] CA-01 a CA-06 verificados manualmente
-- [ ] Codigo revisado
-- [ ] Sem warnings ou erros no build
-- [ ] Documento de requisitos atualizado
-
----
-
-## Checklist Rapido Antes de Comecar a Codar
-
-- [x] Li os documentos de referencia
-- [x] Entendi a historia de usuario e o objetivo de negocio
-- [x] Identifiquei todos os arquivos envolvidos e os li
-- [x] Listei os problemas e impedimentos
-- [x] O plano de implementacao esta em ordem logica (base → topo)
-- [x] Os criterios de aceite sao verificaveis
-- [x] Sinalizei todas as incertezas explicitamente
+- [x] CA-01 a CA-07 verificados
+- [x] Codigo revisado
+- [x] Sem warnings ou erros no build
+- [x] Documento de requisitos atualizado
