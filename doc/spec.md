@@ -1,12 +1,14 @@
 ## Problema 
 
 ## Feature 
-
+se um atleta é desclassificado ele deve receber a flag de desclassificado.
+em chaves de 2 o outro atleta é campeão direto
+em chaves de 3, o atleta que venceu luta com o bye pela vitoria
 
 
 # Guia de Spec para Implementação de Features
 
-> Este documento define o padrão de especificação que deve ser seguido antes de implementar qualquer feature. Ao iniciar uma tarefa, analise este guia e aplique cada seção ao contexto da feature solicitada.
+> Este documento define o padrão de especificação que deve ser seguido antes de implementar qualquer feature. Ao iniciar uma tarefa, analise este guia e aplique cada seção ao contexto da feature solicitada. Sempre siga a regra do SOLID
 
 ---
 
