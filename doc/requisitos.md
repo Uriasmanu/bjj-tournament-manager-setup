@@ -47,7 +47,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Cadastro de Categorias | ⏳ Parcial | Categorias IBJJF implementadas como tipo (`src/types/category.ts` — 151 categorias, 15 faixas etárias × 2 gêneros × 9 pesos) e campo obrigatório no formulário de atleta. Classificação automática por peso/idade/gênero/faixa disponível via `classificarCategoria()`. Gerenciamento dedicado de categorias (CRUD) ainda pendente. |
 | Controle de Inscrições | ❌ Pendente |
 | Controle de Pesagem | ❌ Pendente |
-| Geração de Chaves | ✅ Completo | Máximo de 16 atletas por chave (subgrupos de até 5 para categorias >5 e ≠16), chave editável manualmente, shuffle com separação de equipes (Fisher-Yates), import/export JSON. Estruturas: 2, 3, 4, 5 e 16 atletas. Atletas sem oponente exibidos em cartões com opções de remanejamento (subir/descer peso) e indicador de "luta casada". |
+| Geração de Chaves | ✅ Completo | Máximo de 16 atletas por chave (subgrupos configuráveis de 2 a 16), chave editável manualmente, shuffle com separação de equipes (Fisher-Yates), import/export JSON. Estruturas: 2, 3, 4, 5, 6-15 (geral) e 16 atletas. Atletas sem oponente exibidos em cartões com opções de remanejamento (subir/descer peso) e indicador de "luta casada". |
 | Áreas de Luta | ✅ Completo | CRUD completo, múltiplos árbitros por área, unicidade de árbitro |
 | Chamadas | ❌ Pendente | Aviso de atletas ao púlpito/área de luta (chamada por chave/rodada). |
 | Resultados | ❌ Pendente | Tela de consolidação de resultados por categoria (pódios, medalhistas, ranking). |
@@ -210,7 +210,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Máximo configurável de atletas por chave:** O organizador pode definir o limite de atletas por chave (valores de 2 a 16) antes de gerar as chaves. O valor padrão é 16. O campo "Máximo de atletas por chave" é exibido na tela "Gerenciar Chaves" antes do botão "Gerar Chaves".
 - **Distribuição automática:** O sistema preenche cada chave até atingir o limite configurado, criando novas chaves conforme necessário. A última chave pode ter menos atletas, however não pode ficar com apenas 1 atleta. Se a última chave resultar com apenas 1 atleta, o sistema remove 1 atleta da chave anterior e move para a última, garantindo que nenhuma chave tenha apenas 1 atleta e que nenhuma ultrapasse o limite máximo definido.
   - Exemplos (limite = 6): 15 atletas → [6, 6, 3]; 13 atletas → [6, 5, 2] (ajuste automático); 19 atletas → [6, 6, 5, 2] (ajuste automático).
-- **Tamanhos suportados:** O gerador aceita chaves com 2 a 16 atletas. Estruturas: 2 (1 luta), 3 (3 lutas, repescagem), 4 (3 lutas), 5 (6 lutas), 6-15 (geral, eliminação simples com byes), 15 (15 lutas). Para tamanhos 6-15, o sistema usa `gerarLutasGeral()` que gera uma bracket de eliminação simples com byes automáticos.
+- **Tamanhos suportados:** O gerador aceita chaves com 2 a 16 atletas. Estruturas: 2 (1 luta), 3 (3 lutas, repescagem), 4 (3 lutas), 5 (6 lutas), 6-15 (geral, eliminação simples com byes automáticos), 16 (15 lutas). Para tamanhos 6-15, o sistema usa `gerarLutasGeral()` que gera uma bracket de eliminação simples com byes automáticos. Funções dedicadas de propagação existem para 3 (`advanceWinnerInChave` com lógica de repescagem), 5 (`advanceWinner5`), 6 (`advanceWinner6`) e 16 (`advanceWinner16`) atletas.
 - **Mínimo de 2 atletas:** Categorias com 1 atleta não geram chave — o atleta é listado como "sem chave". Com 0 atletas, nenhuma chave é gerada.
 - **Formato eliminatório simples:** Sem repescagem, sem disputa de 3º lugar (exceto chave de 3 atletas que usa sistema de repescagem restrito — ver seção 3.11.1).
 - **Estrutura por quantidade de atletas:**
@@ -218,14 +218,15 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - 3 atletas: 3 lutas, 3 rodadas — rodada 1 (semifinal: seed 1 vs seed 2), rodada 2 (tbd vs seed 3 — repescagem), rodada 3 (final)
   - 4 atletas: 3 lutas, 2 rodadas (2 Semifinais + Final)
   - 5 atletas: 6 lutas, 3 rodadas — R1 (3 lutas: seed1 vs seed2, seed3 vs seed4, seed5 vs BYE auto-resolvido), R2 (2 lutas: vencedor(L2) vs seed5, vencedor(L1) vs BYE auto-resolvido), R3 (Final: vencedor(L4) vs vencedor(L5))
-  - 6-15 atletas: eliminação simples com byes automáticos — número de rodadas = ceil(log2(N))
+  - 6 atletas: 5 lutas, 3 rodadas — R1 (3 lutas: seed0 vs seed1, seed2 vs seed3, seed4 vs seed5), R2 (1 luta: vencedor(L1) vs vencedor(L2) + carry-over do vencedor(L3) direto para a final), R3 (Final: vencedor(L4) vs vencedor(L3))
+  - 7-15 atletas: eliminação simples com byes automáticos — número de rodadas = ceil(log2(N))
   - 16 atletas: 15 lutas, 4 rodadas (8 lutas R1, 4 lutas R2, 2 lutas R3, 1 luta R4 final)
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
 - **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.
 - **Bloqueio de edição:** Após a primeira luta ser iniciada, a edição é bloqueada.
 - **Seed sorting (geração inicial — `aplicarSeedSorting`):** Ao gerar a chave, atletas são ordenados por: peso (decrescente) → idade (decrescente, `currentYear - anoNascimento`) → nome (ascendente, `localeCompare`). A divisão em lados é dinâmica: metade superior (sideA) e metade inferior (sideB) da seed, com separação de equipes entre lados.
   - 16 atletas (`aplicarSeedSorting16`): sideA = primeiros 8, sideB = últimos 8; dentro de cada lado, atletas da mesma equipe são trocados com o lado oposto.
-- **Embaralhamento (shuffle):** O botão "Embaralhar" randomiza a ordem dos atletas na chave usando Fisher-Yates shuffle e mantém a separação de equipes em lados opostos (via `separarEquipes`). Para 16 atletas, reaplica seed sorting; para os demais, aplica `separarEquipes`. Pode ser acionado a qualquer momento enquanto a chave estiver no status `gerada`.
+- **Embaralhamento (shuffle):** O botão "Embaralhar" randomiza a ordem dos atletas na chave usando Fisher-Yates shuffle e mantém a separação de equipes em lados opostos (via `separarEquipes`). Para 16 atletas, reaplica seed sorting; para os demais, aplica `separarEquipes`. A separação de equipes funciona para chaves de 4 (sideA=[0,3], sideB=[1,2]), 5 (sideA=[0,1,2], sideB=[3,4]) e 6 (sideA=[0,1,2], sideB=[3,4,5]) atletas. Pode ser acionado a qualquer momento enquanto a chave estiver no status `gerada`.
 - **Regeneração:** Permitida apenas se nenhuma luta foi iniciada.
 - **Propriedade `emChave`:** Todo atleta possui a propriedade booleana opcional `emChave` indicando se está alocado em alguma chave. É marcada automaticamente ao gerar, randomizar ou importar chaves, e computada dinamicamente no frontend ao carregar os dados.
 - **Atletas Sem Chave:** Atletas sozinhos na categoria (único atleta) são exibidos em seção destacada com cartões individuais contendo:
@@ -258,6 +259,11 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - **Luta 2 vence:** preenche Luta 4 (`atletaAId` = vencedor).
   - **Luta 4 vence:** preenche Luta 6 (`atletaAId` = vencedor).
   - A Luta 3 (seed5 × BYE) é auto-resolvida na geração com `status='wo'`, e seed5 já é pré-preenchido no `atletaBId` da Luta 4.
+- **Função `advanceWinner6` (chave de 6 atletas):** Propagação manual baseada na ordem da luta (5 lutas, 3 rodadas):
+  - **Luta 1 vence:** preenche Luta 4 (`atletaAId` = vencedor).
+  - **Luta 2 vence:** preenche Luta 4 (`atletaBId` = vencedor).
+  - **Luta 3 vence:** preenche Luta 5 (`atletaBId` = vencedor) — carry-over direto para a final.
+  - **Luta 4 vence:** preenche Luta 5 (`atletaAId` = vencedor) — semifinal → final.
 - **Função `clearWinnerFromLaterRounds`:** Quando uma luta tem seu resultado alterado (reaberta), percorre recursivamente TODAS as rodadas seguintes e limpa o vencedor propagado: seta `atletaAId`/`atletaBId` para `'tbd'`, anula `vencedorId`, reseta `status` para `'pending'` se estava `'completed'` ou `'wo'`.
 - **Constante `tbd`:** Slots de luta vazios são marcados com o valor `'tbd'` (to be determined).
 - **Resultado em chave de 3 atletas com DQ na rodada 1:** Quando `desclassificacao=true` e `luta.rodada === 1`:
@@ -1037,6 +1043,7 @@ Uso de `clamp()` para tamanhos, unidades relativas (`rem`, `vw`), scroll horizon
 | `spec/correcao-avanca-vencedor-chave-4.md` | Correção da propagação de vencedor em chaves de 4 atletas (fórmula baseada em razão) |
 | `spec/correcao-dq-bracket.md` | Correção do DQ: campo `desclassificadoId` e propagação em chaves de 2 e 3 atletas |
 | `spec/validacao-pontos-vitoria.md` | Validação de pontos/vantagens ao selecionar vencedor por pontos (modal de aviso) |
+| `spec/correcao-chave-6-atletas.md` | Correção da chave de 6 atletas: separarEquipes, getTeamConflicts e advanceWinner6 |
 | `doc/import-audit.md` | Auditoria de importação: regras de geração automática de ID e timestamps |
 
 ---
@@ -1110,7 +1117,11 @@ bjj-tournament-manager-setup/
 │   ├── cadastro-arbitro.md  ← Spec detalhado do CRUD de árbitros
 │   ├── placar.md           ← Spec do fluxo Placar (seleção de área → bracket → placar)
 │   ├── placar-jiu-jitsu.md ← Spec do placar funcional de Jiu-Jitsu (pontos, vantagens, punições, cronômetro)
-│   └── placar-voltar-bracket.md ← Spec da correção do botão Voltar (navegação PlacarLuta → PlacarBracket)
+│   ├── placar-voltar-bracket.md ← Spec da correção do botão Voltar (navegação PlacarLuta → PlacarBracket)
+│   ├── max-atletas-por-chave.md ← Spec da correção do acúmulo de chaveIds
+│   ├── layout-chave-5-atletas.md ← Spec do layout visual de chaves com 5 atletas
+│   ├── correcao-chave-5-atletas.md ← Spec da correção de chaves com 5 atletas (6 lutas)
+│   └── correcao-chave-6-atletas.md ← Spec da correção de chaves com 6 atletas (5 lutas, carry-over)
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)
 ```

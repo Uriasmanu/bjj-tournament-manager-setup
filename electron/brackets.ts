@@ -391,8 +391,8 @@ function separarEquipes(atletas: Atleta[]): void {
   const n = atletas.length;
   if (n < 4) return;
 
-  const sideA: number[] = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : [0, 1];
-  const sideB: number[] = n === 4 ? [1, 2] : n === 5 ? [3, 4] : [2, 3, 4];
+  const sideA: number[] = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : n === 6 ? [0, 1, 2] : [0, 1];
+  const sideB: number[] = n === 4 ? [1, 2] : n === 5 ? [3, 4] : n === 6 ? [3, 4, 5] : [2, 3, 4];
 
   for (const side of [sideA, sideB]) {
     const seenTeams = new Set<string>();
@@ -678,6 +678,25 @@ function advanceWinner5(chave: Chave, luta: Luta): void {
   }
 }
 
+function advanceWinner6(chave: Chave, luta: Luta): void {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+
+  if (luta.ordem === 1) {
+    const luta4 = chave.lutas.find(l => l.ordem === 4);
+    if (luta4) luta4.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    const luta4 = chave.lutas.find(l => l.ordem === 4);
+    if (luta4) luta4.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    const luta5 = chave.lutas.find(l => l.ordem === 5);
+    if (luta5) luta5.atletaBId = winnerId;
+  } else if (luta.ordem === 4) {
+    const luta5 = chave.lutas.find(l => l.ordem === 5);
+    if (luta5) luta5.atletaAId = winnerId;
+  }
+}
+
 function advanceWinner16(chave: Chave, luta: Luta): void {
   const winnerId = luta.vencedorId;
   if (!winnerId) return;
@@ -794,6 +813,8 @@ function registrarResultadoHandler(
     }
   } else if (chave.totalAtletas === 5) {
     advanceWinner5(chave, luta);
+  } else if (chave.totalAtletas === 6) {
+    advanceWinner6(chave, luta);
   } else if (chave.totalAtletas === 16) {
     advanceWinner16(chave, luta);
   } else {
