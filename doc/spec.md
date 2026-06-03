@@ -1,9 +1,26 @@
 ## Problema 
-em chaves com 4 atletas o vencedor da 2° luta não esta indo para o card das quartas de final
-Não esta sendo gerada a luda das quartas de final para ser iniciada
+
 
 ## Feature 
+regra exclusiva para chaves com total de 5 atltas
+Nos campeonatos oficiais da IBJJF, quando a chave tem 5 atletas, ela continua funcionando no sistema de eliminação simples (mata-mata), mas com o uso de "byes" (vagas de chapéu/espera).
 
+Para equilibrar o número e fechar a conta matemática na rodada seguinte, 3 atletas dão a sorte de começar "chapados" (avançam direto sem lutar na primeira rodada) e apenas 2 atletas precisam se enfrentar para garantir a última vaga na semifinal.
+
+A distribuição dos atletas que ficam de chapéu segue estritamente o ranking da federação ou sorteio automático do sistema. Veja como fica o formato exato da chave:
+
+PRIMEIRA RODADA (Quartas de Final)
+1x2 vencedor = A
+Atleta 3 = Avança direto (chapéu) -> vira B
+Atleta 4 = Avança direto (chapéu) -> vira C
+Atleta 5 = Avança direto (chapéu) -> vira D
+
+SEGUNDA RODADA (Semifinal)
+AxB vencedor = E
+CxD vencedor = F
+
+TERCEIRA RODADA (Final)
+ExF vencedor = Campeão
 
 
 # Guia de Spec para Implementação de Features
