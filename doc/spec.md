@@ -15,7 +15,7 @@
 ---
 
 ## Histórico de Correções
-<!-- ZONA DA IA: a IA preenche após cada ciclo. Você não edita esta seção. -->
+<!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
 <!--
 ### AAAA-MM-DD — Título curto
@@ -28,7 +28,7 @@
 ---
 
 ## Feature
-<!-- Descreva aqui o que você quer implementar. A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
+<!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
 chave com o total de 6
 Rodada 1 (Quartas de Final / Ajuste)
