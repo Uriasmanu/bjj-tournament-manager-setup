@@ -30,6 +30,23 @@
 ## Feature
 <!-- Descreva aqui o que você quer implementar. A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
+chave com o total de 6
+Rodada 1 (Quartas de Final / Ajuste)
+Atleta A X Atleta B -> G
+
+Atleta C X BYE -> H (C avança direto)
+
+Atleta D X Atleta E -> I
+
+Atleta F X BYE -> J (F avança direto)
+
+Rodada 2 (Semifinais)
+G X H -> Vencedor_Finalista1
+
+I X J -> Vencedor_Finalista2
+
+Rodada 3 (Final — a linha que faltou)
+Vencedor_Finalista1 X Vencedor_Finalista2 -> Campeão
 ---
 
 # Guia de Spec para Implementação de Features
