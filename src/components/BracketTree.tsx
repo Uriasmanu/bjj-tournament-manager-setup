@@ -19,6 +19,16 @@ function isPlaceholder(id: string | null | undefined): boolean {
 }
 
 function buildConnections(chave: Chave): { from: string; to: string }[] {
+  if (chave.totalAtletas === 3) {
+    const connections: { from: string; to: string }[] = [];
+    const r1 = chave.lutas.find(l => l.rodada === 1);
+    const r2 = chave.lutas.find(l => l.rodada === 2);
+    const r3 = chave.lutas.find(l => l.rodada === 3);
+    if (r1 && r3) connections.push({ from: `m${r1.id}`, to: `m${r3.id}` });
+    if (r2 && r3) connections.push({ from: `m${r2.id}`, to: `m${r3.id}` });
+    return connections;
+  }
+
   const sorted = [...chave.lutas].sort((a, b) => a.rodada - b.rodada || a.ordem - b.ordem);
   const winnerToLuta = new Map<string, Luta>();
   for (const l of sorted) {
@@ -61,7 +71,29 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
   const [paths, setPaths] = useState<string[]>([]);
   const bracketRef = useRef<HTMLDivElement>(null);
 
+  const isPyramidLayout = chave.totalAtletas === 3;
+
   const columns = useMemo(() => {
+    if (isPyramidLayout) {
+      const r1 = chave.lutas.find(l => l.rodada === 1);
+      const r2 = chave.lutas.find(l => l.rodada === 2);
+      const r3 = chave.lutas.find(l => l.rodada === 3);
+      const cols: (Luta | ('bye' | 'champion'))[][] = [];
+
+      const col1: (Luta | 'bye')[] = [];
+      if (r1) col1.push(r1);
+      col1.push('bye');
+      cols.push(col1);
+
+      if (r2) cols.push([r2]);
+      if (r3) cols.push([r3]);
+
+      const hasChampion = r3?.vencedorId != null && r3.vencedorId !== 'tbd';
+      if (hasChampion) cols.push(['champion']);
+
+      return cols;
+    }
+
     const byRodada = new Map<number, Luta[]>();
     for (const l of chave.lutas) {
       if (!byRodada.has(l.rodada)) byRodada.set(l.rodada, []);
@@ -69,7 +101,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
     }
     const rodadas = Array.from(byRodada.keys()).sort((a, b) => a - b);
     return rodadas.map(r => byRodada.get(r)!.sort((a, b) => a.ordem - b.ordem));
-  }, [chave.lutas]);
+  }, [chave, isPyramidLayout]);
 
   const connections = useMemo(() => buildConnections(chave), [chave]);
 
@@ -94,13 +126,31 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
           newPaths.push(`M ${x1} ${y1} C ${x1 + 40} ${y1}, ${x2 - 40} ${y2}, ${x2} ${y2}`);
         }
       });
+
+      if (isPyramidLayout) {
+        const r3 = chave.lutas.find(l => l.rodada === 3);
+        const championEl = document.getElementById('champion-card');
+        if (r3 && championEl) {
+          const el2 = document.getElementById(`m${r3.id}`);
+          if (el2) {
+            const rect1 = el2.getBoundingClientRect();
+            const rect2 = championEl.getBoundingClientRect();
+            const x1 = rect1.right - container.left;
+            const y1 = rect1.top + rect1.height / 2 - container.top;
+            const x2 = rect2.left - container.left;
+            const y2 = rect2.top + rect2.height / 2 - container.top;
+            newPaths.push(`M ${x1} ${y1} C ${x1 + 40} ${y1}, ${x2 - 40} ${y2}, ${x2} ${y2}`);
+          }
+        }
+      }
+
       setPaths(newPaths);
     };
 
     drawConnections();
     window.addEventListener('resize', drawConnections);
     return () => window.removeEventListener('resize', drawConnections);
-  }, [connections, chave]);
+  }, [connections, chave, isPyramidLayout]);
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: theme.colors.gray[0], padding: 24, color: theme.black, borderRadius: 8 }}>
@@ -109,7 +159,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
         style={{
           position: 'relative',
           display: 'flex',
-          gap: 48,
+          gap: isPyramidLayout ? 40 : 48,
           justifyContent: 'center',
           alignItems: 'stretch',
           minHeight: 320,
@@ -131,18 +181,79 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
               gap: colIdx === 0 ? 24 : undefined,
             }}
           >
-            {columnLutas.map(luta => (
-              <Card
-                key={luta.id}
-                luta={luta}
-                id={`m${luta.id}`}
-                getAtletaNome={getAtletaNome}
-                onSelectWinner={onSelectWinner}
-                theme={theme}
-              />
-            ))}
+            {columnLutas.map(item => {
+              if (item === 'bye') {
+                return <ByeCard key="bye" chave={chave} getAtletaNome={getAtletaNome} theme={theme} />;
+              }
+              if (item === 'champion') {
+                const r3 = chave.lutas.find(l => l.rodada === 3);
+                return <ChampionCard key="champion" r3={r3} getAtletaNome={getAtletaNome} theme={theme} />;
+              }
+              return (
+                <Card
+                  key={item.id}
+                  luta={item}
+                  id={`m${item.id}`}
+                  getAtletaNome={getAtletaNome}
+                  onSelectWinner={onSelectWinner}
+                  theme={theme}
+                />
+              );
+            })}
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function ByeCard({ chave, getAtletaNome, theme }: { chave: Chave; getAtletaNome: (id: string | null) => string; theme: ReturnType<typeof useMantineTheme> }) {
+  const seed3Id = chave.posicoesAtletas[2];
+  return (
+    <div
+      id="bye-card"
+      style={{
+        width: 256,
+        backgroundColor: theme.colors.gray[1],
+        border: `1px dashed ${theme.colors.gray[4]}`,
+        borderRadius: 8,
+        padding: 12,
+        position: 'relative',
+        zIndex: 10,
+      }}
+    >
+      <div style={{ fontSize: 10, color: theme.colors.gray[5], fontWeight: 700, marginBottom: 8, letterSpacing: 0.5 }}>
+        BYE
+      </div>
+      <div style={{ padding: 8, borderRadius: 4, backgroundColor: theme.colors.blue[0], display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: theme.colors.blue[7], backgroundColor: theme.colors.blue[2], borderRadius: 4, padding: '1px 6px' }}>BYE</span>
+        <span style={{ fontSize: 14, fontWeight: 700, color: theme.black }}>{getAtletaNome(seed3Id)}</span>
+      </div>
+    </div>
+  );
+}
+
+function ChampionCard({ r3, getAtletaNome, theme }: { r3: Luta | undefined; getAtletaNome: (id: string | null) => string; theme: ReturnType<typeof useMantineTheme> }) {
+  const championName = r3?.vencedorId ? getAtletaNome(r3.vencedorId) : '';
+  return (
+    <div
+      id="champion-card"
+      style={{
+        width: 256,
+        backgroundColor: theme.colors.yellow[0],
+        border: `2px solid ${theme.colors.yellow[6]}`,
+        borderRadius: 12,
+        padding: 16,
+        position: 'relative',
+        zIndex: 10,
+        textAlign: 'center',
+      }}
+    >
+      <div style={{ fontSize: 11, color: theme.colors.yellow[8], fontWeight: 800, marginBottom: 4, letterSpacing: 1 }}>
+        CAMPEÃO
+      </div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: theme.colors.yellow[9] }}>
+        {championName}
       </div>
     </div>
   );

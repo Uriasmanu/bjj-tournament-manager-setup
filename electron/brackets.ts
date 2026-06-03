@@ -78,6 +78,7 @@ function gerarLutasTres(posicoes: Atleta[]): Luta[] {
   return [
     criarLuta(1, 1, posicoes[0].id, posicoes[1].id),
     criarLuta(2, 2, TBD, posicoes[2].id),
+    criarLuta(3, 3, TBD, TBD),
   ];
 }
 
@@ -100,6 +101,7 @@ function gerarLutasCinco(posicoes: Atleta[]): Luta[] {
 
 function getTotalRodadas(totalAtletas: number): number {
   if (totalAtletas <= 2) return 1;
+  if (totalAtletas === 3) return 3;
   if (totalAtletas <= 4) return 2;
   return 3;
 }
@@ -558,20 +560,32 @@ function registrarResultadoHandler(
   luta.desclassificacao = data.desclassificacao ?? false;
   luta.desempateArbitro = data.desempateArbitro ?? false;
 
-  advanceWinnerInChave(chave, luta);
+  if (chave.totalAtletas === 3) {
+    const r2 = chave.lutas.find(l => l.rodada === 2);
+    const r3 = chave.lutas.find(l => l.rodada === 3);
 
-  if (chave.totalAtletas === 3 && luta.rodada === 1) {
-    const loserId = luta.vencedorId === luta.atletaAId ? luta.atletaBId : luta.atletaAId;
-    const nextRound = chave.lutas.find(l => l.rodada === 2);
-    if (nextRound) {
-      if (nextRound.atletaAId === luta.vencedorId) nextRound.atletaAId = 'tbd';
-      if (nextRound.atletaBId === luta.vencedorId) nextRound.atletaBId = 'tbd';
-      if (nextRound.atletaAId === 'tbd') {
-        nextRound.atletaAId = loserId;
-      } else if (nextRound.atletaBId === 'tbd') {
-        nextRound.atletaBId = loserId;
+    if (luta.rodada === 1) {
+      const loserId = luta.vencedorId === luta.atletaAId ? luta.atletaBId : luta.atletaAId;
+
+      if (r2) {
+        r2.atletaAId = loserId;
+        r2.vencedorId = null;
+        r2.status = 'pending';
+      }
+      if (r3) {
+        r3.atletaAId = luta.vencedorId;
+        r3.atletaBId = 'tbd';
+        r3.vencedorId = null;
+        r3.status = 'pending';
+      }
+    } else if (luta.rodada === 2) {
+      if (r3 && r3.atletaBId === 'tbd') {
+        r3.atletaBId = luta.vencedorId;
+        r3.status = 'pending';
       }
     }
+  } else {
+    advanceWinnerInChave(chave, luta);
   }
 
   chaves[chaveIndex] = chave;
