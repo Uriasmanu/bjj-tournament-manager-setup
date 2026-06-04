@@ -71,7 +71,7 @@ Antes de escrever qualquer linha de código, leia este documento inteiro e produ
 
 - **Guia de spec** (este documento): confirme que todas as seções serão preenchidas
 - **Documento de requisitos** requisitos.md
-- **Documentação técnica existente** (wikis, ADRs, READMEs): identifique padrões e convenções já estabelecidos
+- **Documentação técnica existente** `spec/{nome-da-feature}.md`: identifique padrões e convenções já estabelecidos
 - **Código-fonte relevante**: leia os arquivos relacionados antes de propor qualquer mudança
 
 > ⚠️ Nunca assuma o comportamento de um arquivo sem tê-lo lido. Sinalize explicitamente quando uma informação é uma inferência e não uma certeza.
