@@ -13,7 +13,7 @@ function isPlaceholder(id: string | null | undefined): boolean {
 }
 
 const ROUND_LABELS: Record<number, string> = {
-  1: 'OITAVAS DE FINAL',
+  1: 'PRIMEIRA RODADA',
   2: 'QUARTAS DE FINAL',
   3: 'SEMIFINAL',
   4: 'FINAL',

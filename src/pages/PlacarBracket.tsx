@@ -35,6 +35,10 @@ export function PlacarBracket() {
       window.electronAPI.loadArbitros(),
     ]).then(([chaves, ath, arb]) => {
       const found = (chaves as Chave[]).find(c => c.id === chaveId);
+      console.log(`[PlacarBracket] load: found=${!!found}, totalAtletas=${found?.totalAtletas}, lutas=${found?.lutas.length}`);
+      if (found) {
+        console.log(`[PlacarBracket] lutas:`, found.lutas.map((l: any) => `#${l.ordem}(r${l.rodada}) ${l.atletaAId}×${l.atletaBId}[${l.status}]`));
+      }
       setChave(found ?? null);
       setAthletes(ath as Atleta[]);
       setArbitros(arb as Arbitro[]);
@@ -82,12 +86,15 @@ export function PlacarBracket() {
     if (!chave || !resultModalLuta) return;
 
     try {
+      console.log(`[PlacarBracket] registrarResultado: lutaId=${resultModalLuta.id}, ordem=${resultModalLuta.ordem}, rodada=${resultModalLuta.rodada}`);
       const updatedChave = await window.electronAPI.registrarResultado({
         chaveId: chave.id,
         lutaId: resultModalLuta.id,
         vencedorId,
         status,
       });
+      console.log(`[PlacarBracket] updatedChave: totalAtletas=${updatedChave.totalAtletas}, lutas=${updatedChave.lutas.length}`);
+      console.log(`[PlacarBracket] lutas pos-registro:`, updatedChave.lutas.map((l: any) => `#${l.ordem}(r${l.rodada}) ${l.atletaAId}×${l.atletaBId}[${l.status}]`));
       setChave(updatedChave);
     } catch (err: unknown) {
       console.error('Erro ao registrar resultado:', err);
