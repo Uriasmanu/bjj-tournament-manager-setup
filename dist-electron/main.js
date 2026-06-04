@@ -801,7 +801,6 @@ function gerarLutasSeis(posicoes) {
     luta6,
     criarLuta(7, 3, TBD, TBD)
   ];
-  console.log(`[gerarLutasSeis] ${posicoes.length} atletas → ${lutas.length} lutas:`, lutas.map((l) => `#${l.ordem}(r${l.rodada})`));
   return lutas;
 }
 function getTotalRodadas(totalAtletas) {

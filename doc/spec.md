@@ -30,6 +30,42 @@
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
+implementa regra para chave com 10 atletas
+
+Rodada 1
+A X B -> K
+
+C X D -> L
+
+E X F -> M
+
+G X H -> N
+
+I X BYE -> O (Atleta I descansa na Rodada 1 e vira O)
+
+J X BYE -> P (Atleta J descansa na Rodada 1 e vira P)
+
+(Aqui, 8 atletas lutaram e 4 avançaram. 2 atletas descansaram e avançaram. Temos 6 atletas ativos).
+
+Rodada 2
+K X L -> Q
+
+M X BYE -> R (O vencedor M descansa na Rodada 2 e vira R)
+
+N X BYE -> S (O vencedor N descansa na Rodada 2 e vira S)
+
+O X P -> T (Os dois que descansaram na primeira rodada se enfrentam agora)
+
+(Usando os seus BYEs estratégicos na Rodada 2, reduzimos os 6 atletas para exatamente 4 semifinalistas: Q, R, S, T).
+
+Rodada 3 (Semifinais)
+Q X R -> U
+
+S X T -> V
+
+Rodada 4 (Final)
+U X V -> Campeão
+
 ---
 
 # Guia de Spec para Implementação de Features
