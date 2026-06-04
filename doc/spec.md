@@ -19,11 +19,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-### 2026-06-04 — Bloqueio de lutas por rodada (integridade do bracket)
-**Tipo:** lógica incompleta
-**O que mudou:** Lutas de uma rodada N+1 podiam ser iniciadas (ou ter vencedor registrado via clique no card do `BracketTree`) mesmo com lutas da rodada N ainda pendentes. Agora, `startableFights` em `PlacarBracket.tsx` filtra adicionalmente por `rodadasCompletas.has(l.rodada)`, e o componente `Card` em `BracketTree.tsx` recebe prop `disabled` que aplica opacidade reduzida, cursor `not-allowed`, tooltip explicativo e bloqueia o `onClick` quando a rodada anterior não está completa. Critério de rodada completa: todas as lutas com status `completed` ou `wo` (BYE pré-preenchido e DQ contam como finalizadas). Aplica-se a todos os tamanhos de chave (2, 3, 4, 5, 6, 7-8, 9-16).
-**Itens atualizados:** RF-01 a RF-06, CA-01 a CA-06, Passos 1-8
-**Arquivo de detalhe:** `spec/bloqueio-rodadas.md`
+
 
 
 <!--
@@ -39,7 +35,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
-Impedir que a rodada seguinte tenham suas lutas iniciadas antes do fim da rodada anterior, regra para todos os tipos de chave
+
 ---
 
 # Guia de Spec para Implementação de Features
