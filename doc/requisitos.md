@@ -205,7 +205,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Reset ao gerar:** Ao clicar em "Gerar Chaves" (tanto na geração inicial quanto na regeneração), o array `chaves` do torneio é completamente resetado para `[]` antes de gerar as novas chaves. Todos os dados anteriores (resultados de lutas, vencedores, status) são descartados. Os flags `emChave` dos atletas também são recalculados do zero.
 - **Distribuição automática:** O sistema preenche cada chave até atingir o limite configurado, criando novas chaves conforme necessário. A última chave pode ter menos atletas, however não pode ficar com apenas 1 atleta. Se a última chave resultar com apenas 1 atleta, o sistema remove 1 atleta da chave anterior e move para a última, garantindo que nenhuma chave tenha apenas 1 atleta e que nenhuma ultrapasse o limite máximo definido.
   - Exemplos (limite = 6): 15 atletas → [6, 6, 3]; 13 atletas → [6, 5, 2] (ajuste automático); 19 atletas → [6, 6, 5, 2] (ajuste automático).
-- **Tamanhos suportados:** O gerador aceita chaves com 2 a 16 atletas. Estruturas: 2 (1 luta), 3 (3 lutas, repescagem), 4 (3 lutas), 5 (6 lutas), 6-15 (geral, eliminação simples com byes automáticos), 16 (15 lutas). Para tamanhos 6-15, o sistema usa `gerarLutasGeral()` que gera uma bracket de eliminação simples com byes automáticos. Funções dedicadas de propagação existem para 3 (`advanceWinnerInChave` com lógica de repescagem), 5 (`advanceWinner5`), 6 (`advanceWinner6`) e 16 (`advanceWinner16`) atletas.
+- **Tamanhos suportados:** O gerador aceita chaves com 2 a 16 atletas. Estruturas: 2 (1 luta), 3 (3 lutas, repescagem), 4 (3 lutas), 5 (6 lutas), 6 (7 lutas, quartas com byes + semifinais + final), 7-15 (geral, eliminação simples com byes automáticos), 16 (15 lutas). Para tamanhos 7-15, o sistema usa `gerarLutasGeral()` que gera uma bracket de eliminação simples com byes automáticos. Funções dedicadas de propagação existem para 3 (`advanceWinnerInChave` com lógica de repescagem), 5 (`advanceWinner5`), 6 (`advanceWinner6`) e 16 (`advanceWinner16`) atletas.
 - **Mínimo de 2 atletas:** Categorias com 1 atleta não geram chave — o atleta é listado como "sem chave". Com 0 atletas, nenhuma chave é gerada.
 - **Formato eliminatório simples:** Sem repescagem, sem disputa de 3º lugar (exceto chave de 3 atletas que usa sistema de repescagem restrito — ver seção 3.11.1).
 - **Estrutura por quantidade de atletas:**
@@ -213,7 +213,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - 3 atletas: 3 lutas, 3 rodadas — rodada 1 (semifinal: seed 1 vs seed 2), rodada 2 (tbd vs seed 3 — repescagem), rodada 3 (final)
   - 4 atletas: 3 lutas, 2 rodadas (2 Semifinais + Final)
   - 5 atletas: 6 lutas, 3 rodadas — R1 (3 lutas: seed1 vs seed2, seed3 vs seed4, seed5 vs BYE auto-resolvido), R2 (2 lutas: vencedor(L2) vs seed5, vencedor(L1) vs BYE auto-resolvido), R3 (Final: vencedor(L4) vs vencedor(L5))
-  - 6 atletas: 5 lutas, 3 rodadas — R1 (3 lutas: seed0 vs seed1, seed2 vs seed3, seed4 vs seed5), R2 (1 luta: vencedor(L1) vs vencedor(L2) + carry-over do vencedor(L3) direto para a final), R3 (Final: vencedor(L4) vs vencedor(L3))
+  - 6 atletas: 7 lutas, 3 rodadas — R1 (4 lutas: L1 seed0 vs seed1, L2 seed2 vs BYE auto-resolvido [wo], L3 seed3 vs seed4, L4 seed5 vs BYE auto-resolvido [wo]), R2 (2 semifinais: L5 vencedor(L2) vs vencedor(L1), L6 vencedor(L4) vs vencedor(L3)), R3 (Final: L7 vencedor(L5) vs vencedor(L6)). Propagação: `advanceWinner6` — vencedor de L1 preenche L5.atletaBId, vencedor de L3 preenche L6.atletaBId (slots A já preenchidos pelos byes na geração). BYEs (L2, L4) são ignorados na propagação (já processados na geração).
   - 7-15 atletas: eliminação simples com byes automáticos — número de rodadas = ceil(log2(N)). Exemplo para 7 atletas: R1 (4 lutas: seed0 vs seed1, seed2 vs seed3, seed4 vs seed5, seed6 vs BYE auto-resolvido), R2 (2 lutas: vencedor(L1) vs vencedor(L2), vencedor(L3) vs vencedor(BYE)), R3 (Final: vencedor(L5) vs vencedor(L6)).
   - 16 atletas: 15 lutas, 4 rodadas (8 lutas R1, 4 lutas R2, 2 lutas R3, 1 luta R4 final)
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
@@ -254,11 +254,13 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - **Luta 2 vence:** preenche Luta 4 (`atletaAId` = vencedor).
   - **Luta 4 vence:** preenche Luta 6 (`atletaAId` = vencedor).
   - A Luta 3 (seed5 × BYE) é auto-resolvida na geração com `status='wo'`, e seed5 já é pré-preenchido no `atletaBId` da Luta 4.
-- **Função `advanceWinner6` (chave de 6 atletas):** Propagação manual baseada na ordem da luta (5 lutas, 3 rodadas):
-  - **Luta 1 vence:** preenche Luta 4 (`atletaAId` = vencedor).
-  - **Luta 2 vence:** preenche Luta 4 (`atletaBId` = vencedor).
-  - **Luta 3 vence:** preenche Luta 5 (`atletaBId` = vencedor) — carry-over direto para a final.
-  - **Luta 4 vence:** preenche Luta 5 (`atletaAId` = vencedor) — semifinal → final.
+- **Função `advanceWinner6` (chave de 6 atletas):** Propagação manual baseada na ordem da luta (7 lutas, 3 rodadas). Estrutura: L1-L4 (rodada 1), L5-L6 (semifinais), L7 (final). BYEs (L2, L4) são ignorados na propagação (já processados na geração com `status='wo'`):
+  - **Luta 1 vence:** preenche Luta 5 (`atletaBId` = vencedor) — slot A já preenchido pelo bye winner (L2).
+  - **Luta 3 vence:** preenche Luta 6 (`atletaBId` = vencedor) — slot A já preenchido pelo bye winner (L4).
+  - **Luta 5 vence (semifinal 1):** preenche Luta 7 (`atletaAId` = vencedor).
+  - **Luta 6 vence (semifinal 2):** preenche Luta 7 (`atletaBId` = vencedor).
+  - **Lutas 2 e 4 (BYE):** ignoradas — vencedores já pré-propagados na geração.
+  - **Detecta estrutura antiga:** Se a chave não possui L4 (estrutura antiga com 6 lutas), usa lógica alternativa por rodada/índice para compatibilidade retroativa.
 - **Função `clearWinnerFromLaterRounds`:** Quando uma luta tem seu resultado alterado (reaberta), percorre recursivamente TODAS as rodadas seguintes e limpa o vencedor propagado: seta `atletaAId`/`atletaBId` para `'tbd'`, anula `vencedorId`, reseta `status` para `'pending'` se estava `'completed'` ou `'wo'`.
 - **Constante `tbd`:** Slots de luta vazios são marcados com o valor `'tbd'` (to be determined).
 - **Resultado em chave de 3 atletas com DQ na rodada 1:** Quando `desclassificacao=true` e `luta.rodada === 1`:
