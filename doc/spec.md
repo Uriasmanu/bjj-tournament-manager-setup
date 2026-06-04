@@ -25,49 +25,11 @@
 **Arquivo de detalhe:** `spec/nome-da-correcao.md`
 -->
 
-### 2026-06-03 — Geração de chave para 9 atletas
-**Tipo:** lógica incompleta
-**O que mudou:** `gerarLutasGeral()` produzia 5 lutas no round 1 para 9 atletas (ceil(9/2)) com propagação de BYE quebrada → `gerarLutasNove()` dedicada gera 6 lutas no round 1 (3 reais + 3 BYEs nos índices 1,3,5), pareamento correto nos rounds seguintes (3→2→1) e `advanceWinner9()` propaga vencedores entre todas as rodadas, com auto-advance do vencedor da última QF para a final (BYE na semifinal).
-**Itens atualizados:** RF-01 a RF-07, CA-01 a CA-07
-**Arquivo de detalhe:** `spec/9-atletas.md`
-
-
 ---
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
-chave com o total de 9 atletas
-Rodada 1 
-A X B -> J
 
-C X BYE -> K
-
-D X E -> L
-
-F X BYE -> M
-
-G X H -> N
-
-I X BYE -> O
-
-Rodada 2 (Correção: Casando os 6 que sobraram)
-J X K -> P
-
-L X M -> Q
-
-N X O -> R
-
-(Pronto, agora temos 3 vencedores: P, Q e R. Como 3 é um número ímpar, aqui sim precisamos de 1 BYE para poder ir para a final).
-
-Rodada 3 (Semifinal)
-P X Q -> T
-
-R X BYE -> U (O vencedor R ganha o benefício de ir direto para a final)
-
-Rodada 4 (Final)
-T X U -> Campeão
-
-**Implementado**
 ---
 
 # Guia de Spec para Implementação de Features
