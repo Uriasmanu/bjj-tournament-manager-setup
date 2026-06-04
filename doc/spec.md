@@ -19,6 +19,18 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
+### 2026-06-04 — Implementação chave de 12 atletas
+**Tipo:** lógica incompleta
+**O que mudou:** Não existia função dedicada para chave de 12 atletas → Implementada `gerarLutasDoze()`, `advanceWinner12()` e dispatchers
+**Itens atualizados:** RF-01 a RF-10, CA-01 a CA-09, Passos 1-8
+**Arquivo de detalhe:** `spec/12-atletas.md`
+
+### 2026-06-04 — Correção propagação BYEs chave 12 atletas
+**Tipo:** lógica incompleta
+**O que mudou:** BYEs não avançavam corretamente para R2 → L11 e L12 agora são pré-preenchidas na geração com vencedores dos BYEs (L5-L8)
+**Itens atualizados:** RF-06, RF-07, CA-02, CA-06, CA-07, Passo 1
+**Arquivo de detalhe:** `spec/12-atletas.md`
+
 <!--
 ### AAAA-MM-DD — Título curto
 **Tipo:** bug | ajuste visual | lógica incompleta
