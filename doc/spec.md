@@ -19,11 +19,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-### 2026-06-04 — Implementação chave de 13 atletas
-**Tipo:** lógica incompleta
-**O que mudou:** Não existia função dedicada para chave de 13 atletas → Implementada `gerarLutasTreze()`, `advanceWinner13()` e dispatchers
-**Itens atualizados:** RF-01 a RF-12, CA-01 a CA-12, Passos 1-8
-**Arquivo de detalhe:** `spec/13-atletas.md`
 
 <!--
 ### AAAA-MM-DD — Título curto
@@ -38,45 +33,43 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
-implementa regra para chave com 13 atletas
+implementa regra para chave com 14 atletas
+
 Rodada 1 (Oitavas de Final / Ajuste)
-A X B -> K
+A X B -> M
 
-C X D -> L
+C X D -> N
 
-E X F -> M
+E X F -> O
 
-G X H -> N
+G X H -> P
 
-I X J -> O
+I X J -> Q
 
-P X BYE -> Q (Atleta P avança direto)
+K X L -> R
 
-R X BYE -> S (Atleta R avança direto)
+S X BYE -> T (Atleta S avança direto)
 
-T X BYE -> U (Atleta T avança direto)
+U X BYE -> V (Atleta U avança direto)
 
-(BYEs eliminados. Restam exatamente 8 atletas ativos para a próxima rodada: K, L, M, N, O, Q, S, U).
+(BYEs eliminados da competição. Restam exatamente 8 atletas ativos para a próxima rodada: M, N, O, P, Q, R, T, V).
 
 Rodada 2 (Quartas de Final)
-K X L -> V
-
 M X N -> W
 
-O X Q -> X
+O X P -> X
 
-S X U -> Y
+Q X R -> Y
 
-(Mata-mata perfeito. Restam 4 atletas para as semifinais).
+T X V -> Z (Os dois que avançaram por BYE se enfrentam aqui)
 
 Rodada 3 (Semifinais)
-V X W -> Z
+W X X -> AA
 
-X X Y -> AA
+Y X Z -> AB
 
 Rodada 4 (Final)
-Z X AA -> Campeão
-
+AA X AB -> Campeão
 ---
 
 # Guia de Spec para Implementação de Features
