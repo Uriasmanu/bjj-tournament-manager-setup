@@ -783,6 +783,32 @@ function gerarLutasNove(posicoes) {
   lutas.push(l12);
   return lutas;
 }
+function gerarLutasDez(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, posicoes[3].id);
+  const l3 = criarLuta(ordem++, 1, posicoes[4].id, posicoes[5].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[6].id, posicoes[7].id);
+  const l5 = criarLuta(ordem++, 1, posicoes[8].id, TBD);
+  l5.vencedorId = posicoes[8].id;
+  l5.status = "wo";
+  const l6 = criarLuta(ordem++, 1, posicoes[9].id, TBD);
+  l6.vencedorId = posicoes[9].id;
+  l6.status = "wo";
+  lutas.push(l1, l2, l3, l4, l5, l6);
+  const l7 = criarLuta(ordem++, 2, TBD, TBD);
+  const l8 = criarLuta(ordem++, 2, TBD, TBD);
+  const l9 = criarLuta(ordem++, 2, TBD, TBD);
+  const l10 = criarLuta(ordem++, 2, posicoes[8].id, posicoes[9].id);
+  lutas.push(l7, l8, l9, l10);
+  const l11 = criarLuta(ordem++, 3, TBD, TBD);
+  const l12 = criarLuta(ordem++, 3, TBD, TBD);
+  lutas.push(l11, l12);
+  const l13 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l13);
+  return lutas;
+}
 function gerarLutasSeis(posicoes) {
   const luta2 = criarLuta(2, 1, posicoes[2].id, TBD);
   luta2.vencedorId = posicoes[2].id;
@@ -895,6 +921,8 @@ function gerarLutas(posicoes) {
       return gerarLutasSeis(posicoes);
     case 9:
       return gerarLutasNove(posicoes);
+    case 10:
+      return gerarLutasDez(posicoes);
     case 16:
       return gerarLutas16(posicoes);
     default:
@@ -928,8 +956,6 @@ function gerarChave(categoriaId, atletas) {
   const embaralhados = shuffleArray(atletas);
   const posicoes = embaralhados.length === 16 ? aplicarSeedSorting16(embaralhados) : aplicarSeedSorting(embaralhados);
   const lutas = gerarLutas(posicoes);
-  
-  
   return {
     id: crypto.randomUUID(),
     categoriaId,
@@ -1057,8 +1083,8 @@ function separarEquipes(atletas) {
   var _a, _b, _c;
   const n = atletas.length;
   if (n < 4) return;
-  const sideA = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : n === 6 ? [0, 1, 2] : n === 9 ? [0, 1, 2, 3, 4] : [0, 1];
-  const sideB = n === 4 ? [1, 2] : n === 5 ? [3, 4] : n === 6 ? [3, 4, 5] : n === 9 ? [5, 6, 7, 8] : [2, 3, 4];
+  const sideA = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : n === 6 ? [0, 1, 2] : n === 9 ? [0, 1, 2, 3, 4] : n === 10 ? [0, 1, 2, 3, 4] : [0, 1];
+  const sideB = n === 4 ? [1, 2] : n === 5 ? [3, 4] : n === 6 ? [3, 4, 5] : n === 9 ? [5, 6, 7, 8] : n === 10 ? [5, 6, 7, 8, 9] : [2, 3, 4];
   for (const side of [sideA, sideB]) {
     const seenTeams = /* @__PURE__ */ new Set();
     for (const idx of side) {
@@ -1334,9 +1360,6 @@ function advanceWinner6(chave, luta) {
     const luta7 = chave.lutas.find((l) => l.ordem === 7);
     if (luta7) luta7.atletaBId = winnerId;
   }
-  const r2 = chave.lutas.filter((l) => l.rodada === 2);
-  const r3 = chave.lutas.filter((l) => l.rodada === 3);
-  
 }
 function advanceWinner9(chave, luta) {
   const winnerId = luta.vencedorId;
@@ -1374,6 +1397,48 @@ function advanceWinner9(chave, luta) {
     }
   } else if (luta.ordem === 10) {
     if (l12) l12.atletaAId = winnerId;
+  }
+}
+function advanceWinner10(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const l7 = chave.lutas.find((l) => l.ordem === 7);
+  const l8 = chave.lutas.find((l) => l.ordem === 8);
+  const l9 = chave.lutas.find((l) => l.ordem === 9);
+  const l10 = chave.lutas.find((l) => l.ordem === 10);
+  const l11 = chave.lutas.find((l) => l.ordem === 11);
+  const l12 = chave.lutas.find((l) => l.ordem === 12);
+  const l13 = chave.lutas.find((l) => l.ordem === 13);
+  if (luta.ordem === 1) {
+    if (l7) l7.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l7) l7.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l8) {
+      l8.atletaAId = winnerId;
+      l8.vencedorId = winnerId;
+      l8.status = "wo";
+    }
+    if (l11) l11.atletaBId = winnerId;
+  } else if (luta.ordem === 4) {
+    if (l9) {
+      l9.atletaAId = winnerId;
+      l9.vencedorId = winnerId;
+      l9.status = "wo";
+    }
+    if (l12) l12.atletaAId = winnerId;
+  } else if (luta.ordem === 5) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem === 6) {
+    if (l10) l10.atletaBId = winnerId;
+  } else if (luta.ordem === 7) {
+    if (l11) l11.atletaAId = winnerId;
+  } else if (luta.ordem === 10) {
+    if (l12) l12.atletaBId = winnerId;
+  } else if (luta.ordem === 11) {
+    if (l13) l13.atletaAId = winnerId;
+  } else if (luta.ordem === 12) {
+    if (l13) l13.atletaBId = winnerId;
   }
 }
 function advanceWinner16(chave, luta) {
@@ -1415,9 +1480,6 @@ function registrarResultadoHandler(torneioId, data) {
   const chave = JSON.parse(JSON.stringify(chaves[chaveIndex]));
   const luta = chave.lutas.find((l) => l.id === data.lutaId);
   if (!luta) throw new Error("Luta não encontrada");
-  
-  
-  
   const oldWinnerId = luta.vencedorId;
   if (oldWinnerId && oldWinnerId !== data.vencedorId) {
     clearWinnerFromLaterRounds(chave, luta.rodada, oldWinnerId);
@@ -1471,11 +1533,11 @@ function registrarResultadoHandler(torneioId, data) {
   } else if (chave.totalAtletas === 5) {
     advanceWinner5(chave, luta);
   } else if (chave.totalAtletas === 6) {
-    
     advanceWinner6(chave, luta);
-    
   } else if (chave.totalAtletas === 9) {
     advanceWinner9(chave, luta);
+  } else if (chave.totalAtletas === 10) {
+    advanceWinner10(chave, luta);
   } else if (chave.totalAtletas === 16) {
     advanceWinner16(chave, luta);
   } else {
@@ -1521,10 +1583,6 @@ function registerBracketHandlers() {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     const chaves = (loadTorneio(torneioId).chaves ?? []).map((c) => normalizeChave(c));
-    
-    for (const c of chaves) {
-      
-    }
     return chaves;
   });
   ipcMain.handle("load-chave-por-categoria", (_event, categoriaId) => {
