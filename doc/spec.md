@@ -19,17 +19,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-### 2026-06-04 — Implementação chave de 12 atletas
-**Tipo:** lógica incompleta
-**O que mudou:** Não existia função dedicada para chave de 12 atletas → Implementada `gerarLutasDoze()`, `advanceWinner12()` e dispatchers
-**Itens atualizados:** RF-01 a RF-10, CA-01 a CA-09, Passos 1-8
-**Arquivo de detalhe:** `spec/12-atletas.md`
-
-### 2026-06-04 — Correção propagação BYEs chave 12 atletas
-**Tipo:** lógica incompleta
-**O que mudou:** BYEs não avançavam corretamente para R2 → L11 e L12 agora são pré-preenchidas na geração com vencedores dos BYEs (L5-L8)
-**Itens atualizados:** RF-06, RF-07, CA-02, CA-06, CA-07, Passo 1
-**Arquivo de detalhe:** `spec/12-atletas.md`
 
 <!--
 ### AAAA-MM-DD — Título curto
@@ -44,49 +33,44 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
-implementa regra para chave com 12 atletas
-
+implementa regra para chave com 13 atletas
 Rodada 1 (Oitavas de Final / Ajuste)
-Colocamos 8 atletas para lutar e 4 ficam esperando.
+A X B -> K
 
-A X B -> I
+C X D -> L
 
-C X D -> J
+E X F -> M
 
-E X F -> K
+G X H -> N
 
-G X H -> L
+I X J -> O
 
-M X BYE -> N (Atleta M avança direto)
+P X BYE -> Q (Atleta P avança direto)
 
-O X BYE -> P (Atleta O avança direto)
+R X BYE -> S (Atleta R avança direto)
 
-Q X BYE -> R (Atleta Q avança direto)
+T X BYE -> U (Atleta T avança direto)
 
-S X BYE -> T (Atleta S avança direto)
+(BYEs eliminados. Restam exatamente 8 atletas ativos para a próxima rodada: K, L, M, N, O, Q, S, U).
 
-(Pronto, os BYEs sumiram. Restam exatamente 8 atletas ativos na chave: I, J, K, L, N, P, R, T).
-
-Rodada 2 (Quartas de Final - Chave Perfeita)
-I X J -> U
-
+Rodada 2 (Quartas de Final)
 K X L -> V
 
-N X P -> W
+M X N -> W
 
-R X T -> X
+O X Q -> X
 
-(Mata-mata limpo, sem nenhuma folga. Restam 4 atletas).
+S X U -> Y
+
+(Mata-mata perfeito. Restam 4 atletas para as semifinais).
 
 Rodada 3 (Semifinais)
-U X V -> Y
+V X W -> Z
 
-W X X -> Z
+X X Y -> AA
 
 Rodada 4 (Final)
-Y X Z -> Campeão
-
-
+Z X AA -> Campeão
 
 ---
 
