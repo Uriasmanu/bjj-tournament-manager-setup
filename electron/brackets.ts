@@ -288,6 +288,55 @@ function gerarLutasDoze(posicoes: Atleta[]): Luta[] {
   return lutas;
 }
 
+function gerarLutasTreze(posicoes: Atleta[]): Luta[] {
+  const lutas: Luta[] = [];
+  let ordem = 1;
+
+  // Rodada 1: 8 lutas (5 reais + 3 BYEs)
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, posicoes[3].id);
+  const l3 = criarLuta(ordem++, 1, posicoes[4].id, posicoes[5].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[6].id, posicoes[7].id);
+  const l5 = criarLuta(ordem++, 1, posicoes[8].id, posicoes[9].id);
+
+  const l6 = criarLuta(ordem++, 1, posicoes[10].id, TBD);
+  l6.vencedorId = posicoes[10].id;
+  l6.status = 'wo';
+
+  const l7 = criarLuta(ordem++, 1, posicoes[11].id, TBD);
+  l7.vencedorId = posicoes[11].id;
+  l7.status = 'wo';
+
+  const l8 = criarLuta(ordem++, 1, posicoes[12].id, TBD);
+  l8.vencedorId = posicoes[12].id;
+  l8.status = 'wo';
+
+  lutas.push(l1, l2, l3, l4, l5, l6, l7, l8);
+
+  // Rodada 2: 4 lutas (quartas — chave perfeita)
+  // L9 e L10 são lutas reais entre vencedores das lutas reais da R1
+  const l9 = criarLuta(ordem++, 2, TBD, TBD);
+  const l10 = criarLuta(ordem++, 2, TBD, TBD);
+  // L11: vencedor(L5) × pos[10] (pré-preenchido)
+  const l11 = criarLuta(ordem++, 2, TBD, posicoes[10].id);
+  // L12: pos[11] × pos[12] (pré-preenchido)
+  const l12 = criarLuta(ordem++, 2, posicoes[11].id, posicoes[12].id);
+
+  lutas.push(l9, l10, l11, l12);
+
+  // Rodada 3: 2 lutas (semifinais)
+  const l13 = criarLuta(ordem++, 3, TBD, TBD);
+  const l14 = criarLuta(ordem++, 3, TBD, TBD);
+
+  lutas.push(l13, l14);
+
+  // Rodada 4: 1 luta (final)
+  const l15 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l15);
+
+  return lutas;
+}
+
 function gerarLutasDez(posicoes: Atleta[]): Luta[] {
   const lutas: Luta[] = [];
   let ordem = 1;
@@ -457,6 +506,7 @@ function gerarLutas(posicoes: Atleta[]): Luta[] {
     case 10: return gerarLutasDez(posicoes);
     case 11: return gerarLutasOnze(posicoes);
     case 12: return gerarLutasDoze(posicoes);
+    case 13: return gerarLutasTreze(posicoes);
     case 16: return gerarLutas16(posicoes);
     default:
       if (posicoes.length >= 7 && posicoes.length <= 15) return gerarLutasGeral(posicoes);
@@ -650,8 +700,8 @@ function separarEquipes(atletas: Atleta[]): void {
   const n = atletas.length;
   if (n < 4) return;
 
-  const sideA: number[] = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : n === 6 ? [0, 1, 2] : n === 9 ? [0, 1, 2, 3, 4] : n === 10 ? [0, 1, 2, 3, 4] : n === 11 ? [0, 1, 2, 3, 4, 5] : n === 12 ? [0, 1, 2, 3, 4, 5] : [0, 1];
-  const sideB: number[] = n === 4 ? [1, 2] : n === 5 ? [3, 4] : n === 6 ? [3, 4, 5] : n === 9 ? [5, 6, 7, 8] : n === 10 ? [5, 6, 7, 8, 9] : n === 11 ? [6, 7, 8, 9, 10] : n === 12 ? [6, 7, 8, 9, 10, 11] : [2, 3, 4];
+  const sideA: number[] = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : n === 6 ? [0, 1, 2] : n === 9 ? [0, 1, 2, 3, 4] : n === 10 ? [0, 1, 2, 3, 4] : n === 11 ? [0, 1, 2, 3, 4, 5] : n === 12 ? [0, 1, 2, 3, 4, 5] : n === 13 ? [0, 1, 2, 3, 4, 5] : [0, 1];
+  const sideB: number[] = n === 4 ? [1, 2] : n === 5 ? [3, 4] : n === 6 ? [3, 4, 5] : n === 9 ? [5, 6, 7, 8] : n === 10 ? [5, 6, 7, 8, 9] : n === 11 ? [6, 7, 8, 9, 10] : n === 12 ? [6, 7, 8, 9, 10, 11] : n === 13 ? [6, 7, 8, 9, 10, 11, 12] : [2, 3, 4];
 
   for (const side of [sideA, sideB]) {
     const seenTeams = new Set<string>();
@@ -1143,6 +1193,45 @@ function advanceWinner12(chave: Chave, luta: Luta): void {
   }
 }
 
+function advanceWinner13(chave: Chave, luta: Luta): void {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+
+  const l9 = chave.lutas.find(l => l.ordem === 9);
+  const l10 = chave.lutas.find(l => l.ordem === 10);
+  const l11 = chave.lutas.find(l => l.ordem === 11);
+  const l13 = chave.lutas.find(l => l.ordem === 13);
+  const l14 = chave.lutas.find(l => l.ordem === 14);
+  const l15 = chave.lutas.find(l => l.ordem === 15);
+
+  if (luta.ordem === 1) {
+    if (l9) l9.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l9) l9.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem === 4) {
+    if (l10) l10.atletaBId = winnerId;
+  } else if (luta.ordem === 5) {
+    // L5: vencedor vai para L11.atletaAId
+    if (l11) l11.atletaAId = winnerId;
+  } else if (luta.ordem >= 6 && luta.ordem <= 8) {
+    // BYE — already set at generation
+  } else if (luta.ordem === 9) {
+    if (l13) l13.atletaAId = winnerId;
+  } else if (luta.ordem === 10) {
+    if (l13) l13.atletaBId = winnerId;
+  } else if (luta.ordem === 11) {
+    if (l14) l14.atletaAId = winnerId;
+  } else if (luta.ordem === 12) {
+    if (l14) l14.atletaBId = winnerId;
+  } else if (luta.ordem === 13) {
+    if (l15) l15.atletaAId = winnerId;
+  } else if (luta.ordem === 14) {
+    if (l15) l15.atletaBId = winnerId;
+  }
+}
+
 function advanceWinner16(chave: Chave, luta: Luta): void {
   const winnerId = luta.vencedorId;
   if (!winnerId) return;
@@ -1269,6 +1358,8 @@ function registrarResultadoHandler(
     advanceWinner11(chave, luta);
   } else if (chave.totalAtletas === 12) {
     advanceWinner12(chave, luta);
+  } else if (chave.totalAtletas === 13) {
+    advanceWinner13(chave, luta);
   } else if (chave.totalAtletas === 16) {
     advanceWinner16(chave, luta);
   } else {
