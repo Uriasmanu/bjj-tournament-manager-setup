@@ -33,7 +33,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
-
+Impedir que a rodada seguinte tenham suas lutas iniciadas antes do fim da rodada anterior, regra para todos os tipos de chave
 ---
 
 # Guia de Spec para Implementação de Features

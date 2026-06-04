@@ -1022,7 +1022,7 @@ A validação ocorre:
 | Validação | Mensagem de Erro |
 |---|---|
 | Categoria deve ter entre 2 e 16 atletas | `"A categoria precisa ter entre 2 e 16 atletas para gerar uma chave."` |
-| Número de atletas deve ser 2, 3, 4, 5 ou 16 | `"Número inválido de atletas"` |
+| Número de atletas deve ser 2–6, 9–16 | `"Número inválido de atletas"` |
 | Chave já existe para a categoria | `"Chave já existe para esta categoria."` |
 
 ### 11.6. Importação de Chaves (main process)
