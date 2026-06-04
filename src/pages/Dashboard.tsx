@@ -21,7 +21,7 @@ const dashboardCards: DashboardCard[] = [
   { label: 'Áreas de Luta', description: 'Gerenciamento de áreas de competição', icon: IconMapPin, route: '/admin/areas', status: 'implemented' },
   { label: 'Árbitros', description: 'Cadastro e escala de árbitros', icon: IconUserShield, route: '/admin/arbitros', status: 'implemented' },
   { label: 'Placar', description: 'Acompanhamento de lutas e resultados', icon: IconScoreboard, route: '/admin/placar', status: 'implemented' },
-  { label: 'Resultados', description: 'Classificação e medalhistas', icon: IconTrophy, status: 'planned' },
+  { label: 'Resultados', description: 'Classificação e medalhistas', icon: IconTrophy, route: '/admin/resultados', status: 'implemented' },
 ];
 
 export function Dashboard() {

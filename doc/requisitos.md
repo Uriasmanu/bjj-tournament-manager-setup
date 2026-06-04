@@ -707,6 +707,44 @@ Recurso de lutas de exibição/super fight na tela `PlacarChaves` (Placar Area).
 - **Arquivo:** `src/App.tsx` — nova rota `/admin/placar/luta-casada/:areaId/:lutaCasadaId`.
 - **Spec:** `spec/luta-casada.md`
 
+### 3.23. Resultados — Tela com Tudo do Torneio
+
+Nova rota `/admin/resultados` que exibe uma visão consolidada de todos os dados do torneio ativo (carregados de `torneio.json`). O card "Resultados" do `Dashboard.tsx` (que estava `status: 'planned'`) passa a `status: 'implemented'` com `route: '/admin/resultados'`.
+
+#### Estrutura da Tela
+
+A página usa `Tabs` do Mantine com 6 abas:
+
+| Aba | Conteúdo |
+|-----|----------|
+| **Visão Geral** | Cards com contadores (atletas, chaves, lutas casadas, áreas, árbitros) + lista de medalhistas (🥇/🥈/🥉) por chave encerrada |
+| **Chaves** | Tabela com Categoria, Atletas, Status (PENDENTE/EM ANDAMENTO/ENCERRADO), Vencedor |
+| **Lutas Casadas** | Cards com Atleta A vs B, status, vencedor |
+| **Equipes** | Tabela com Equipe, Atletas, 🥇 Ouro, 🥈 Prata, 🥉 Bronze agregados |
+| **Árbitros** | Tabela com Árbitro, Faixa, Equipe, total de Lutas (chave + casada) |
+| **Atletas** | Tabela scrollável com Atleta, Equipe, Faixa, Peso, Categoria, Chave |
+
+#### Cálculo de Medalhistas
+
+- **🥇 Ouro (1º)**: vencedor da luta final (maior `rodada` da chave com `vencedorId`).
+- **🥈 Prata (2º)**: perdedor da luta final.
+- **🥉 Bronze (3º)**: perdedores das semifinais (apenas para chaves com `rodada ≥ 3`).
+- Para chaves com 2-3 atletas (sem semifinal): apenas 1º e 2º são exibidos.
+
+#### Comportamento
+
+- Empty state quando não há torneio ativo, com botão para voltar ao menu inicial.
+- Medalhas por equipe são agregadas a partir de todas as chaves encerradas.
+- Lista de atletas usa `stickyHeader` e `maxHeight: 60vh` para scroll interno.
+- Apenas leitura — nenhum dado é modificado.
+
+#### Detalhes de Implementação
+
+- **Arquivo:** `src/pages/Resultados.tsx` — página completa com 6 abas e cálculos agregados.
+- **Arquivo:** `src/pages/Dashboard.tsx` — card "Resultados" muda para `status: 'implemented'` + `route: '/admin/resultados'`.
+- **Arquivo:** `src/App.tsx` — nova rota `/admin/resultados`.
+- **Spec:** `spec/resultados-menu.md`
+
 ---
 
 ## 4. Plataforma
