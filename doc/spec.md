@@ -33,7 +33,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
-resultados em menu vai mostrar tudo do torneio.json
 
 ---
 
