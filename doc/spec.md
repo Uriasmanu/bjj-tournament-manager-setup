@@ -19,11 +19,11 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-### 2026-06-04 — Implementação chave de 14 atletas
+### 2026-06-04 — Implementação chave de 15 atletas
 **Tipo:** lógica incompleta
-**O que mudou:** Não existia função dedicada para chave de 14 atletas → Implementada `gerarLutasQuatorze()`, `advanceWinner14()` e dispatchers
+**O que mudou:** Não existia função dedicada para chave de 15 atletas → Implementada `gerarLutasQuinze()`, `advanceWinner15()` e dispatchers
 **Itens atualizados:** RF-01 a RF-11, CA-01 a CA-11, Passos 1-8
-**Arquivo de detalhe:** `spec/14-atletas.md`
+**Arquivo de detalhe:** `spec/15-atletas.md`
 
 <!--
 ### AAAA-MM-DD — Título curto
@@ -38,43 +38,43 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
-implementa regra para chave com 14 atletas
+implementa regra para chave com 15 atletas
 
 Rodada 1 (Oitavas de Final / Ajuste)
-A X B -> M
+A X B -> O
 
-C X D -> N
+C X D -> P
 
-E X F -> O
+E X F -> Q
 
-G X H -> P
+G X H -> R
 
-I X J -> Q
+I X J -> S
 
-K X L -> R
+K X L -> T
 
-S X BYE -> T (Atleta S avança direto)
+M X N -> U
 
-U X BYE -> V (Atleta U avança direto)
+V X BYE -> W (O atleta V descansa na primeira rodada e vira W)
 
-(BYEs eliminados da competição. Restam exatamente 8 atletas ativos para a próxima rodada: M, N, O, P, Q, R, T, V).
+(BYEs totalmente eliminados. Restam exatamente 8 atletas ativos para as quartas de final: O, P, Q, R, S, T, U, W).
 
 Rodada 2 (Quartas de Final)
-M X N -> W
-
 O X P -> X
 
 Q X R -> Y
 
-T X V -> Z (Os dois que avançaram por BYE se enfrentam aqui)
+S X T -> Z
+
+U X W -> AA (O vencedor U enfrenta o atleta V que estava descansado)
 
 Rodada 3 (Semifinais)
-W X X -> AA
+X X Y -> AB
 
-Y X Z -> AB
+Z X AA -> AC
 
 Rodada 4 (Final)
-AA X AB -> Campeão
+AB X AC -> Campeão
 ---
 
 # Guia de Spec para Implementação de Features
