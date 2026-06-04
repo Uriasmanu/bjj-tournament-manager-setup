@@ -19,6 +19,11 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
+### 2026-06-04 — Implementação chave de 14 atletas
+**Tipo:** lógica incompleta
+**O que mudou:** Não existia função dedicada para chave de 14 atletas → Implementada `gerarLutasQuatorze()`, `advanceWinner14()` e dispatchers
+**Itens atualizados:** RF-01 a RF-11, CA-01 a CA-11, Passos 1-8
+**Arquivo de detalhe:** `spec/14-atletas.md`
 
 <!--
 ### AAAA-MM-DD — Título curto
