@@ -34,7 +34,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
-
+Na tela de placar Area, tem que ter um jeito intuitivo, seguindo o UI e UX de ser criada a luta casada, Apenas atletas regisreados no torneio. Arbitro é o que esta na are, entre no registro de lutas da chave e do arbirtro, so precisa do nome dos dois atletas. tag que é luta casada, registre internamente todas as informaçoes dos atletas, faixa, peso , equipe e categoria inscrita
 
 ---
 
