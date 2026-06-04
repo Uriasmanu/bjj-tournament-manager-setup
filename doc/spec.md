@@ -33,7 +33,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
-
+Quero que a aplicação tenha uma aparencia moderna e use as cores que estão determinadas em requisitos
 ---
 
 # Guia de Spec para Implementação de Features
