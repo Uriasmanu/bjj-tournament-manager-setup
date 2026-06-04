@@ -12,16 +12,6 @@
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
 
-### [aberto] Avanço no BYE
-**Comportamento atual:** Atletas no BYE estão ficando "parados" nos cards.
-**Comportamento esperado:** Quem avança no BYE em LUTA #2 e LUTA #4, deveriam ir respectivamente para LUTA #5 e LUTA #6.
-**Status:** ✅ Resolvido — vencedores dos byes agora são pré-propagados para as semifinais na geração.
-
-### [aberto] Avanço de lutas atleta x atleta
-**Comportamento atual:** Atletas x atletas estão ficando "parados" nos cards, tambem não esta sendo gerada as lutas da semifinal.
-**Comportamento esperado:** deveriam ir respectivamente para LUTA #5 e LUTA #6 e gerar a luta da semifinal.
-**Status:** ✅ Resolvido — `advanceWinner6` estava invertendo os slots das semifinais: colocava o vencedor de luta 1 em `atletaAId` (que já tinha o bye winner) em vez de `atletaBId` (slot vazio). Lutas BYE (#2, #4) também estavam sendo processadas desnecessariamente. Corrigido: luta 1→luta5.B, luta 3→luta6.B, BYE=skip. Labels das rodadas no BracketTree também corrigidos.
-
 ---
 
 ## Histórico de Correções
@@ -35,47 +25,10 @@
 **Arquivo de detalhe:** `spec/nome-da-correcao.md`
 -->
 
-
-### 2026-06-03 — Chave para 6 atletas sem Final
-**Tipo:** lógica incompleta
-**O que mudou:** `gerarLutasGeral` gerava 3 lutas na rodada 1 sem byes para 6 atletas, resultando em chave incompleta sem rodada final → Criada `gerarLutasSeis()` com 6 lutas (4 rodada 1 com 2 byes + 2 semifinais + 1 final) e `advanceWinner6()` atualizado com propagação correta.
-**Itens atualizados:** RF-01 a RF-08, CA-01 a CA-05
-**Arquivo de detalhe:** `spec/chave-6-atletas.md`
-
-### 2026-06-03 — Avanço no BYE não propagava para semifinais
-**Tipo:** lógica incompleta
-**O que mudou:** Vencedores dos byes (lutas 2 e 4) tinham `vencedorId` definido mas não eram pré-propagados para as semifinais (lutas 5 e 6) → `gerarLutasSeis()` agora preenche `atletaAId` das lutas 5 e 6 com os vencedores dos byes na geração.
-**Itens atualizados:** CA-01, CA-02
-**Arquivo de detalhe:** `spec/chave-6-atletas.md`
-
-### 2026-06-03 — Avanço de atleta×atleta não propagava para semifinais
-**Tipo:** lógica incompleta
-**O que mudou:** `advanceWinner6` invertia os slots das semifinais — colocava vencedores em `atletaAId` (já ocupado pelo bye winner) em vez de `atletaBId` (slot vazio). Lutas BYE (#2, #4) também eram processadas sem efeito. → Corrigido: luta 1→luta5.B, luta 3→luta6.B, BYE=lutas #2 e #4 são ignoradas. Labels das rodadas no BracketTree corrigidos ("PRIMEIRA RODADA", "QUARTAS DE FINAL", "SEMIFINAL", "FINAL").
-**Itens atualizados:** CA-03
-**Arquivo de detalhe:** `spec/chave-6-atletas.md`
-
 ---
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
-
-chave com o total de 6
-Rodada 1 (Quartas de Final / Ajuste)
-Atleta A X Atleta B -> G
-
-Atleta C X BYE -> H (C avança direto)
-
-Atleta D X Atleta E -> I
-
-Atleta F X BYE -> J (F avança direto)
-
-Rodada 2 (Semifinais)
-G X H -> Vencedor_Finalista1
-
-I X J -> Vencedor_Finalista2
-
-Rodada 3 (Final — a linha que faltou)
-Vencedor_Finalista1 X Vencedor_Finalista2 -> Campeão
 
 **Implementado**
 ---
