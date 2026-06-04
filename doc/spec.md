@@ -19,11 +19,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-### 2026-06-04 — Implementação chave de 15 atletas
-**Tipo:** lógica incompleta
-**O que mudou:** Não existia função dedicada para chave de 15 atletas → Implementada `gerarLutasQuinze()`, `advanceWinner15()` e dispatchers
-**Itens atualizados:** RF-01 a RF-11, CA-01 a CA-11, Passos 1-8
-**Arquivo de detalhe:** `spec/15-atletas.md`
 
 <!--
 ### AAAA-MM-DD — Título curto
@@ -38,43 +33,46 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
-implementa regra para chave com 15 atletas
+implementa regra para chave com 16 atletas
 
-Rodada 1 (Oitavas de Final / Ajuste)
-A X B -> O
+Rodada 1 (Oitavas de Final)
+A X B -> Q
 
-C X D -> P
+C X D -> R
 
-E X F -> Q
+E X F -> S
 
-G X H -> R
+G X H -> T
 
-I X J -> S
+I X J -> U
 
-K X L -> T
+K X L -> V
 
-M X N -> U
+M X N -> W
 
-V X BYE -> W (O atleta V descansa na primeira rodada e vira W)
-
-(BYEs totalmente eliminados. Restam exatamente 8 atletas ativos para as quartas de final: O, P, Q, R, S, T, U, W).
-
-Rodada 2 (Quartas de Final)
 O X P -> X
 
+(Os 16 começam lutando. Sobram exatamente 8 atletas ativos para a próxima fase: Q, R, S, T, U, V, W, X).
+
+Rodada 2 (Quartas de Final)
 Q X R -> Y
 
 S X T -> Z
 
-U X W -> AA (O vencedor U enfrenta o atleta V que estava descansado)
+U X V -> AA
+
+W X X -> AB
+
+(Mata-mata limpo. Restam 4 atletas para as semifinais).
 
 Rodada 3 (Semifinais)
-X X Y -> AB
+Y X Z -> AC
 
-Z X AA -> AC
+AA X AB -> AD
 
 Rodada 4 (Final)
-AB X AC -> Campeão
+AC X AD -> Campeão
+
 ---
 
 # Guia de Spec para Implementação de Features
