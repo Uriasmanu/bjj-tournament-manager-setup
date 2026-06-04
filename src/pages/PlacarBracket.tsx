@@ -65,10 +65,17 @@ export function PlacarBracket() {
 
   const startableFights = useMemo(() => {
     if (!chave) return [];
+    const rodadasCompletas = new Set<number>();
+    rodadasCompletas.add(1);
+    for (let r = 2; r <= chave.totalRodadas; r++) {
+      const anteriorCompleta = chave.lutas.every(l => l.rodada !== r - 1 || l.status === 'completed' || l.status === 'wo');
+      if (anteriorCompleta) rodadasCompletas.add(r);
+    }
     return chave.lutas.filter(l =>
       l.status === 'pending'
       && l.atletaAId !== 'bye' && l.atletaBId !== 'bye'
       && l.atletaAId !== 'tbd' && l.atletaBId !== 'tbd'
+      && rodadasCompletas.has(l.rodada)
     );
   }, [chave]);
 

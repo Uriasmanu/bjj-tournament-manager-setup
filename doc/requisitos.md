@@ -614,6 +614,45 @@ Para chaves com **16 atletas**, o sistema gera uma chave de eliminação simples
 - **Arquivo:** `electron/brackets.ts`
 - **Funções:** `gerarLutas16()`, `advanceWinner16()`, `aplicarSeedSorting16()`
 - **Dispatchers:** case 16 em `gerarLutas()`, case 16 em `registrarResultadoHandler()`
+
+### 3.21. Bloqueio de Lutas por Rodada
+
+Regra de integridade do bracket: lutas de uma rodada N+1 só podem ser iniciadas (ou ter vencedor registrado) após **todas** as lutas da rodada N estarem finalizadas.
+
+#### Critério de "Rodada Completa"
+
+Uma rodada R é considerada completa quando **toda** luta de R possui um dos status finais:
+
+- `completed` — vencedor registrado normalmente
+- `wo` — vitória por WO (inclui BYE pré-preenchido na geração e DQ por desclassificação)
+
+Lutas com status `pending` (ainda não iniciadas) ou `in-progress` (em andamento) **bloqueiam** a próxima rodada.
+
+#### Comportamento Esperado
+
+| Rodada Anterior | Rodada Atual | Pode Iniciar? |
+|-----------------|--------------|----------------|
+| R1 completa | R2 com atletas definidos | ✅ Sim |
+| R1 incompleta (lutas pending) | R2 com atletas definidos | ❌ Não |
+| R1 completa (lutas com BYE = `wo`) | R2 | ✅ Sim (BYE já é `wo`) |
+| R2 completa | R3 com atletas definidos | ✅ Sim |
+| R3 completa | R4 (Final) | ✅ Sim |
+| Qualquer | R1 | ✅ Sim (sem rodada anterior) |
+
+#### Pontos de Validação
+
+- **Tabela "Lutas para Iniciar"** (`PlacarBracket.tsx`): apenas lutas cujas rodadas anteriores estão completas são listadas.
+- **Card de luta no `BracketTree`**: lutas bloqueadas são renderizadas com opacidade reduzida, cursor `not-allowed` e tooltip "Aguarde a rodada anterior terminar". Cliques no card são ignorados.
+- **Backend (futuro)**: IPC `registrar-resultado` e `salvar-resultado-luta` podem ser reforçados para defesa em profundidade.
+
+#### Detalhes de Implementação
+
+- **Arquivo:** `src/pages/PlacarBracket.tsx`
+  - `startableFights` (useMemo): adiciona verificação `rodadasCompletas.has(l.rodada)`.
+- **Arquivo:** `src/components/BracketTree.tsx`
+  - `rodadasCompletas` (useMemo): constrói set de rodadas que satisfazem a regra.
+  - `Card` (componente): aceita prop `disabled`; aplica opacidade, cursor e bloqueia `onClick` quando `disabled=true`.
+  - Ambos os call sites de `Card` (16 atletas e pirâmide) passam `disabled={!rodadasCompletas.has(item.rodada)}`.
 - **Spec:** `spec/16-atletas.md`
 
 ---

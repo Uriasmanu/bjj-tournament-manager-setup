@@ -140,6 +140,15 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
     return cols;
   }, [chave, is16Layout]);
 
+  const rodadasCompletas = useMemo(() => {
+    const set = new Set<number>([1]);
+    for (let r = 2; r <= chave.totalRodadas; r++) {
+      const anteriorCompleta = chave.lutas.every(l => l.rodada !== r - 1 || l.status === 'completed' || l.status === 'wo');
+      if (anteriorCompleta) set.add(r);
+    }
+    return set;
+  }, [chave]);
+
   const columns = useMemo(() => {
     if (isPyramidLayout) {
       const r1 = chave.lutas.find(l => l.rodada === 1);
@@ -277,6 +286,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
                       getAtletaNome={getAtletaNome}
                       onSelectWinner={onSelectWinner}
                       theme={theme}
+                      disabled={!rodadasCompletas.has(item.rodada)}
                     />
                   );
                 })}
@@ -322,6 +332,7 @@ export function BracketTree({ chave, getAtletaNome, onSelectWinner }: BracketTre
                         getAtletaNome={getAtletaNome}
                         onSelectWinner={onSelectWinner}
                         theme={theme}
+                        disabled={!rodadasCompletas.has(item.rodada)}
                       />
                     );
                   })}
@@ -394,12 +405,14 @@ interface CardProps {
   getAtletaNome: (id: string | null) => string;
   onSelectWinner?: (luta: Luta, vencedorId: string) => void;
   theme: ReturnType<typeof useMantineTheme>;
+  disabled?: boolean;
 }
 
-function Card({ luta, id, getAtletaNome, onSelectWinner, theme }: CardProps) {
+function Card({ luta, id, getAtletaNome, onSelectWinner, theme, disabled }: CardProps) {
   return (
     <div
       id={id}
+      title={disabled ? 'Aguarde a rodada anterior terminar' : undefined}
       style={{
         width: 160,
         backgroundColor: theme.white,
@@ -409,6 +422,7 @@ function Card({ luta, id, getAtletaNome, onSelectWinner, theme }: CardProps) {
         boxShadow: theme.shadows.sm,
         position: 'relative',
         zIndex: 10,
+        opacity: disabled ? 0.4 : 1,
       }}
     >
       <div style={{ fontSize: 9, color: theme.colors.gray[5], fontWeight: 700, marginBottom: 4, letterSpacing: 0.5 }}>
@@ -431,9 +445,10 @@ function Card({ luta, id, getAtletaNome, onSelectWinner, theme }: CardProps) {
               justifyContent: 'space-between',
               alignItems: 'center',
               backgroundColor: isDisqualified ? theme.colors.red[1] : isWinner ? theme.colors.green[1] : theme.colors.gray[0],
-              cursor: !placeholder && slotId && onSelectWinner ? 'pointer' : 'default',
+              cursor: !placeholder && slotId && onSelectWinner && !disabled ? 'pointer' : 'not-allowed',
             }}
             onClick={() => {
+              if (disabled) return;
               if (!placeholder && slotId && onSelectWinner) {
                 onSelectWinner(luta, slotId);
               }
