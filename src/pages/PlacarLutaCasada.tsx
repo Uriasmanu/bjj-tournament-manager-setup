@@ -452,7 +452,7 @@ export function PlacarLutaCasada() {
     <PageLayout
       title="Placar · Luta Casada"
       backRoute={`/admin/placar/chaves/${areaId}`}
-      headerExtras={<Badge color="grape" variant="filled" size="lg">LUTA CASADA</Badge>}
+      headerExtras={<Badge color="dark" variant="filled" size="lg">LUTA CASADA</Badge>}
     >
       <Stack gap="md">
         {lutaFinalizada && (
@@ -572,7 +572,7 @@ export function PlacarLutaCasada() {
         <Group justify="center" gap="md">
           <Button
             size="lg"
-            color="grape"
+            color="dark"
             leftSection={<IconFlag size={18} />}
             onClick={handleAbrirFinalizar}
             disabled={bloqueado}
@@ -634,7 +634,7 @@ export function PlacarLutaCasada() {
               Cancelar
             </Button>
             <Button
-              color="grape"
+              color="dark"
               onClick={handleConfirmarFinalizar}
               loading={salvando}
               disabled={!vencedorFinal}
@@ -669,7 +669,7 @@ export function PlacarLutaCasada() {
           ) : resultadoTipo === 'pontos' ? (
             <Text ta="center" size="lg" fw={700}>
               Confirmar vitória por pontos do atleta{' '}
-              <Text component="span" c="grape" fw={900} tt="uppercase">
+              <Text component="span" c="dark" fw={900} tt="uppercase">
                 {vencedorFinal === luta.atletaAId ? nomeA : nomeB}
               </Text>
               ?
@@ -677,7 +677,7 @@ export function PlacarLutaCasada() {
           ) : resultadoTipo === 'finalizacao' ? (
             <Text ta="center" size="lg" fw={700}>
               Confirmar vitória por finalização do atleta{' '}
-              <Text component="span" c="grape" fw={900} tt="uppercase">
+              <Text component="span" c="dark" fw={900} tt="uppercase">
                 {vencedorFinal === luta.atletaAId ? nomeA : nomeB}
               </Text>
               ?
@@ -696,7 +696,7 @@ export function PlacarLutaCasada() {
               Cancelar
             </Button>
             <Button
-              color={resultadoTipo === 'desclassificacao' ? 'red' : 'grape'}
+              color={resultadoTipo === 'desclassificacao' ? 'red' : 'dark'}
               onClick={handleConfirmarResultado}
               loading={salvando}
               leftSection={resultadoTipo === 'desclassificacao' ? <IconAlertTriangle size={16} /> : <IconFlag size={16} />}

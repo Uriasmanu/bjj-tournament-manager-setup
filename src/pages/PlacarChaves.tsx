@@ -1,5 +1,5 @@
 import { Container, Text, Card, Stack, Group, Badge, Loader, Center, SimpleGrid, TextInput, Button } from '@mantine/core';
-import { IconSearch, IconPlus, IconSwords } from '@tabler/icons-react';
+import { IconSearch, IconPlus } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { PageLayout } from '../components/PageLayout';
@@ -94,6 +94,16 @@ export function PlacarChaves() {
     );
   }, [chaves, athletes, searchQuery]);
 
+  const filteredLutasCasadas = useMemo(() => {
+    if (!searchQuery.trim()) return lutasCasadas;
+    const q = searchQuery.toLowerCase().trim();
+    return lutasCasadas.filter(l => {
+      const nomeA = l.atletaASnapshot.nome.toLowerCase();
+      const nomeB = l.atletaBSnapshot.nome.toLowerCase();
+      return nomeA.includes(q) || nomeB.includes(q);
+    });
+  }, [lutasCasadas, searchQuery]);
+
   const getArbitroNome = (id: string | null): string => {
     if (!id) return 'Sem árbitro';
     const r = arbitros.find(a => a.id === id);
@@ -111,87 +121,38 @@ export function PlacarChaves() {
     );
   }
 
+  const totalItens = filteredChaves.length + filteredLutasCasadas.length;
+
   return (
     <PageLayout title={area ? `Placar - ${area.nome}` : 'Placar'} backRoute="/admin/placar">
       <Stack gap="lg">
-        <Text c="dimmed" size="sm">
-          {chaves.length} chave(s) nesta área. Clique em uma chave para ver as lutas.
-        </Text>
-
-        <Card withBorder shadow="sm" padding="md" radius="md">
-          <Stack gap="sm">
-            <Group justify="space-between" align="center">
-              <Group gap="xs" align="center">
-                <IconSwords size={20} color="grape" />
-                <Text fw={700} size="md">Lutas Casadas</Text>
-                <Badge size="sm" color="grape" variant="light">{lutasCasadas.length}</Badge>
-              </Group>
-              <Button
-                size="sm"
-                color="grape"
-                leftSection={<IconPlus size={16} />}
-                onClick={() => setModalLutaCasadaOpen(true)}
-              >
-                Nova Luta Casada
-              </Button>
-            </Group>
-            {lutasCasadas.length === 0 ? (
-              <Text size="sm" c="dimmed">
-                Nenhuma luta casada cadastrada. Clique em "Nova Luta Casada" para criar uma luta de exibição.
-              </Text>
-            ) : (
-              <Stack gap="xs">
-                {lutasCasadas
-                  .slice()
-                  .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-                  .map(luta => (
-                    <Card
-                      key={luta.id}
-                      withBorder
-                      padding="sm"
-                      radius="sm"
-                      role="button"
-                      tabIndex={0}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/admin/placar/luta-casada/${areaId}/${luta.id}`)}
-                    >
-                      <Group justify="space-between" wrap="nowrap">
-                        <Group gap="xs" align="center" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
-                          <Text size="sm" fw={600} truncate>
-                            {luta.atletaASnapshot.nome.charAt(0).toUpperCase() + luta.atletaASnapshot.nome.slice(1)}
-                          </Text>
-                          <Text size="xs" c="dimmed">vs</Text>
-                          <Text size="sm" fw={600} truncate>
-                            {luta.atletaBSnapshot.nome.charAt(0).toUpperCase() + luta.atletaBSnapshot.nome.slice(1)}
-                          </Text>
-                        </Group>
-                        <Group gap="xs" wrap="nowrap">
-                          <Badge size="sm" color="grape" variant="filled">LUTA CASADA</Badge>
-                          {luta.status === 'pending' && <Badge size="sm" color="yellow" variant="light">PENDENTE</Badge>}
-                          {luta.status === 'completed' && <Badge size="sm" color="green" variant="filled">FINALIZADA</Badge>}
-                          {luta.status === 'wo' && <Badge size="sm" color="red" variant="filled">WO</Badge>}
-                        </Group>
-                      </Group>
-                    </Card>
-                  ))}
-              </Stack>
-            )}
-          </Stack>
-        </Card>
+        <Group justify="space-between" align="center" wrap="wrap">
+          <Text c="dimmed" size="sm">
+            {chaves.length} chave(s) e {lutasCasadas.length} luta(s) casada(s) nesta área. Clique para ver as lutas.
+          </Text>
+          <Button
+            size="sm"
+            color="dark"
+            leftSection={<IconPlus size={16} />}
+            onClick={() => setModalLutaCasadaOpen(true)}
+          >
+            Nova Luta Casada
+          </Button>
+        </Group>
 
         <TextInput
-          placeholder="Buscar chave..."
+          placeholder="Buscar chave, atleta ou luta casada..."
           leftSection={<IconSearch size={16} />}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.currentTarget.value)}
-          w={320}
+          w={360}
         />
 
-        {filteredChaves.length === 0 ? (
+        {totalItens === 0 ? (
           <Text c="dimmed" ta="center" py="xl">
-            {chaves.length === 0
-              ? 'Nenhuma chave associada a esta área de luta.'
-              : `Nenhuma chave encontrada para a busca "${searchQuery}"`}
+            {chaves.length === 0 && lutasCasadas.length === 0
+              ? 'Nenhuma chave ou luta casada associada a esta área de luta.'
+              : `Nenhum item encontrado para a busca "${searchQuery}"`}
           </Text>
         ) : (
           <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
@@ -257,6 +218,67 @@ export function PlacarChaves() {
                 </Card>
               );
             })}
+
+            {filteredLutasCasadas
+              .slice()
+              .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+              .map(luta => {
+                const nomeA = luta.atletaASnapshot.nome.charAt(0).toUpperCase() + luta.atletaASnapshot.nome.slice(1);
+                const nomeB = luta.atletaBSnapshot.nome.charAt(0).toUpperCase() + luta.atletaBSnapshot.nome.slice(1);
+                const vencedorId = luta.vencedorId;
+                const vencedorNome = vencedorId === luta.atletaAId ? nomeA
+                  : vencedorId === luta.atletaBId ? nomeB
+                  : null;
+                return (
+                  <Card
+                    key={`luta-casada-${luta.id}`}
+                    withBorder
+                    shadow="sm"
+                    padding="md"
+                    radius="md"
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = '';
+                      e.currentTarget.style.boxShadow = '';
+                    }}
+                    onClick={() => navigate(`/admin/placar/luta-casada/${areaId}/${luta.id}`)}
+                  >
+                    <Badge size="sm" color="dark" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
+                      LUTA CASADA
+                    </Badge>
+                    <Stack gap="xs">
+                      <Text fw={700} size="sm">
+                        {nomeA} <Text component="span" c="dimmed" fw={500}>vs</Text> {nomeB}
+                      </Text>
+                      <Group gap={4}>
+                        {luta.status === 'pending' && <Badge size="sm" color="yellow" variant="light">PENDENTE</Badge>}
+                        {luta.status === 'completed' && <Badge size="sm" color="green" variant="filled">FINALIZADA</Badge>}
+                        {luta.status === 'wo' && <Badge size="sm" color="red" variant="filled">WO</Badge>}
+                      </Group>
+                      <Text size="xs" c="dimmed">
+                        Árbitro: {luta.arbitroId
+                          ? (() => {
+                              const r = arbitros.find(a => a.id === luta.arbitroId);
+                              if (!r) return 'Árbitro removido';
+                              return `${r.nome.charAt(0).toUpperCase() + r.nome.slice(1)} (${FAIXA_LABEL[r.faixa] ?? r.faixa})`;
+                            })()
+                          : 'Sem árbitro'}
+                      </Text>
+                      {vencedorNome && (
+                        <Text size="xs" c="dimmed">
+                          Vencedor: <Text component="span" fw={700} c="green.7">{vencedorNome}</Text>
+                        </Text>
+                      )}
+                    </Stack>
+                  </Card>
+                );
+              })}
           </SimpleGrid>
         )}
       </Stack>

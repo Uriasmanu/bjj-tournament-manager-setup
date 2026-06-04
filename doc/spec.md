@@ -13,13 +13,31 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Não use a cor roxa
-### [aberto] Precisa deixar visivel em placar area quem é o cencedor
-### [aberto] DEixe o card da luta casada junto com os cards de chave, mantendo todos com o mesmo tamanho
+### [resolvido 2026-06-04] Não use a cor roxa
+### [resolvido 2026-06-04] Precisa deixar visivel em placar area quem é o cencedor
+### [resolvido 2026-06-04] DEixe o card da luta casada junto com os cards de chave, mantendo todos com o mesmo tamanho
 ---
 
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
+
+### 2026-06-04 — Sem cor roxa (grape) na Luta Casada
+**Tipo:** ajuste visual
+**O que mudou:** Removida a cor `grape` (roxa) usada como destaque da feature Luta Casada. Substituída por `dark` (preto) em todos os pontos: badge "LUTA CASADA" no header (`PlacarLutaCasada.tsx`) e nos cards (`PlacarChaves.tsx`); botão "Nova Luta Casada" e "Finalizar Luta" / "Confirmar"; Paper do árbitro no `ModalCriarLutaCasada.tsx` (era `bg="grape.0"`, agora `bg="dark.0"`); textos `<Text c="grape">` no modal de confirmação de resultado.
+**Itens atualizados:** Problema Encontrado "Não use a cor roxa"
+**Arquivo de detalhe:** `spec/luta-casada.md`
+
+### 2026-06-04 — Vencedor visível no Placar Area
+**Tipo:** lógica incompleta
+**O que mudou:** Cards de Luta Casada em `PlacarChaves.tsx` agora exibem o nome do vencedor (em verde) quando a luta está finalizada (`status === 'completed'` ou `'wo'`). Lutas pendentes não mostram vencedor.
+**Itens atualizados:** Problema Encontrado "Precisa deixar visivel em placar area quem é o cencedor"
+**Arquivo de detalhe:** `spec/luta-casada.md`
+
+### 2026-06-04 — Luta Casada no mesmo grid dos cards de chave
+**Tipo:** ajuste visual
+**O que mudou:** Cards de Luta Casada agora são renderizados no mesmo `SimpleGrid` (`cols={{ base: 1, sm: 2, md: 3 }}`) dos cards de Chave, mantendo exatamente o mesmo tamanho/estilo (Card com `withBorder shadow="sm" padding="md" radius="md"`, hover `translateY(-2px)`). Removida a seção "Lutas Casadas" separada que existia antes. O botão "Nova Luta Casada" foi movido para o header ao lado do contador. Busca unificada filtra tanto chaves quanto lutas casadas por nome.
+**Itens atualizados:** Problema Encontrado "DEixe o card da luta casada junto com os cards de chave, mantendo todos com o mesmo tamanho"
+**Arquivo de detalhe:** `spec/luta-casada.md`
 
 ### 2026-06-04 — Luta Casada (Placar Area)
 **Tipo:** feature nova

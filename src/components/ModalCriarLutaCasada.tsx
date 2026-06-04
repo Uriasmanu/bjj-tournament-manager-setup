@@ -157,10 +157,10 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
           </Alert>
         )}
 
-        <Paper withBorder p="sm" radius="sm" bg="grape.0">
+        <Paper withBorder p="sm" radius="sm" bg="dark.0">
           <Group justify="space-between">
             <Text size="sm" fw={600}>Árbitro da Área</Text>
-            <Badge color="grape" variant="filled">
+            <Badge color="dark" variant="filled">
               {arbitroAtual ? `${capitalize(arbitroAtual.nome)} (${FAIXA_LABEL[arbitroAtual.faixa] ?? arbitroAtual.faixa})` : 'Sem árbitro'}
             </Badge>
           </Group>
@@ -209,7 +209,7 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
           <Button variant="default" onClick={onClose} disabled={salvando}>
             Cancelar
           </Button>
-          <Button color="grape" onClick={handleCriar} disabled={!podeCriar} loading={salvando}>
+          <Button color="dark" onClick={handleCriar} disabled={!podeCriar} loading={salvando}>
             Criar Luta Casada
           </Button>
         </Group>
