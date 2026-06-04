@@ -783,6 +783,40 @@ function gerarLutasNove(posicoes) {
   lutas.push(l12);
   return lutas;
 }
+function gerarLutasOnze(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, posicoes[3].id);
+  const l3 = criarLuta(ordem++, 1, posicoes[4].id, posicoes[5].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[6].id, TBD);
+  l4.vencedorId = posicoes[6].id;
+  l4.status = "wo";
+  const l5 = criarLuta(ordem++, 1, posicoes[7].id, TBD);
+  l5.vencedorId = posicoes[7].id;
+  l5.status = "wo";
+  const l6 = criarLuta(ordem++, 1, posicoes[8].id, TBD);
+  l6.vencedorId = posicoes[8].id;
+  l6.status = "wo";
+  const l7 = criarLuta(ordem++, 1, posicoes[9].id, TBD);
+  l7.vencedorId = posicoes[9].id;
+  l7.status = "wo";
+  const l8 = criarLuta(ordem++, 1, posicoes[10].id, TBD);
+  l8.vencedorId = posicoes[10].id;
+  l8.status = "wo";
+  lutas.push(l1, l2, l3, l4, l5, l6, l7, l8);
+  const l9 = criarLuta(ordem++, 2, TBD, TBD);
+  const l10 = criarLuta(ordem++, 2, TBD, posicoes[6].id);
+  const l11 = criarLuta(ordem++, 2, posicoes[7].id, posicoes[8].id);
+  const l12 = criarLuta(ordem++, 2, posicoes[9].id, posicoes[10].id);
+  lutas.push(l9, l10, l11, l12);
+  const l13 = criarLuta(ordem++, 3, TBD, TBD);
+  const l14 = criarLuta(ordem++, 3, TBD, TBD);
+  lutas.push(l13, l14);
+  const l15 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l15);
+  return lutas;
+}
 function gerarLutasDez(posicoes) {
   const lutas = [];
   let ordem = 1;
@@ -923,6 +957,8 @@ function gerarLutas(posicoes) {
       return gerarLutasNove(posicoes);
     case 10:
       return gerarLutasDez(posicoes);
+    case 11:
+      return gerarLutasOnze(posicoes);
     case 16:
       return gerarLutas16(posicoes);
     default:
@@ -1083,8 +1119,8 @@ function separarEquipes(atletas) {
   var _a, _b, _c;
   const n = atletas.length;
   if (n < 4) return;
-  const sideA = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : n === 6 ? [0, 1, 2] : n === 9 ? [0, 1, 2, 3, 4] : n === 10 ? [0, 1, 2, 3, 4] : [0, 1];
-  const sideB = n === 4 ? [1, 2] : n === 5 ? [3, 4] : n === 6 ? [3, 4, 5] : n === 9 ? [5, 6, 7, 8] : n === 10 ? [5, 6, 7, 8, 9] : [2, 3, 4];
+  const sideA = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : n === 6 ? [0, 1, 2] : n === 9 ? [0, 1, 2, 3, 4] : n === 10 ? [0, 1, 2, 3, 4] : n === 11 ? [0, 1, 2, 3, 4, 5] : [0, 1];
+  const sideB = n === 4 ? [1, 2] : n === 5 ? [3, 4] : n === 6 ? [3, 4, 5] : n === 9 ? [5, 6, 7, 8] : n === 10 ? [5, 6, 7, 8, 9] : n === 11 ? [6, 7, 8, 9, 10] : [2, 3, 4];
   for (const side of [sideA, sideB]) {
     const seenTeams = /* @__PURE__ */ new Set();
     for (const idx of side) {
@@ -1441,6 +1477,35 @@ function advanceWinner10(chave, luta) {
     if (l13) l13.atletaBId = winnerId;
   }
 }
+function advanceWinner11(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const l9 = chave.lutas.find((l) => l.ordem === 9);
+  const l10 = chave.lutas.find((l) => l.ordem === 10);
+  const l13 = chave.lutas.find((l) => l.ordem === 13);
+  const l14 = chave.lutas.find((l) => l.ordem === 14);
+  const l15 = chave.lutas.find((l) => l.ordem === 15);
+  if (luta.ordem === 1) {
+    if (l9) l9.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l9) l9.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem >= 4 && luta.ordem <= 8) ;
+  else if (luta.ordem === 9) {
+    if (l13) l13.atletaAId = winnerId;
+  } else if (luta.ordem === 10) {
+    if (l13) l13.atletaBId = winnerId;
+  } else if (luta.ordem === 11) {
+    if (l14) l14.atletaAId = winnerId;
+  } else if (luta.ordem === 12) {
+    if (l14) l14.atletaBId = winnerId;
+  } else if (luta.ordem === 13) {
+    if (l15) l15.atletaAId = winnerId;
+  } else if (luta.ordem === 14) {
+    if (l15) l15.atletaBId = winnerId;
+  }
+}
 function advanceWinner16(chave, luta) {
   const winnerId = luta.vencedorId;
   if (!winnerId) return;
@@ -1538,6 +1603,8 @@ function registrarResultadoHandler(torneioId, data) {
     advanceWinner9(chave, luta);
   } else if (chave.totalAtletas === 10) {
     advanceWinner10(chave, luta);
+  } else if (chave.totalAtletas === 11) {
+    advanceWinner11(chave, luta);
   } else if (chave.totalAtletas === 16) {
     advanceWinner16(chave, luta);
   } else {

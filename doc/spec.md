@@ -1,5 +1,7 @@
 # spec.md — Template de Feature
 
+NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes e atualize o documento `spec/{nome-da-feature}.md` caso seja implementado uma nova regra de negocio. Permitido melhorar a descrição e titulo do problema aberto
+
 ---
 
 ## Problemas Encontrados
@@ -25,7 +27,11 @@
 **Arquivo de detalhe:** `spec/nome-da-correcao.md`
 -->
 
-
+### 2026-06-03 — Implementada chave dedicada para 11 atletas
+**Tipo:** feature
+**O que mudou:** Antes usava `gerarLutasGeral` (algoritmo genérico) → agora usa `gerarLutasOnze` dedicada com 15 lutas, 4 rodadas, BYEs estrategicamente distribuídos.
+**Itens atualizados:** RF-01 a RF-07, CA-01 a CA-07 (spec/11-atletas.md)
+**Arquivo de detalhe:** `spec/11-atletas.md`
 ---
 
 ## Feature
@@ -74,209 +80,7 @@ Rodada 4 (Final)
 X X Y -> Campeão
 
 
-Veja como fica a estrutura ideal para 12 atletas:
 
-Rodada 1 (Oitavas de Final / Ajuste)
-Colocamos 8 atletas para lutar e 4 ficam esperando.
-
-A X B -> I
-
-C X D -> J
-
-E X F -> K
-
-G X H -> L
-
-M X BYE -> N (Atleta M avança direto)
-
-O X BYE -> P (Atleta O avança direto)
-
-Q X BYE -> R (Atleta Q avança direto)
-
-S X BYE -> T (Atleta S avança direto)
-
-(Pronto, os BYEs sumiram. Restam exatamente 8 atletas ativos na chave: I, J, K, L, N, P, R, T).
-
-Rodada 2 (Quartas de Final - Chave Perfeita)
-I X J -> U
-
-K X L -> V
-
-N X P -> W
-
-R X T -> X
-
-(Mata-mata limpo, sem nenhuma folga. Restam 4 atletas).
-
-Rodada 3 (Semifinais)
-U X V -> Y
-
-W X X -> Z
-
-Rodada 4 (Final)
-Y X Z -> Campeão
-
-chave com 13
-
-Rodada 1 (Oitavas de Final / Ajuste)
-A X B -> K
-
-C X D -> L
-
-E X F -> M
-
-G X H -> N
-
-I X J -> O
-
-P X BYE -> Q (Atleta P avança direto)
-
-R X BYE -> S (Atleta R avança direto)
-
-T X BYE -> U (Atleta T avança direto)
-
-(BYEs eliminados. Restam exatamente 8 atletas ativos para a próxima rodada: K, L, M, N, O, Q, S, U).
-
-Rodada 2 (Quartas de Final)
-K X L -> V
-
-M X N -> W
-
-O X Q -> X
-
-S X U -> Y
-
-(Mata-mata perfeito. Restam 4 atletas para as semifinais).
-
-Rodada 3 (Semifinais)
-V X W -> Z
-
-X X Y -> AA
-
-Rodada 4 (Final)
-Z X AA -> Campeão
-
-chave com 14
-
-Rodada 1 (Oitavas de Final / Ajuste)
-A X B -> M
-
-C X D -> N
-
-E X F -> O
-
-G X H -> P
-
-I X J -> Q
-
-K X L -> R
-
-S X BYE -> T (Atleta S avança direto)
-
-U X BYE -> V (Atleta U avança direto)
-
-(BYEs eliminados da competição. Restam exatamente 8 atletas ativos para a próxima rodada: M, N, O, P, Q, R, T, V).
-
-Rodada 2 (Quartas de Final)
-M X N -> W
-
-O X P -> X
-
-Q X R -> Y
-
-T X V -> Z (Os dois que avançaram por BYE se enfrentam aqui)
-
-Rodada 3 (Semifinais)
-W X X -> AA
-
-Y X Z -> AB
-
-Rodada 4 (Final)
-AA X AB -> Campeão
-
-chave com 15
-
-Rodada 1 (Oitavas de Final / Ajuste)
-A X B -> O
-
-C X D -> P
-
-E X F -> Q
-
-G X H -> R
-
-I X J -> S
-
-K X L -> T
-
-M X N -> U
-
-V X BYE -> W (O atleta V descansa na primeira rodada e vira W)
-
-(BYEs totalmente eliminados. Restam exatamente 8 atletas ativos para as quartas de final: O, P, Q, R, S, T, U, W).
-
-Rodada 2 (Quartas de Final)
-O X P -> X
-
-Q X R -> Y
-
-S X T -> Z
-
-U X W -> AA (O vencedor U enfrenta o atleta V que estava descansado)
-
-Rodada 3 (Semifinais)
-X X Y -> AB
-
-Z X AA -> AC
-
-Rodada 4 (Final)
-AB X AC -> Campeão
-
-chave com 16
-
-Para 16 atletas, você atingiu o cenário dos sonhos de qualquer organizador de torneio: a potência de 2 perfeita.
-
-Aqui a matemática é exata. Não existe nenhum BYE e ninguém descansa. Todos os 16 atletas lutam logo no primeiro minuto do campeonato, divididos em duas chaves perfeitamente simétricas de 8 de cada lado.
-
-O desenho exato usando as suas letras fica assim:
-
-Rodada 1 (Oitavas de Final)
-A X B -> Q
-
-C X D -> R
-
-E X F -> S
-
-G X H -> T
-
-I X J -> U
-
-K X L -> V
-
-M X N -> W
-
-O X P -> X
-
-(Os 16 começam lutando. Sobram exatamente 8 atletas ativos para a próxima fase: Q, R, S, T, U, V, W, X).
-
-Rodada 2 (Quartas de Final)
-Q X R -> Y
-
-S X T -> Z
-
-U X V -> AA
-
-W X X -> AB
-
-(Mata-mata limpo. Restam 4 atletas para as semifinais).
-
-Rodada 3 (Semifinais)
-Y X Z -> AC
-
-AA X AB -> AD
-
-Rodada 4 (Final)
-AC X AD -> Campeão
 ---
 
 # Guia de Spec para Implementação de Features
