@@ -25,6 +25,13 @@
 **Arquivo de detalhe:** `spec/nome-da-correcao.md`
 -->
 
+### 2026-06-03 — Geração de chave para 9 atletas
+**Tipo:** lógica incompleta
+**O que mudou:** `gerarLutasGeral()` produzia 5 lutas no round 1 para 9 atletas (ceil(9/2)) com propagação de BYE quebrada → `gerarLutasNove()` dedicada gera 6 lutas no round 1 (3 reais + 3 BYEs nos índices 1,3,5), pareamento correto nos rounds seguintes (3→2→1) e `advanceWinner9()` propaga vencedores entre todas as rodadas, com auto-advance do vencedor da última QF para a final (BYE na semifinal).
+**Itens atualizados:** RF-01 a RF-07, CA-01 a CA-07
+**Arquivo de detalhe:** `spec/9-atletas.md`
+
+
 ---
 
 ## Feature
@@ -246,4 +253,4 @@ Passo 2: [descrição clara da ação]
 2. Para cada item `[aberto]` resolvido: mova-o para **Histórico de Correções** com o formato estabelecido e atualize os RF, CA e Passos afetados.
 3. Crie o arquivo `spec/{nome-da-feature}.md` seguindo todas as seções deste guia antes de escrever qualquer código.
 4. Após criar o `.md`, revise-o para verificar coerência. Só então implemente.
-5. Ao finalizar qualquer ciclo (feature nova ou correção), registre no **Histórico de Correções** em spec.md sem alterar os comentario ou apagar algo, apenas adicione suas observaçoes e atualize o documento `spec/{nome-da-feature}.md` caso seja implementado uma nova regra de negocio. Permitido melhorar a descrição e titulo do problema aberto
+5. Ao finalizar qualquer ciclo (feature nova ou correção), registre no **Histórico de Correções** em spec.md NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes e atualize o documento `spec/{nome-da-feature}.md` caso seja implementado uma nova regra de negocio. Permitido melhorar a descrição e titulo do problema aberto
