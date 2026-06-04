@@ -6,9 +6,10 @@ interface PageLayoutProps {
   title: string;
   children: React.ReactNode;
   backRoute?: string;
+  headerExtras?: React.ReactNode;
 }
 
-export function PageLayout({ title, children, backRoute }: PageLayoutProps) {
+export function PageLayout({ title, children, backRoute, headerExtras }: PageLayoutProps) {
   const navigate = useNavigate();
 
   const styles = {
@@ -27,6 +28,7 @@ export function PageLayout({ title, children, backRoute }: PageLayoutProps) {
               </ActionIcon>
             )}
             <Title order={2}>{title}</Title>
+            {headerExtras}
           </Group>
         </Group>
         {children}

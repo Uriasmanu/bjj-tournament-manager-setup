@@ -2,6 +2,7 @@ import { ipcRenderer, contextBridge } from 'electron'
 import type { Torneio } from '../src/types/tournament'
 import type { AreaLuta } from '../src/types/area'
 import type { PlacarLuta } from '../src/types/bracket'
+import type { LutaCasada } from '../src/types/lutaCasada'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   createTournament: (data: { nome: string; data: string }) =>
@@ -91,6 +92,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     desclassificacao?: boolean;
     desempateArbitro?: boolean;
   }) => ipcRenderer.invoke('registrar-resultado', data),
+  loadLutasCasadasPorArea: (areaId: string) =>
+    ipcRenderer.invoke('load-lutas-casadas-por-area', areaId),
+  saveLutaCasada: (data: Omit<LutaCasada, 'id' | 'tag' | 'createdAt' | 'updatedAt'>) =>
+    ipcRenderer.invoke('save-luta-casada', data),
+  updateLutaCasada: (data: LutaCasada) =>
+    ipcRenderer.invoke('update-luta-casada', data),
+  deleteLutaCasada: (lutaCasadaId: string) =>
+    ipcRenderer.invoke('delete-luta-casada', lutaCasadaId),
 })
 
 contextBridge.exposeInMainWorld('activation', {

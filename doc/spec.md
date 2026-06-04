@@ -13,13 +13,19 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-
+### [aberto] Não use a cor roxa
+### [aberto] Precisa deixar visivel em placar area quem é o cencedor
+### [aberto] DEixe o card da luta casada junto com os cards de chave, mantendo todos com o mesmo tamanho
 ---
 
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-
+### 2026-06-04 — Luta Casada (Placar Area)
+**Tipo:** feature nova
+**O que mudou:** Nova seção "Lutas Casadas" no topo da tela `PlacarChaves` (Placar Area), com botão "Nova Luta Casada" e listagem das lutas existentes. Modal `ModalCriarLutaCasada` permite selecionar 2 atletas cadastrados (com snapshot automático de faixa/peso/equipe/categoria); o árbitro é atribuído automaticamente do `area.arbitroIds[0]`. Validação bloqueia criação se A === B ou área sem árbitro. Nova tela `PlacarLutaCasada` espelha a lógica de `PlacarLuta` (timer, painéis A/B, finalizar) sem dependência de `chaveId`, exibindo badge "LUTA CASADA" no header. Persistência em `torneio.lutasCasadas` (JSON) via novos IPCs `load-lutas-casadas-por-area`, `save-luta-casada`, `update-luta-casada`, `delete-luta-casada`. `PageLayout` agora aceita `headerExtras` para badges no título.
+**Itens atualizados:** RF-01 a RF-09, CA-01 a CA-09, Passos 1-8
+**Arquivo de detalhe:** `spec/luta-casada.md`
 
 
 <!--
@@ -64,7 +70,7 @@ Antes de escrever qualquer linha de código, leia este documento inteiro e produ
 ## 2. Analise os Documentos de Referência
 
 - **Guia de spec** (este documento): confirme que todas as seções serão preenchidas
-- **Documento de requisitos** (PRD, task do Azure DevOps, issue, ou briefing): extraia os requisitos funcionais e não-funcionais
+- **Documento de requisitos** requisitos.md
 - **Documentação técnica existente** (wikis, ADRs, READMEs): identifique padrões e convenções já estabelecidos
 - **Código-fonte relevante**: leia os arquivos relacionados antes de propor qualquer mudança
 

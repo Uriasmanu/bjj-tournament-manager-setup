@@ -23,6 +23,7 @@ import { PlacarMenu } from './pages/PlacarMenu';
 import { PlacarChaves } from './pages/PlacarChaves';
 import { PlacarBracket } from './pages/PlacarBracket';
 import { PlacarLuta } from './pages/PlacarLuta';
+import { PlacarLutaCasada } from './pages/PlacarLutaCasada';
 import { ActivationScreen } from './components/ActivationScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -48,6 +49,7 @@ function MainApp() {
           <Route path="/admin/placar/chaves/:areaId" element={<PlacarChaves />} />
           <Route path="/admin/placar/chave/:areaId/:chaveId" element={<PlacarBracket />} />
           <Route path="/admin/placar/luta/:areaId/:chaveId/:lutaId" element={<PlacarLuta />} />
+          <Route path="/admin/placar/luta-casada/:areaId/:lutaCasadaId" element={<PlacarLutaCasada />} />
         </Routes>
       </ErrorBoundary>
     </HashRouter>

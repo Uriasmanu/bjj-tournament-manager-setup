@@ -2,6 +2,7 @@ import type { AreaLuta } from './area';
 import type { Atleta } from './athlete';
 import type { Arbitro } from './referee';
 import type { Chave } from './bracket';
+import type { LutaCasada } from './lutaCasada';
 
 export interface Torneio {
   id: string;
@@ -14,6 +15,7 @@ export interface Torneio {
   arbitros?: Arbitro[];
   chaves?: Chave[];
   areas?: AreaLuta[];
+  lutasCasadas?: LutaCasada[];
 }
 
 export interface CreateTorneioInput {

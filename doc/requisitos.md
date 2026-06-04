@@ -655,6 +655,58 @@ Lutas com status `pending` (ainda não iniciadas) ou `in-progress` (em andamento
   - Ambos os call sites de `Card` (16 atletas e pirâmide) passam `disabled={!rodadasCompletas.has(item.rodada)}`.
 - **Spec:** `spec/16-atletas.md`
 
+### 3.22. Luta Casada (Placar Area)
+
+Recurso de lutas de exibição/super fight na tela `PlacarChaves` (Placar Area). Permite criar uma luta avulsa entre dois atletas cadastrados no torneio, sem vínculo com chave de eliminação oficial, registrando o resultado e exibindo tag "LUTA CASADA".
+
+#### Dados Persistidos
+
+- `LutaCasada` armazenada em `torneio.lutasCasadas` (array de objetos):
+  - `id` (uuid), `areaId`, `arbitroId` (primeiro árbitro da área ou `null`)
+  - `atletaAId`, `atletaBId` (refs)
+  - `atletaASnapshot`, `atletaBSnapshot` (nome, faixa, pesoKg, equipe, categoria — congelados no momento da criação)
+  - `tag: 'luta-casada'`
+  - `status: 'pending' | 'completed' | 'wo'`
+  - `placarA?`, `placarB?`, `vencedorId?`, `finalizacao?`, `desclassificacao?`, `desempateArbitro?`
+  - `dataFinalizacao?`
+  - `createdAt`, `updatedAt`
+
+#### Fluxo
+
+1. Em `PlacarChaves`, nova seção "Lutas Casadas" no topo, com botão "Nova Luta Casada".
+2. Clique abre `ModalCriarLutaCasada`:
+   - 2 `Select` pesquisáveis (Atleta A, Atleta B) com lista de `loadAthletes`
+   - Snapshot automático de faixa/peso/equipe/categoria ao selecionar
+   - Exibe árbitro da área (`area.arbitroIds[0]`)
+   - Bloqueia criação se A === B ou se área sem árbitro
+3. Ao criar, navega para `/admin/placar/luta-casada/:areaId/:lutaCasadaId`.
+4. `PlacarLutaCasada` é espelhada de `PlacarLuta`, mas:
+   - Exibe badge "LUTA CASADA" no header
+   - Não depende de `chaveId`
+   - Usa snapshots congelados nos painéis A/B
+   - Persiste via `updateLutaCasada` em vez de `registrarResultado`
+5. Ao finalizar, retorna para `PlacarChaves` e a luta aparece com status atualizado.
+
+#### Pontos de Validação
+
+- Backend: `atletaAId !== atletaBId` (lançado em `saveLutaCasada` e `updateLutaCasada`).
+- Frontend: validações no modal (Atleta A ≠ B, área com árbitro) e botões desabilitados.
+
+#### Detalhes de Implementação
+
+- **Arquivo:** `src/types/lutaCasada.ts` — tipo `LutaCasada`, `AtletaSnapshot`, `LutaCasadaStatus`.
+- **Arquivo:** `src/types/tournament.ts` — `Torneio.lutasCasadas?: LutaCasada[]`.
+- **Arquivo:** `electron/lutasCasadas.ts` — persistência (`loadLutasCasadasPorArea`, `saveLutaCasada`, `updateLutaCasada`, `deleteLutaCasada`).
+- **Arquivo:** `electron/main.ts` — `registerLutasCasadasHandlers` (4 IPCs).
+- **Arquivo:** `electron/preload.ts` — expõe `loadLutasCasadasPorArea`, `saveLutaCasada`, `updateLutaCasada`, `deleteLutaCasada`.
+- **Arquivo:** `src/types/electron.d.ts` — typings dos novos métodos.
+- **Arquivo:** `src/components/ModalCriarLutaCasada.tsx` — modal de criação.
+- **Arquivo:** `src/pages/PlacarChaves.tsx` — seção de lutas casadas e listagem.
+- **Arquivo:** `src/pages/PlacarLutaCasada.tsx` — scoreboard de luta casada.
+- **Arquivo:** `src/components/PageLayout.tsx` — adiciona prop opcional `headerExtras` para badges no header.
+- **Arquivo:** `src/App.tsx` — nova rota `/admin/placar/luta-casada/:areaId/:lutaCasadaId`.
+- **Spec:** `spec/luta-casada.md`
+
 ---
 
 ## 4. Plataforma

@@ -39,7 +39,11 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   deleteArea: (areaId) => electron.ipcRenderer.invoke("delete-area", areaId),
   deleteAreas: (areaIds) => electron.ipcRenderer.invoke("delete-areas", areaIds),
   loadChavesPorArea: (areaId) => electron.ipcRenderer.invoke("load-chaves-por-area", areaId),
-  registrarResultado: (data) => electron.ipcRenderer.invoke("registrar-resultado", data)
+  registrarResultado: (data) => electron.ipcRenderer.invoke("registrar-resultado", data),
+  loadLutasCasadasPorArea: (areaId) => electron.ipcRenderer.invoke("load-lutas-casadas-por-area", areaId),
+  saveLutaCasada: (data) => electron.ipcRenderer.invoke("save-luta-casada", data),
+  updateLutaCasada: (data) => electron.ipcRenderer.invoke("update-luta-casada", data),
+  deleteLutaCasada: (lutaCasadaId) => electron.ipcRenderer.invoke("delete-luta-casada", lutaCasadaId)
 });
 electron.contextBridge.exposeInMainWorld("activation", {
   check: () => electron.ipcRenderer.invoke("check-activation"),

@@ -3,6 +3,7 @@ import type { Torneio, CreateTorneioInput } from './tournament';
 import type { Atleta } from './athlete';
 import type { Arbitro } from './referee';
 import type { Chave, PlacarLuta } from './bracket';
+import type { LutaCasada } from './lutaCasada';
 
 declare global {
   interface Window {
@@ -61,6 +62,10 @@ interface ElectronAPI {
     desclassificacao?: boolean;
     desempateArbitro?: boolean;
   }) => Promise<Chave>;
+  loadLutasCasadasPorArea: (areaId: string) => Promise<LutaCasada[]>;
+  saveLutaCasada: (data: Omit<LutaCasada, 'id' | 'tag' | 'createdAt' | 'updatedAt'>) => Promise<LutaCasada>;
+  updateLutaCasada: (data: LutaCasada) => Promise<LutaCasada>;
+  deleteLutaCasada: (lutaCasadaId: string) => Promise<void>;
 }
 
 interface ActivationAPI {

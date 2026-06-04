@@ -1,12 +1,14 @@
-import { Container, Text, Card, Stack, Group, Badge, Loader, Center, SimpleGrid, TextInput } from '@mantine/core';
-import { IconSearch } from '@tabler/icons-react';
+import { Container, Text, Card, Stack, Group, Badge, Loader, Center, SimpleGrid, TextInput, Button } from '@mantine/core';
+import { IconSearch, IconPlus, IconSwords } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { PageLayout } from '../components/PageLayout';
+import { ModalCriarLutaCasada } from '../components/ModalCriarLutaCasada';
 import type { Chave } from '../types/bracket';
 import type { AreaLuta } from '../types/area';
 import type { Arbitro } from '../types/referee';
 import type { Atleta } from '../types/athlete';
+import type { LutaCasada } from '../types/lutaCasada';
 import { categoriaLabels } from '../types/category';
 
 const FAIXA_ORDER: Record<string, number> = {
@@ -55,8 +57,10 @@ export function PlacarChaves() {
   const [area, setArea] = useState<AreaLuta | null>(null);
   const [arbitros, setArbitros] = useState<Arbitro[]>([]);
   const [athletes, setAthletes] = useState<Atleta[]>([]);
+  const [lutasCasadas, setLutasCasadas] = useState<LutaCasada[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [modalLutaCasadaOpen, setModalLutaCasadaOpen] = useState(false);
 
   useEffect(() => {
     if (!areaId) return;
@@ -65,15 +69,22 @@ export function PlacarChaves() {
       window.electronAPI.loadChavesPorArea(areaId),
       window.electronAPI.loadArbitros(),
       window.electronAPI.loadAthletes(),
-    ]).then(([areas, ch, arb, ath]) => {
+      window.electronAPI.loadLutasCasadasPorArea(areaId),
+    ]).then(([areas, ch, arb, ath, lutas]) => {
       const found = (areas as AreaLuta[]).find(a => a.id === areaId);
       setArea(found ?? null);
       setChaves(ch);
       setArbitros(arb as Arbitro[]);
       setAthletes(ath as Atleta[]);
+      setLutasCasadas(lutas as LutaCasada[]);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [areaId]);
+
+  const handleLutaCasadaCriada = (luta: LutaCasada) => {
+    setLutasCasadas(prev => [...prev, luta]);
+    navigate(`/admin/placar/luta-casada/${areaId}/${luta.id}`);
+  };
 
   const filteredChaves = useMemo(() => {
     if (!searchQuery.trim()) return chaves;
@@ -106,6 +117,67 @@ export function PlacarChaves() {
         <Text c="dimmed" size="sm">
           {chaves.length} chave(s) nesta área. Clique em uma chave para ver as lutas.
         </Text>
+
+        <Card withBorder shadow="sm" padding="md" radius="md">
+          <Stack gap="sm">
+            <Group justify="space-between" align="center">
+              <Group gap="xs" align="center">
+                <IconSwords size={20} color="grape" />
+                <Text fw={700} size="md">Lutas Casadas</Text>
+                <Badge size="sm" color="grape" variant="light">{lutasCasadas.length}</Badge>
+              </Group>
+              <Button
+                size="sm"
+                color="grape"
+                leftSection={<IconPlus size={16} />}
+                onClick={() => setModalLutaCasadaOpen(true)}
+              >
+                Nova Luta Casada
+              </Button>
+            </Group>
+            {lutasCasadas.length === 0 ? (
+              <Text size="sm" c="dimmed">
+                Nenhuma luta casada cadastrada. Clique em "Nova Luta Casada" para criar uma luta de exibição.
+              </Text>
+            ) : (
+              <Stack gap="xs">
+                {lutasCasadas
+                  .slice()
+                  .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+                  .map(luta => (
+                    <Card
+                      key={luta.id}
+                      withBorder
+                      padding="sm"
+                      radius="sm"
+                      role="button"
+                      tabIndex={0}
+                      style={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/admin/placar/luta-casada/${areaId}/${luta.id}`)}
+                    >
+                      <Group justify="space-between" wrap="nowrap">
+                        <Group gap="xs" align="center" wrap="nowrap" style={{ minWidth: 0, flex: 1 }}>
+                          <Text size="sm" fw={600} truncate>
+                            {luta.atletaASnapshot.nome.charAt(0).toUpperCase() + luta.atletaASnapshot.nome.slice(1)}
+                          </Text>
+                          <Text size="xs" c="dimmed">vs</Text>
+                          <Text size="sm" fw={600} truncate>
+                            {luta.atletaBSnapshot.nome.charAt(0).toUpperCase() + luta.atletaBSnapshot.nome.slice(1)}
+                          </Text>
+                        </Group>
+                        <Group gap="xs" wrap="nowrap">
+                          <Badge size="sm" color="grape" variant="filled">LUTA CASADA</Badge>
+                          {luta.status === 'pending' && <Badge size="sm" color="yellow" variant="light">PENDENTE</Badge>}
+                          {luta.status === 'completed' && <Badge size="sm" color="green" variant="filled">FINALIZADA</Badge>}
+                          {luta.status === 'wo' && <Badge size="sm" color="red" variant="filled">WO</Badge>}
+                        </Group>
+                      </Group>
+                    </Card>
+                  ))}
+              </Stack>
+            )}
+          </Stack>
+        </Card>
 
         <TextInput
           placeholder="Buscar chave..."
@@ -188,6 +260,17 @@ export function PlacarChaves() {
           </SimpleGrid>
         )}
       </Stack>
+
+      {area && (
+        <ModalCriarLutaCasada
+          opened={modalLutaCasadaOpen}
+          onClose={() => setModalLutaCasadaOpen(false)}
+          area={area}
+          atletas={athletes}
+          arbitros={arbitros}
+          onCriada={handleLutaCasadaCriada}
+        />
+      )}
     </PageLayout>
   );
 }

@@ -6,10 +6,12 @@ import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes
 import { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
 import { loadAreas, saveArea, updateArea, deleteArea, deleteAreas } from './areas'
 import { registerBracketHandlers } from './brackets'
+import { loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada } from './lutasCasadas'
 import { checkActivation, validatePassword, activateLicense } from './activation'
 import type { AreaLuta } from '../src/types/area'
 import type { Atleta } from '../src/types/athlete'
 import type { Arbitro } from '../src/types/referee'
+import type { LutaCasada } from '../src/types/lutaCasada'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -212,12 +214,39 @@ function registerActivationHandlers(): void {
   })
 }
 
+function registerLutasCasadasHandlers(): void {
+  ipcMain.handle('load-lutas-casadas-por-area', (_event, areaId: string): LutaCasada[] => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadLutasCasadasPorArea(torneioId, areaId)
+  })
+
+  ipcMain.handle('save-luta-casada', (_event, data: Omit<LutaCasada, 'id' | 'tag' | 'createdAt' | 'updatedAt'>): LutaCasada => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return saveLutaCasada(torneioId, data)
+  })
+
+  ipcMain.handle('update-luta-casada', (_event, data: LutaCasada): LutaCasada => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return updateLutaCasada(torneioId, data)
+  })
+
+  ipcMain.handle('delete-luta-casada', (_event, lutaCasadaId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return deleteLutaCasada(torneioId, lutaCasadaId)
+  })
+}
+
 app.whenReady().then(() => {
   registerTournamentHandlers()
   registerAthleteHandlers()
   registerRefereeHandlers()
   registerBracketHandlers()
   registerAreaHandlers()
+  registerLutasCasadasHandlers()
   registerActivationHandlers()
   createWindow()
 })
