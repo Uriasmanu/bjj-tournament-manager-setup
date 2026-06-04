@@ -33,7 +33,45 @@
 
 implementa regra para chave com 11 atletas
 
+Rodada 1 (Oitavas de Final / Ajuste)
+Colocamos 6 atletas para lutar e 5 ficam esperando.
 
+A X B -> L
+
+C X D -> M
+
+E X F -> N
+
+G X BYE -> O
+
+H X BYE -> P
+
+I X BYE -> Q
+
+J X BYE -> R
+
+K X BYE -> S
+
+(A partir daqui, restam exatamente 8 atletas ativos na chave: L, M, N, O, P, Q, R, S).
+
+Rodada 2 (Quartas de Final - Chave Perfeita)
+L X M -> T
+
+N X O -> U
+
+P X Q -> V
+
+R X S -> W
+
+(Ninguém ganha BYE aqui. Todos jogam e restam 4 atletas).
+
+Rodada 3 (Semifinais)
+T X U -> X
+
+V X W -> Y
+
+Rodada 4 (Final)
+X X Y -> Campeão
 
 ---
 
