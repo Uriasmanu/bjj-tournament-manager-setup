@@ -763,7 +763,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `validate-password` | Renderer → Main → Renderer | Valida senha de ativação (hash SHA-256) |
 | `activate-license` | Renderer → Main → Renderer | Gera e salva token HMAC de ativação |
 | `gerar-todas-chaves` | Renderer → Main → Renderer | Gera todas as chaves do torneio, distribui árbitros automaticamente, marca `emChave` nos atletas |
-| `gerar-chave` | Renderer → Main → Renderer | Gera chave para uma categoria (mín. 2, máx. 5 atletas) + marca `emChave` |
+| `gerar-chave` | Renderer → Main → Renderer | Gera chave para uma categoria (mín. 2, máx. 16 atletas) + marca `emChave` |
 | `load-chaves` | Renderer → Main → Renderer | Carrega todas as chaves do torneio ativo |
 | `load-chave-por-categoria` | Renderer → Main → Renderer | Carrega chave de uma categoria específica |
 | `randomizar-chave` | Renderer → Main → Renderer | Randomiza ordem dos atletas na chave com separação de equipes, mantém `emChave` |

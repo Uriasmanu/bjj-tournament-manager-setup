@@ -19,17 +19,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-### 2026-06-04 — Chave de 16 atletas
-**Tipo:** lógica incompleta
-**O que mudou:** Não existia documentação da chave de 16 atletas → Documentada estrutura existente `gerarLutas16()`, `advanceWinner16()` e `aplicarSeedSorting16()`
-**Itens atualizados:** RF-01 a RF-09, CA-01 a CA-08, Passos 1-5
-**Arquivo de detalhe:** `spec/16-atletas.md`
-
-### 2026-06-04 — Layout BracketTree 16 atletas -> horizontal piramide
-**Tipo:** ajuste visual
-**O que mudou:** Layout vertical → Horizontal (esquerda→direita) com columns `justifyContent: space-around` para efeito pirâmide, cards menores (160px), gap reduzido (12px)
-**Itens atualizados:** N/A (apenas visual)
-**Arquivo de detalhe:** `src/components/BracketTree.tsx`
 
 <!--
 ### AAAA-MM-DD — Título curto
@@ -44,45 +33,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
-implementa regra para chave com 16 atletas
-
-Rodada 1 (Oitavas de Final)
-A X B -> Q
-
-C X D -> R
-
-E X F -> S
-
-G X H -> T
-
-I X J -> U
-
-K X L -> V
-
-M X N -> W
-
-O X P -> X
-
-(Os 16 começam lutando. Sobram exatamente 8 atletas ativos para a próxima fase: Q, R, S, T, U, V, W, X).
-
-Rodada 2 (Quartas de Final)
-Q X R -> Y
-
-S X T -> Z
-
-U X V -> AA
-
-W X X -> AB
-
-(Mata-mata limpo. Restam 4 atletas para as semifinais).
-
-Rodada 3 (Semifinais)
-Y X Z -> AC
-
-AA X AB -> AD
-
-Rodada 4 (Final)
-AC X AD -> Campeão
 
 ---
 
