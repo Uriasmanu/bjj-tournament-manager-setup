@@ -928,8 +928,8 @@ function gerarChave(categoriaId, atletas) {
   const embaralhados = shuffleArray(atletas);
   const posicoes = embaralhados.length === 16 ? aplicarSeedSorting16(embaralhados) : aplicarSeedSorting(embaralhados);
   const lutas = gerarLutas(posicoes);
-  console.log(`[gerarChave] cat=${categoriaId}, atletas=${posicoes.length}, lutas=${lutas.length}`);
-  console.log(`[gerarChave] lutas:`, lutas.map((l) => `#${l.ordem}(r${l.rodada}) ${l.atletaAId}×${l.atletaBId}[${l.status}]`));
+  
+  
   return {
     id: crypto.randomUUID(),
     categoriaId,
@@ -1336,7 +1336,7 @@ function advanceWinner6(chave, luta) {
   }
   const r2 = chave.lutas.filter((l) => l.rodada === 2);
   const r3 = chave.lutas.filter((l) => l.rodada === 3);
-  console.log(`[advanceWinner6] resultado: r2=${r2.map((l) => `${l.atletaAId}×${l.atletaBId}`).join(", ")}, r3=${r3.map((l) => `${l.atletaAId}×${l.atletaBId}`).join(", ")}`);
+  
 }
 function advanceWinner9(chave, luta) {
   const winnerId = luta.vencedorId;
@@ -1415,9 +1415,9 @@ function registrarResultadoHandler(torneioId, data) {
   const chave = JSON.parse(JSON.stringify(chaves[chaveIndex]));
   const luta = chave.lutas.find((l) => l.id === data.lutaId);
   if (!luta) throw new Error("Luta não encontrada");
-  console.log(`[registrar-resultado] INICIO: chave.totalAtletas=${chave.totalAtletas}, chave.lutas=${chave.lutas.length}`);
-  console.log(`[registrar-resultado] luta=${luta.ordem}(r${luta.rodada}), vencedor=${data.vencedorId}`);
-  console.log(`[registrar-resultado] todas lutas:`, chave.lutas.map((l) => `#${l.ordem}(r${l.rodada}) ${l.atletaAId}×${l.atletaBId}[${l.status}]`));
+  
+  
+  
   const oldWinnerId = luta.vencedorId;
   if (oldWinnerId && oldWinnerId !== data.vencedorId) {
     clearWinnerFromLaterRounds(chave, luta.rodada, oldWinnerId);
@@ -1471,9 +1471,9 @@ function registrarResultadoHandler(torneioId, data) {
   } else if (chave.totalAtletas === 5) {
     advanceWinner5(chave, luta);
   } else if (chave.totalAtletas === 6) {
-    console.log(`[registrar-resultado] advanceWinner6: totalAtletas=${chave.totalAtletas}, lutas=${chave.lutas.length}, lutaOrdem=${luta.ordem}, lutaRodada=${luta.rodada}`);
+    
     advanceWinner6(chave, luta);
-    console.log(`[registrar-resultado] POS advanceWinner6:`, chave.lutas.map((l) => `#${l.ordem}(r${l.rodada}) ${l.atletaAId}×${l.atletaBId}[${l.status}]`));
+    
   } else if (chave.totalAtletas === 9) {
     advanceWinner9(chave, luta);
   } else if (chave.totalAtletas === 16) {
@@ -1521,9 +1521,9 @@ function registerBracketHandlers() {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     const chaves = (loadTorneio(torneioId).chaves ?? []).map((c) => normalizeChave(c));
-    console.log(`[load-chaves] ${chaves.length} chaves carregadas`);
+    
     for (const c of chaves) {
-      console.log(`[load-chaves] chave ${c.id.slice(0, 8)}: totalAtletas=${c.totalAtletas}, lutas=${c.lutas.length}, rodadas=${c.totalRodadas}`);
+      
     }
     return chaves;
   });
