@@ -19,6 +19,17 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
+### 2026-06-04 — Chave de 16 atletas
+**Tipo:** lógica incompleta
+**O que mudou:** Não existia documentação da chave de 16 atletas → Documentada estrutura existente `gerarLutas16()`, `advanceWinner16()` e `aplicarSeedSorting16()`
+**Itens atualizados:** RF-01 a RF-09, CA-01 a CA-08, Passos 1-5
+**Arquivo de detalhe:** `spec/16-atletas.md`
+
+### 2026-06-04 — Layout BracketTree 16 atletas -> horizontal piramide
+**Tipo:** ajuste visual
+**O que mudou:** Layout vertical → Horizontal (esquerda→direita) com columns `justifyContent: space-around` para efeito pirâmide, cards menores (160px), gap reduzido (12px)
+**Itens atualizados:** N/A (apenas visual)
+**Arquivo de detalhe:** `src/components/BracketTree.tsx`
 
 <!--
 ### AAAA-MM-DD — Título curto

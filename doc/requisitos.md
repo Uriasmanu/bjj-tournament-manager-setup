@@ -575,6 +575,49 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 
 ---
 
+### 3.20. Geração de Chaves — 16 Atletas
+
+Para chaves com **16 atletas**, o sistema gera uma chave de eliminação simples com **15 lutas** distribuídas em **4 rodadas**, sem BYEs — chave perfeita desde a primeira rodada.
+
+#### Estrutura da Chave
+
+| Rodada | Lutas | Descrição |
+|--------|-------|-----------|
+| R1 (Oitavas) | L1-L8 | 8 lutas reais entre posições 0-15 (todas com atletas definidos) |
+| R2 (Quartas) | L9-L12 | L9: vencedor(L1) × vencedor(L2). L10: vencedor(L3) × vencedor(L4). L11: vencedor(L5) × vencedor(L6). L12: vencedor(L7) × vencedor(L8) |
+| R3 (Semifinais) | L13-L14 | L13: vencedor(L9) × vencedor(L10). L14: vencedor(L11) × vencedor(L12) |
+| R4 (Final) | L15 | vencedor(L13) × vencedor(L14) |
+
+#### Propagação de Vencedores (`advanceWinner16`)
+
+- L1 → L9.atletaAId
+- L2 → L9.atletaBId
+- L3 → L10.atletaAId
+- L4 → L10.atletaBId
+- L5 → L11.atletaAId
+- L6 → L11.atletaBId
+- L7 → L12.atletaAId
+- L8 → L12.atletaBId
+- L9 → L13.atletaAId
+- L10 → L13.atletaBId
+- L11 → L14.atletaAId
+- L12 → L14.atletaBId
+- L13 → L15.atletaAId
+- L14 → L15.atletaBId
+
+#### Separação de Equipes
+
+- `aplicarSeedSorting16`: sideA=[0,1,2,3,4,5,6,7], sideB=[8,9,10,11,12,13,14,15]
+
+#### Detalhes de Implementação
+
+- **Arquivo:** `electron/brackets.ts`
+- **Funções:** `gerarLutas16()`, `advanceWinner16()`, `aplicarSeedSorting16()`
+- **Dispatchers:** case 16 em `gerarLutas()`, case 16 em `registrarResultadoHandler()`
+- **Spec:** `spec/16-atletas.md`
+
+---
+
 ## 4. Plataforma
 
 A aplicação será desenvolvida para:
