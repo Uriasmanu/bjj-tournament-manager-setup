@@ -25,52 +25,15 @@
 **Arquivo de detalhe:** `spec/nome-da-correcao.md`
 -->
 
-### 2026-06-03 — Geração de chave para 10 atletas
-**Tipo:** lógica incompleta
-**O que mudou:** `gerarLutasGeral()` produzia 5 lutas no R1 com propagação quebrada → `gerarLutasDez()` dedicada gera 13 lutas (R1:6, R2:4, R3:2, R4:1) com BYEs estratégicos: 2 atletas descansam na R1 e se enfrentam na R2, vencedores de L3/L4 avançam direto para as semis via WO. `advanceWinner10()` propaga com auto-advance de L3→L11.B e L4→L12.A.
-**Itens atualizados:** RF-01 a RF-07, CA-01 a CA-07
-**Arquivo de detalhe:** `spec/10-atletas.md`
 
 ---
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
-implementa regra para chave com 10 atletas
+implementa regra para chave com 11 atletas
 
-Rodada 1
-A X B -> K
 
-C X D -> L
-
-E X F -> M
-
-G X H -> N
-
-I X BYE -> O (Atleta I descansa na Rodada 1 e vira O)
-
-J X BYE -> P (Atleta J descansa na Rodada 1 e vira P)
-
-(Aqui, 8 atletas lutaram e 4 avançaram. 2 atletas descansaram e avançaram. Temos 6 atletas ativos).
-
-Rodada 2
-K X L -> Q
-
-M X BYE -> R (O vencedor M descansa na Rodada 2 e vira R)
-
-N X BYE -> S (O vencedor N descansa na Rodada 2 e vira S)
-
-O X P -> T (Os dois que descansaram na primeira rodada se enfrentam agora)
-
-(Usando os seus BYEs estratégicos na Rodada 2, reduzimos os 6 atletas para exatamente 4 semifinalistas: Q, R, S, T).
-
-Rodada 3 (Semifinais)
-Q X R -> U
-
-S X T -> V
-
-Rodada 4 (Final)
-U X V -> Campeão
 
 ---
 
