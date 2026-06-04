@@ -27,57 +27,52 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Arquivo de detalhe:** `spec/nome-da-correcao.md`
 -->
 
-### 2026-06-03 — Implementada chave dedicada para 11 atletas
-**Tipo:** feature
-**O que mudou:** Antes usava `gerarLutasGeral` (algoritmo genérico) → agora usa `gerarLutasOnze` dedicada com 15 lutas, 4 rodadas, BYEs estrategicamente distribuídos.
-**Itens atualizados:** RF-01 a RF-07, CA-01 a CA-07 (spec/11-atletas.md)
-**Arquivo de detalhe:** `spec/11-atletas.md`
 ---
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 
-implementa regra para chave com 11 atletas
+implementa regra para chave com 12 atletas
 
 Rodada 1 (Oitavas de Final / Ajuste)
-Colocamos 6 atletas para lutar e 5 ficam esperando.
+Colocamos 8 atletas para lutar e 4 ficam esperando.
 
-A X B -> L
+A X B -> I
 
-C X D -> M
+C X D -> J
 
-E X F -> N
+E X F -> K
 
-G X BYE -> O
+G X H -> L
 
-H X BYE -> P
+M X BYE -> N (Atleta M avança direto)
 
-I X BYE -> Q
+O X BYE -> P (Atleta O avança direto)
 
-J X BYE -> R
+Q X BYE -> R (Atleta Q avança direto)
 
-K X BYE -> S
+S X BYE -> T (Atleta S avança direto)
 
-(A partir daqui, restam exatamente 8 atletas ativos na chave: L, M, N, O, P, Q, R, S).
+(Pronto, os BYEs sumiram. Restam exatamente 8 atletas ativos na chave: I, J, K, L, N, P, R, T).
 
 Rodada 2 (Quartas de Final - Chave Perfeita)
-L X M -> T
+I X J -> U
 
-N X O -> U
+K X L -> V
 
-P X Q -> V
+N X P -> W
 
-R X S -> W
+R X T -> X
 
-(Ninguém ganha BYE aqui. Todos jogam e restam 4 atletas).
+(Mata-mata limpo, sem nenhuma folga. Restam 4 atletas).
 
 Rodada 3 (Semifinais)
-T X U -> X
+U X V -> Y
 
-V X W -> Y
+W X X -> Z
 
 Rodada 4 (Final)
-X X Y -> Campeão
+Y X Z -> Campeão
 
 
 
