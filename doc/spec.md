@@ -29,6 +29,36 @@
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
+chave com o total de 9 atletas
+Rodada 1 
+A X B -> J
+
+C X BYE -> K
+
+D X E -> L
+
+F X BYE -> M
+
+G X H -> N
+
+I X BYE -> O
+
+Rodada 2 (Correção: Casando os 6 que sobraram)
+J X K -> P
+
+L X M -> Q
+
+N X O -> R
+
+(Pronto, agora temos 3 vencedores: P, Q e R. Como 3 é um número ímpar, aqui sim precisamos de 1 BYE para poder ir para a final).
+
+Rodada 3 (Semifinal)
+P X Q -> T
+
+R X BYE -> U (O vencedor R ganha o benefício de ir direto para a final)
+
+Rodada 4 (Final)
+T X U -> Campeão
 
 **Implementado**
 ---
