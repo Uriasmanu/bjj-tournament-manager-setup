@@ -1,6 +1,6 @@
 import { Text, Button, Stack, Group, Loader, Center, Modal, Badge, Table, ActionIcon, Checkbox, TextInput } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconPencil, IconTrash, IconSearch } from '@tabler/icons-react';
+import { IconPlus, IconPencil, IconTrash, IconSearch, IconFileUpload, IconFileCode } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState, useMemo } from 'react';
 import type { AreaLuta } from '../types/area';
@@ -74,18 +74,20 @@ export function AdminAreas() {
   };
 
   const handleSave = async (area: AreaLuta): Promise<boolean> => {
-    const duplicate = areas.some(
-      (a) =>
-        a.id !== area.id &&
-        a.nome.trim().toLowerCase() === area.nome.trim().toLowerCase()
-    );
-    if (duplicate) {
-      notifications.show({
-        title: 'Erro',
-        message: 'Já existe uma área de luta com este nome.',
-        color: 'red',
-      });
-      return false;
+    if (area.nome.trim() !== '') {
+      const duplicate = areas.some(
+        (a) =>
+          a.id !== area.id &&
+          a.nome.trim().toLowerCase() === area.nome.trim().toLowerCase()
+      );
+      if (duplicate) {
+        notifications.show({
+          title: 'Erro',
+          message: 'Já existe uma área de luta com este nome.',
+          color: 'red',
+        });
+        return false;
+      }
     }
     try {
       if (selectedArea) {
@@ -104,6 +106,28 @@ export function AdminAreas() {
       const msg = err instanceof Error ? err.message : 'Erro ao salvar a área de luta.';
       notifications.show({ title: 'Erro', message: msg, color: 'red' });
       return false;
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      await window.electronAPI.exportAreas();
+      notifications.show({ title: 'Sucesso', message: 'Áreas de luta exportadas em JSON!', color: 'green' });
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao exportar áreas de luta.', color: 'red' });
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const result = await window.electronAPI.importAreas();
+      if (result.imported === 0 && result.skipped === 0) return;
+      const msg = `${result.imported} área(s) importada(s)${result.skipped > 0 ? `, ${result.skipped} ignorada(s) (já existentes)` : ''}.`;
+      notifications.show({ title: 'Sucesso', message: msg, color: 'green' });
+      await loadData();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao importar áreas de luta.';
+      notifications.show({ title: 'Erro ao importar', message: msg, color: 'red', autoClose: false });
     }
   };
 
@@ -172,6 +196,24 @@ export function AdminAreas() {
     <PageLayout title="Áreas de Luta" backRoute="/admin/areas">
       <Group mb="md" justify="space-between">
         <Group>
+          <Button
+            variant="default"
+            leftSection={<IconFileUpload size={16} />}
+            onClick={handleImport}
+            styles={{ root: { borderRadius: 12 } }}
+            aria-label="Importar áreas de luta"
+          >
+            Importar
+          </Button>
+          <Button
+            variant="default"
+            leftSection={<IconFileCode size={16} />}
+            onClick={handleExport}
+            styles={{ root: { borderRadius: 12 } }}
+            aria-label="Exportar áreas de luta em JSON"
+          >
+            Exportar JSON
+          </Button>
           <Button leftSection={<IconPlus size={16} />} onClick={handleNew}>
             Cadastrar
           </Button>

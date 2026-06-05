@@ -79,6 +79,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('delete-area', areaId),
   deleteAreas: (areaIds: string[]) =>
     ipcRenderer.invoke('delete-areas', areaIds),
+  importAreas: () =>
+    ipcRenderer.invoke('import-areas'),
+  exportAreas: () =>
+    ipcRenderer.invoke('export-areas'),
   loadChavesPorArea: (areaId: string) =>
     ipcRenderer.invoke('load-chaves-por-area', areaId),
   registrarResultado: (data: {

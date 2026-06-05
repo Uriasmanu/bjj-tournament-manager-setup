@@ -4,7 +4,7 @@ import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
 import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
 import { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
-import { loadAreas, saveArea, updateArea, deleteArea, deleteAreas } from './areas'
+import { loadAreas, saveArea, updateArea, deleteArea, deleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas } from './areas'
 import { registerBracketHandlers } from './brackets'
 import { loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada } from './lutasCasadas'
 import { checkActivation, validatePassword, activateLicense, getActivationInfo } from './activation'
@@ -197,6 +197,20 @@ function registerAreaHandlers(): void {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return deleteAreas(torneioId, areaIds)
+  })
+
+  ipcMain.handle('import-areas', async (): Promise<{ imported: number; skipped: number }> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    const filePath = await openAreaFileDialog()
+    if (!filePath) return { imported: 0, skipped: 0 }
+    return importAreasFromFile(torneioId, filePath)
+  })
+
+  ipcMain.handle('export-areas', async (): Promise<void> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return exportAreas(torneioId)
   })
 }
 

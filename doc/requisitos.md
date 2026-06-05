@@ -36,7 +36,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
 | Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
 | PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
-| Áreas de Luta | ✅ Completo | CRUD com nome + múltiplos árbitros por área. Validação de unicidade de árbitro entre áreas. Migração retroativa de dados legados. Menu com Cadastrar/Listar, tabela com busca, exclusão individual/em lote. |
+| Áreas de Luta | ✅ Completo | CRUD com nome + múltiplos árbitros por área. Validação de unicidade de árbitro entre áreas. Migração retroativa de dados legados. Menu com Cadastrar/Listar, tabela com busca, exclusão individual/em lote. Importar/Exportar JSON no header (mesmo padrão de Atletas). Nome opcional: se vazio, sistema gera automaticamente `Área N` (próximo número disponível, preenche gaps). |
 | Placar (Scoreboard) | ✅ Completo | Fluxo `PlacarMenu → PlacarChaves → PlacarBracket → PlacarLuta` (seleção de área, lista de chaves da área, bracket com lutas iniciáveis, placar funcional com cronômetro, pontos 2/3/4, vantagens, punições, finalização/DQ/desempate, persistência no JSON do torneio). Cores azul anil (Atleta A) e branco (Atleta B). Vencedor propagado para a próxima rodada. Validação de pontos/vantagens ao selecionar vencedor por pontos com modal de aviso. `desclassificadoId` identifica atleta desclassificado. Correção de propagação em chaves de 2, 3 e 4 atletas. |
 | Registro de horário de lutas | ✅ Completo | Cada `Luta` e `LutaCasada` grava `horarioInicio` (1º clique em "Iniciar" do cronômetro) e `horarioTermino`/`dataFinalizacao` (confirmação do resultado no modal final) no formato `DD/MM/YYYY HH:mm:ss` (timezone local). Exibidos em Resultados na info de cada luta. JSONs legados sem os campos continuam funcionando (campos opcionais, exibidos como "—"). |
 
@@ -553,6 +553,30 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Normalização ao salvar (`saveArea`/`updateArea`):** `nome.trim()` e `arbitroIds.filter(Boolean)` removem espaços extras e IDs vazios antes de persistir.
 - **Migração retroativa:** O campo `normalizeArea()` no backend converte automaticamente dados legados do formato `arbitroId` (string) para `arbitroIds` (array) ao carregar as áreas do JSON.
 - **Exclusão em lote:** Na tela de listagem, cada linha possui um checkbox. O cabeçalho possui um checkbox "Selecionar todas" com estado indeterminado. Com uma ou mais áreas selecionadas, um botão "Excluir Selecionados (N)" aparece. A exclusão em lote é feita via IPC `delete-areas`.
+
+#### 3.18.1. Nome Opcional de Área de Luta (Implementado)
+
+- **Comportamento:** O campo `nome` da `AreaLuta` é **opcional** no cadastro, edição e importação. Quando vazio (ou ausente), o sistema gera automaticamente o nome `"Área N"`.
+- **Função `gerarNomeAreaPadrao(areas: AreaLuta[]): string`:** em `electron/areas.ts`. Encontra o **menor inteiro ≥ 1** que não está em uso em nomes que casam `/^Área (\d+)$/i` (case-insensitive). Lista vazia → `"Área 1"`. Se a lista tem `["Área 1", "Área 3", "Área 5"]`, a próxima sem nome vira `"Área 2"` (preenche gaps).
+- **Pontos de aplicação:** a função é usada em `saveArea`, `updateArea` e `importAreasFromFile` (single source of truth).
+- **UI (`AreaForm.tsx`):** label alterado de "Nome *" para "Nome" (sem asterisco). Validação `length < 2` removida. Placeholder informativo: `"Deixe vazio para gerar automaticamente (Área N)"`. Submit com nome vazio é aceito.
+- **Validação de duplicata:** o check no frontend (`AdminAreas.tsx:handleSave`) é pulado quando `area.nome.trim() === ''` (vai ser gerado pelo backend). Demais duplicatas (case-insensitive) seguem bloqueadas.
+- **Migração retroativa:** áreas já existentes no JSON com `nome: ''` permanecem com string vazia (não há migration automático). O usuário pode editá-las para acionar a geração.
+
+#### 3.18.2. Importação e Exportação de Áreas (Implementado)
+
+- **Botões:** no header de `AdminAreas.tsx`, à esquerda de "Cadastrar" (mesmo padrão de `AdminAthletes.tsx`): **"Importar"** (`IconFileUpload`) e **"Exportar JSON"** (`IconFileCode`). Ambos com `variant="default"`, `borderRadius: 12` e `aria-label`.
+- **Exportação (`exportAreas`):** abre diálogo nativo "Salvar como" com default `areas.json`. Grava JSON com indentação de 2 espaços contendo a lista atual de `AreaLuta`.
+- **Importação (`importAreasFromFile`):** abre diálogo nativo `.json`. Parseia o conteúdo e valida que é um array (outros formatos rejeitados com erro). Para cada item:
+  - Valida `arbitroIds` se presente (deve ser array).
+  - Normaliza `nome` (trim) e `arbitroIds` (filtra strings vazias).
+  - **Deduplicação:** se já existe área com mesmo `nome` (case-insensitive), conta como `skipped` e segue.
+  - Verifica `checkRefereeNotInUse` para evitar conflito de árbitros.
+  - Gera `id` (UUID), `createdAt`/`updatedAt` (timestamp atual) e nome padrão se vazio.
+  - Persiste atomicamente no JSON do torneio ativo.
+- **Retorno:** `{ imported, skipped }` — frontend exibe `"X área(s) importada(s), Y ignorada(s) (já existentes)."` ou silenciar quando ambos são zero (cancelamento do diálogo).
+- **Formato do JSON:** array de objetos com `nome` e `arbitroIds`. `id`, `createdAt`, `updatedAt` são opcionais (autogerados/autosobrescritos). Mesma estrutura de `AreaLuta` exportado.
+- **Especificação detalhada:** ver `spec/areas-import-export-nome-opcional.md`.
 
 ### 3.19. Placar / Scoreboard (Implementado)
 

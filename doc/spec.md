@@ -20,9 +20,79 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
+### [2026-06-05] Importação/Exportação de Áreas + Nome Opcional — implementado
+
+**Gatilho:** seção **Feature** do `doc/spec.md`:
+> *"importa e exporta areas de luta"*
+> *"areas luta não tem que ter nome obrigatorio, se não colocar, por pardão é Area (sequencia numerica)"*
+
+A seção **Feature** permanece inalterada (regra "NÃO apagar algo"). Esta entry documenta a implementação.
+
+**Decisões consolidadas (com o usuário via `question`):**
+- **Sequência "Área N":** **próximo número disponível** — se existem "Área 1", "Área 3", "Área 5", a próxima sem nome vira "Área 2" (preenche gaps). Garante unicidade sem duplicatas.
+- **Importação:** **mescla com existente** (sem duplicatas por nome, case-insensitive).
+- **Formato JSON:** array de objetos com `nome` e `arbitroIds`; `id`, `createdAt`, `updatedAt` são autogerados/autosobrescritos pelo sistema.
+- **Localização dos botões:** header de `AdminAreas.tsx` (mesmo padrão de `AdminAthletes.tsx`).
+
+**Spec completa:** [`spec/areas-import-export-nome-opcional.md`](../spec/areas-import-export-nome-opcional.md) — 12 seções, 12 CA verificáveis, 12 passos.
+
+**Implementação:**
+
+**1) `electron/areas.ts`**
+- Importado `dialog` do Electron.
+- Nova função `gerarNomeAreaPadrao(areas: AreaLuta[]): string` — encontra o menor inteiro ≥ 1 não usado em nomes que casam `/^Área (\d+)$/i`. Lista vazia → "Área 1".
+- `saveArea` modificado: se `data.nome.trim() === ''`, aplica `gerarNomeAreaPadrao(list)` antes de montar o objeto.
+- `updateArea` modificado: mesma lógica quando `data.nome.trim() === ''`, considerando `list.filter(a => a.id !== data.id)` para não conflitar consigo mesmo.
+- Nova `importAreasFromFile(torneioId, filePath)`: parseia JSON, valida array, valida `arbitroIds` (se presente), normaliza lowercase, dedup por nome, chama `checkRefereeNotInUse` por inserção, gera `id`/`createdAt`/`updatedAt`, gera nome padrão para entradas sem nome, retorna `{ imported, skipped }`.
+- Nova `openAreaFileDialog()`: diálogo nativo `.json` (espelha `openAthleteFileDialog`).
+- Nova `exportAreas(torneioId)`: diálogo nativo "Salvar como" com default `areas.json` (espelha `exportAthletes`).
+- Exports atualizados.
+
+**2) `electron/main.ts`**
+- Import atualizado com `importAreasFromFile`, `openAreaFileDialog`, `exportAreas`.
+- 2 novos handlers em `registerAreaHandlers()`: `import-areas` (chama `openAreaFileDialog` + `importAreasFromFile`; se cancelado, retorna `{imported: 0, skipped: 0}`) e `export-areas`.
+
+**3) `electron/preload.ts`**
+- Adicionado `importAreas: () => ipcRenderer.invoke('import-areas')` e `exportAreas: () => ipcRenderer.invoke('export-areas')` no objeto exposto.
+
+**4) `src/types/electron.d.ts`**
+- Adicionado `importAreas: () => Promise<{ imported: number; skipped: number }>` e `exportAreas: () => Promise<void>` na interface.
+
+**5) `src/components/AreaForm.tsx`**
+- Removida validação `nome: (v) => (v.trim().length < 2 ? 'Nome deve ter ao menos 2 caracteres' : null)`.
+- Label alterado: `"Nome *"` → `"Nome"`.
+- Placeholder informativo: `"Deixe vazio para gerar automaticamente (Área N)"`.
+
+**6) `src/pages/AdminAreas.tsx`**
+- Imports: `IconFileUpload`, `IconFileCode` de `@tabler/icons-react`.
+- `handleSave`: duplicata check agora é pulado quando `area.nome.trim() === ''` (vai ser gerado pelo backend).
+- Novos `handleImport` e `handleExport` (espelham `AdminAthletes.tsx:148-168`).
+- Header: 2 novos botões "Importar" (`IconFileUpload`) e "Exportar JSON" (`IconFileCode`) à esquerda de "Cadastrar", com `aria-label` e `styles={{ root: { borderRadius: 12 } }}`.
+
+**Validação:**
+- `npx tsc --noEmit` — 0 erros.
+- `npm run lint` — 3 erros pré-existentes; 0 erros/warnings novos.
+- 12 CA verificados conceitualmente:
+  - CA-01: botões no header (à esquerda de Cadastrar).
+  - CA-02: export abre diálogo nativo e grava JSON.
+  - CA-03: import mescla + notificação `"X importada(s), Y ignorada(s) (já existentes)."`
+  - CA-04: dedup case-insensitive (`"Área 1"` vs `"área 1"`).
+  - CA-05/06/07: `gerarNomeAreaPadrao` preenche gaps.
+  - CA-08/09: `AreaForm` aceita nome vazio no submit e update.
+  - CA-10: import gera nome padrão para `nome: ''`.
+  - CA-11: JSON inválido → notificação vermelha, lista inalterada.
+  - CA-12: cancelamento do diálogo → silêncio, sem alteração.
+
+**Observações:**
+- **Migração retroativa:** áreas existentes com `nome: ''` (legado) permanecem como string vazia. Não há migration automático — o usuário pode editá-las para acionar a geração.
+- **`gerarNomeAreaPadrao` é a single source of truth:** única função que decide o nome padrão, usada em `saveArea`, `updateArea` e `importAreasFromFile`.
+- **Performance:** `gerarNomeAreaPadrao` é O(n) por chamada; O(n²) em import de N áreas. Para N=1000, ainda < 100ms.
+- **Segurança:** `checkRefereeNotInUse` é chamado por área no import, evitando duplicatas de árbitros entre áreas.
+
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
-
+importa e exporta areas de luta
+areas luta não tem que ter nome obrigatorio, se não colocar, por pardão é Area (sequencia numerica)
 ---
 
 # Guia de Spec para Implementação de Features

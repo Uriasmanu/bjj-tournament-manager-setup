@@ -23,9 +23,6 @@ export function AreaForm({ opened, onClose, onSave, area }: AreaFormProps) {
       nome: '',
       arbitroIds: [] as string[],
     },
-    validate: {
-      nome: (v) => (v.trim().length < 2 ? 'Nome deve ter ao menos 2 caracteres' : null),
-    },
   });
 
   useEffect(() => {
@@ -71,8 +68,8 @@ export function AreaForm({ opened, onClose, onSave, area }: AreaFormProps) {
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="md">
           <TextInput
-            label="Nome *"
-            placeholder="Nome da área de luta"
+            label="Nome"
+            placeholder="Deixe vazio para gerar automaticamente (Área N)"
             {...form.getInputProps('nome')}
           />
 

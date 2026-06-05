@@ -567,6 +567,16 @@ function loadTorneio$2(torneioId) {
 function saveTorneio$2(torneio) {
   fs.writeFileSync(getTorneioPath$2(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
 }
+function gerarNomeAreaPadrao(areas) {
+  const usados = /* @__PURE__ */ new Set();
+  for (const a of areas) {
+    const m = a.nome.match(/^Área (\d+)$/i);
+    if (m) usados.add(Number(m[1]));
+  }
+  let n = 1;
+  while (usados.has(n)) n += 1;
+  return `Área ${n}`;
+}
 function normalizeArea(area) {
   return {
     id: area.id,
@@ -602,9 +612,10 @@ function saveArea(torneioId, data) {
   const torneio = loadTorneio$2(torneioId);
   const list = loadAreas(torneioId);
   const now = (/* @__PURE__ */ new Date()).toISOString();
+  const nomeFinal = data.nome.trim() === "" ? gerarNomeAreaPadrao(list) : data.nome.trim();
   const area = {
     id: crypto.randomUUID(),
-    nome: data.nome.trim(),
+    nome: nomeFinal,
     arbitroIds: arbitroIds.filter(Boolean),
     createdAt: now,
     updatedAt: now
@@ -623,9 +634,10 @@ function updateArea(torneioId, data) {
   const index = list.findIndex((a) => a.id === data.id);
   if (index === -1) throw new Error("Área de luta não encontrada");
   const now = (/* @__PURE__ */ new Date()).toISOString();
+  const nomeFinal = data.nome.trim() === "" ? gerarNomeAreaPadrao(list.filter((a) => a.id !== data.id)) : data.nome.trim();
   list[index] = {
     ...data,
-    nome: data.nome.trim(),
+    nome: nomeFinal,
     arbitroIds: arbitroIds.filter(Boolean),
     updatedAt: now
   };
@@ -646,6 +658,69 @@ function deleteAreas(torneioId, areaIds) {
   torneio.areas = (torneio.areas ?? []).filter((a) => !idSet.has(a.id));
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   saveTorneio$2(torneio);
+}
+function importAreasFromFile(torneioId, filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const incoming = JSON.parse(raw);
+  if (!Array.isArray(incoming)) {
+    throw new Error("Arquivo inválido: o conteúdo deve ser um array de áreas de luta.");
+  }
+  const torneio = loadTorneio$2(torneioId);
+  const current = loadAreas(torneioId);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  let imported = 0;
+  let skipped = 0;
+  for (const item of incoming) {
+    if (!item || typeof item !== "object") {
+      throw new Error("Área inválida no arquivo: formato incorreto.");
+    }
+    const itemObj = item;
+    if (itemObj.arbitroIds !== void 0 && !Array.isArray(itemObj.arbitroIds)) {
+      throw new Error(`Área inválida no arquivo: "${String(itemObj.nome ?? "sem nome")}" — arbitroIds deve ser um array.`);
+    }
+    const nomeRaw = typeof itemObj.nome === "string" ? itemObj.nome.trim() : "";
+    const arbitroIdsIn = Array.isArray(itemObj.arbitroIds) ? itemObj.arbitroIds.filter((x) => typeof x === "string" && x.length > 0) : [];
+    const duplicate = current.some(
+      (ex) => ex.nome.trim().toLowerCase() === nomeRaw.toLowerCase() && nomeRaw !== ""
+    );
+    if (duplicate) {
+      skipped += 1;
+      continue;
+    }
+    checkRefereeNotInUse(torneioId, arbitroIdsIn);
+    const nomeFinal = nomeRaw === "" ? gerarNomeAreaPadrao(current) : nomeRaw;
+    const area = {
+      id: crypto.randomUUID(),
+      nome: nomeFinal,
+      arbitroIds: arbitroIdsIn,
+      createdAt: now,
+      updatedAt: now
+    };
+    current.push(area);
+    imported += 1;
+  }
+  torneio.areas = current;
+  torneio.updatedAt = now;
+  saveTorneio$2(torneio);
+  return { imported, skipped };
+}
+async function openAreaFileDialog() {
+  const result = await dialog.showOpenDialog({
+    properties: ["openFile"],
+    filters: [{ name: "JSON", extensions: ["json"] }]
+  });
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
+}
+async function exportAreas(torneioId) {
+  const list = loadAreas(torneioId);
+  const result = await dialog.showSaveDialog({
+    title: "Exportar Áreas de Luta",
+    defaultPath: "areas.json",
+    filters: [{ name: "JSON", extensions: ["json"] }]
+  });
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(list, null, 2), "utf-8");
+  }
 }
 const DATA_DIR$1 = path.join(app.getPath("userData"), "data");
 const TORNEIOS_DIR$1 = path.join(DATA_DIR$1, "torneios");
@@ -2292,6 +2367,18 @@ function registerAreaHandlers() {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     return deleteAreas(torneioId, areaIds);
+  });
+  ipcMain.handle("import-areas", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const filePath = await openAreaFileDialog();
+    if (!filePath) return { imported: 0, skipped: 0 };
+    return importAreasFromFile(torneioId, filePath);
+  });
+  ipcMain.handle("export-areas", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return exportAreas(torneioId);
   });
 }
 function registerActivationHandlers() {

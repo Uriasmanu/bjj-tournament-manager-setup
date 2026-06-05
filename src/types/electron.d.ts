@@ -57,6 +57,8 @@ interface ElectronAPI {
   updateArea: (data: AreaLuta) => Promise<AreaLuta>;
   deleteArea: (areaId: string) => Promise<void>;
   deleteAreas: (areaIds: string[]) => Promise<void>;
+  importAreas: () => Promise<{ imported: number; skipped: number }>;
+  exportAreas: () => Promise<void>;
   loadChavesPorArea: (areaId: string) => Promise<Chave[]>;
   registrarResultado: (data: {
     chaveId: string;
