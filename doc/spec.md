@@ -23,6 +23,9 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
+Em placar alem de pode escolher anualmente o tempo de luta o sistema tambem vai deixar por padrão os tempos conforme a baixo, assim o usuario ou edita ou usa a sugestão:
+
+Os tempos de luta no Jiu-Jitsu seguem as normas estabelecidas pela IBJJF (International Brazilian Jiu-Jitsu Federation), que servem como referência para a maioria dos campeonatos.Aqui está a lista detalhada por categoria de idade e graduação:Tabela de Tempos de Luta (IBJJF)CategoriaFaixaTempo de LutaMirim (4 a 6 anos)Todas2 minutosInfantil (7 a 9 anos)Todas3 minutosInfanto-Juvenil (10 a 15 anos)Todas4 minutosJuvenil (16 a 17 anos)Branca à Preta5 minutosAdultoBranca5 minutosAdultoAzul6 minutosAdultoRoxa7 minutosAdultoMarrom8 minutosAdultoPreta10 minutosMaster (1 a 7)Branca5 minutosMaster (1 a 7)Azul5 minutosMaster (1 a 7)Roxa6 minutosMaster (1 a 7)Marrom7 minutosMaster (1 a 7)Preta7 minutos
 
 ---
 
