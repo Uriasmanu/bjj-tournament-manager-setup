@@ -1,8 +1,38 @@
-import { Modal, TextInput, NumberInput, Select, Button, Group, Stack } from '@mantine/core';
+import { Modal, TextInput, NumberInput, Select, Button, Group, Stack, Box, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useEffect, useMemo } from 'react';
 import type { Atleta, Faixa } from '../types/athlete';
 import { CATEGORIAS_IBJJF } from '../types/category';
+
+const COLORS = {
+  c1: '#092b5a',
+  c2: '#09738a',
+  c3: '#fcfaf4',
+  c4: '#78a890',
+  c5: '#9ed1b7',
+};
+
+const inputStyles = {
+  input: {
+    border: `2px solid ${COLORS.c2}4d`,
+    borderRadius: 8,
+    padding: '12px',
+    transition: 'all 0.2s',
+  },
+  inputFocus: {
+    borderColor: COLORS.c2,
+    boxShadow: `0 0 0 2px ${COLORS.c2}66`,
+  },
+};
+
+const labelProps = {
+  style: {
+    color: COLORS.c1,
+    fontWeight: 600,
+    fontSize: 14,
+    marginBottom: 4,
+  },
+};
 
 const faixas: { group: string; items: { value: string; label: string }[] }[] = [
   {
@@ -181,77 +211,135 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
     <Modal
       opened={opened}
       onClose={onClose}
-      title={athlete ? 'Editar Atleta' : 'Novo Atleta'}
+      withCloseButton
       centered
       size="lg"
+      padding={0}
+      styles={{
+        body: { padding: 0 },
+        header: { display: 'none' },
+      }}
     >
-      <form onSubmit={form.onSubmit(handleSubmit)}>
-        <Stack gap="md">
-          <TextInput
-            label="Nome *"
-            placeholder="Nome completo do atleta"
-            {...form.getInputProps('nome')}
-          />
+      <Box
+        style={{
+          background: '#fff',
+          borderTop: `8px solid ${COLORS.c1}`,
+          borderRadius: 16,
+          padding: 32,
+          boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
+        }}
+      >
+        <Title
+          order={2}
+          mb="xl"
+          style={{
+            color: COLORS.c1,
+            fontWeight: 700,
+            fontSize: '1.875rem',
+            textAlign: 'center',
+          }}
+        >
+          {athlete ? 'Editar Atleta' : 'Novo Atleta'}
+        </Title>
 
-          <TextInput
-            label="Equipe *"
-            placeholder="Nome da equipe / academia"
-            {...form.getInputProps('equipe')}
-          />
+        <form onSubmit={form.onSubmit(handleSubmit)}>
+          <Stack gap="md">
+            <TextInput
+              label="Nome *"
+              placeholder="Nome completo do atleta"
+              labelProps={labelProps}
+              styles={inputStyles}
+              {...form.getInputProps('nome')}
+            />
 
-          <Select
-            label="Gênero *"
-            placeholder="Selecione o gênero"
-            data={[
-              { value: 'masculino', label: 'Masculino' },
-              { value: 'feminino', label: 'Feminino' },
-            ]}
-            {...form.getInputProps('genero')}
-          />
+            <TextInput
+              label="Equipe *"
+              placeholder="Nome da equipe / academia"
+              labelProps={labelProps}
+              styles={inputStyles}
+              {...form.getInputProps('equipe')}
+            />
 
-          <NumberInput
-            label="Peso (kg) *"
-            placeholder="Ex.: 72.5"
-            min={1}
-            max={300}
-            decimalScale={1}
-            {...form.getInputProps('pesoKg')}
-          />
+            <Select
+              label="Gênero *"
+              placeholder="Selecione o gênero"
+              data={[
+                { value: 'masculino', label: 'Masculino' },
+                { value: 'feminino', label: 'Feminino' },
+              ]}
+              labelProps={labelProps}
+              styles={inputStyles}
+              {...form.getInputProps('genero')}
+            />
 
-          <Select
-            label="Faixa *"
-            placeholder="Selecione a faixa"
-            data={faixas.map((g) => ({
-              group: g.group,
-              items: g.items.map((i) => ({ value: i.value, label: i.label })),
-            }))}
-            {...form.getInputProps('faixa')}
-          />
+            <NumberInput
+              label="Peso (kg) *"
+              placeholder="Ex.: 72.5"
+              min={1}
+              max={300}
+              decimalScale={1}
+              labelProps={labelProps}
+              styles={inputStyles}
+              {...form.getInputProps('pesoKg')}
+            />
 
-          <Select
-            label="Categoria *"
-            placeholder="Selecione a categoria IBJJF"
-            data={catGrouped}
-            disabled={catOptions.length === 0}
-            searchable
-            {...form.getInputProps('categoria')}
-          />
+            <Select
+              label="Faixa *"
+              placeholder="Selecione a faixa"
+              data={faixas.map((g) => ({
+                group: g.group,
+                items: g.items.map((i) => ({ value: i.value, label: i.label })),
+              }))}
+              labelProps={labelProps}
+              styles={inputStyles}
+              {...form.getInputProps('faixa')}
+            />
 
-          <NumberInput
-            label="Ano de Nascimento *"
-            placeholder="Ex.: 1998"
-            min={1920}
-            max={anoAtual}
-            allowDecimal={false}
-            {...form.getInputProps('anoNascimento')}
-          />
+            <Select
+              label="Categoria *"
+              placeholder="Selecione a categoria IBJJF"
+              data={catGrouped}
+              disabled={catOptions.length === 0}
+              searchable
+              labelProps={labelProps}
+              styles={inputStyles}
+              {...form.getInputProps('categoria')}
+            />
 
-          <Group justify="flex-end" mt="md">
-            <Button variant="outline" onClick={onClose}>Cancelar</Button>
-            <Button type="submit">Salvar</Button>
-          </Group>
-        </Stack>
-      </form>
+            <NumberInput
+              label="Ano de Nascimento *"
+              placeholder="Ex.: 1998"
+              min={1920}
+              max={anoAtual}
+              allowDecimal={false}
+              labelProps={labelProps}
+              styles={inputStyles}
+              {...form.getInputProps('anoNascimento')}
+            />
+
+            <Group justify="flex-end" mt="md">
+              <Button variant="outline" onClick={onClose}>Cancelar</Button>
+              <Button
+                type="submit"
+                styles={{
+                  root: {
+                    backgroundColor: COLORS.c4,
+                    color: '#fff',
+                    fontWeight: 700,
+                    padding: '16px',
+                    borderRadius: 8,
+                    transition: 'all 0.2s',
+                    '&:hover': { backgroundColor: COLORS.c1 },
+                    '&:active': { transform: 'scale(0.98)' },
+                  },
+                }}
+              >
+                {athlete ? 'Salvar Alterações' : 'Cadastrar Atleta'}
+              </Button>
+            </Group>
+          </Stack>
+        </form>
+      </Box>
     </Modal>
   );
 }
