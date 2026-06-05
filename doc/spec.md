@@ -13,13 +13,32 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+### [aberto] Em lutas casadas, o tempo de sugestão é sempre do que tem a maior categoria, ou maior cor de faixa
+### [aberto] Em resultados tem que ter uma forma facil e intuitiva de ver o as informaçoes das luta, todas as informaç~eos pontos, tempo, tipo de vitoria etc
+### [aberto] em dashbor, tem que mostrar se esta usando credencial, credencial deve expirar a cada 1 ano, e depois pedir a senha novamente (me fale a senha pq vou trocar manualmente)
 ---
 
 
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
+### [2026-06-04] Feature: tempo de luta sugerido pela IBJJF no placar (resolve [aberto] de lutas casadas)
+- **Ciclo:** implementação de `Feature` declarada em `doc/spec.md` ("Em placar alem de pode escolher anualmente o tempo de luta o sistema tambem vai deixar por padrão os tempos conforme a baixo, assim o usuario ou edita ou usa a sugestão") **+** tratamento do `[aberto]` "Em lutas casadas, o tempo de sugestão é sempre do que tem a maior categoria, ou maior cor de faixa".
+- **Spec criada:** `spec/tempo-luta-padrao-ibjjf.md` (12 seções, 7 RF, 11 CA, 5 passos).
+- **Mudança:** criado `src/types/fightTime.ts` com a função pura `sugerirTempoLutaMinutos(atleta)` cobrindo a tabela IBJJF (Mirim 2 min, Infantil 3, Infanto-Juvenil 4, Juvenil 5, Adulto 5/6/7/8/10 por faixa, Master 5/5/6/7/7 por faixa, fallback 5 min). `PlacarLuta.tsx` pré-preenche `tempoInicial`/`tempoRestante` com a sugestão do atleta A (fallback B). `PlacarLutaCasada.tsx` carrega `loadAthletes` em paralelo, calcula a sugestão para A e B, e usa `MAX(sugerir(A), sugerir(B))` (com fallback) — esta é a **resolução do `[aberto]`** (luta casada sempre usa o tempo do atleta de maior categoria/faixa). Ambas as telas exibem um `<Badge variant="light" color="blue">Sugestão IBJJF · N min</Badge>` ao lado do `NumberInput`.
+- **Decisões registradas na spec (itens `a confirmar`):** classificador de faixa etária para tempo é **independente** do `calcularFaixaEtaria` existente (a tabela de tempos IBJJF usa faixas etárias mais agregadas: Mirim 4–6, Infantil 7–9, Infanto-Juvenil 10–15); Master 1–7 todos tratados como "master" (>=30 anos); Badge exibe sempre a sugestão original, mesmo após edição manual do input; `TEMPO_DEFAULT_SEGUNDOS` (5 min) preservado como fallback quando o(s) atleta(s) de referência é(são) removido(s) ou tem `anoNascimento <= 0`; "maior categoria/maior cor de faixa" do `[aberto]` implementado como `MAX(sugerir(A), sugerir(B))` (a função é monotonicamente não-decrescente em idade e faixa).
+- **Validação:** `npx tsc --noEmit` passou; `npm run lint` não introduziu novos erros (3 erros pré-existentes em `PageLayout.tsx` e `PlacarBracket.tsx` não relacionados).
+- **Observação sobre `[aberto]`s pendentes:** os itens sobre "resultados" e "credencial/dashboard" permanecem em "Problemas Encontrados" para ciclos futuros.
+- **Arquivos novos/alterados:**
+  - criado: `src/types/fightTime.ts`
+  - criado: `spec/tempo-luta-padrao-ibjjf.md`
+  - modificado: `src/pages/PlacarLuta.tsx`
+  - modificado: `src/pages/PlacarLutaCasada.tsx`
+  - modificado: `doc/spec.md` (este registro; o `[aberto]` de lutas casadas permanece em Problemas Encontrados conforme a regra "NÃO apagar algo")
 
+### [2026-06-04] Feature: novo layout do formulário de adicionar atleta
+
+---
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->

@@ -13,6 +13,7 @@ import {
   Radio,
   Alert,
   Divider,
+  Badge,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import {
@@ -28,6 +29,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageLayout } from '../components/PageLayout';
 import type { Chave, Luta, PlacarLuta } from '../types/bracket';
 import type { Atleta } from '../types/athlete';
+import { sugerirTempoLutaMinutos, TEMPO_LUTA_FALLBACK_MINUTOS } from '../types/fightTime';
 
 const AZUL_ANIL = '#1e3a8a';
 const BRANCO = '#ffffff';
@@ -283,6 +285,7 @@ export function PlacarLuta() {
   const [placarB, setPlacarB] = useState<PlacarLuta>(placarVazio());
   const [tempoInicial, setTempoInicial] = useState<number>(TEMPO_DEFAULT_SEGUNDOS);
   const [tempoRestante, setTempoRestante] = useState<number>(TEMPO_DEFAULT_SEGUNDOS);
+  const [tempoSugeridoMinutos, setTempoSugeridoMinutos] = useState<number>(TEMPO_LUTA_FALLBACK_MINUTOS);
   const [rodando, setRodando] = useState(false);
 
   const [finalizarOpened, { open: openFinalizar, close: closeFinalizar }] = useDisclosure(false);
@@ -308,6 +311,18 @@ export function PlacarLuta() {
       setAthletes(ath as Atleta[]);
       if (foundLuta?.placarA) setPlacarA({ ...placarVazio(), ...foundLuta.placarA, total: calcularTotal(foundLuta.placarA) });
       if (foundLuta?.placarB) setPlacarB({ ...placarVazio(), ...foundLuta.placarB, total: calcularTotal(foundLuta.placarB) });
+      const atletas = ath as Atleta[];
+      const refId = foundLuta?.atletaAId && foundLuta.atletaAId !== 'tbd' && foundLuta.atletaAId !== 'bye'
+        ? foundLuta.atletaAId
+        : foundLuta?.atletaBId ?? '';
+      const refAtleta = atletas.find(a => a.id === refId);
+      const minutos = refAtleta
+        ? sugerirTempoLutaMinutos(refAtleta)
+        : TEMPO_LUTA_FALLBACK_MINUTOS;
+      setTempoSugeridoMinutos(minutos);
+      const segundos = minutos * 60;
+      setTempoInicial(segundos);
+      setTempoRestante(segundos);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [chaveId, lutaId]);
@@ -533,6 +548,14 @@ export function PlacarLuta() {
                 aria-label="Tempo inicial em minutos"
                 size="md"
               />
+              <Badge
+                variant="light"
+                color="blue"
+                size="sm"
+                aria-label="Sugestão de tempo de luta pela IBJJF"
+              >
+                Sugestão IBJJF · {tempoSugeridoMinutos} min
+              </Badge>
             </Group>
           </Group>
         </Paper>

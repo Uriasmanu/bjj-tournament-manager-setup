@@ -28,6 +28,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageLayout } from '../components/PageLayout';
 import type { PlacarLuta } from '../types/bracket';
 import type { LutaCasada, AtletaSnapshot } from '../types/lutaCasada';
+import type { Atleta } from '../types/athlete';
+import { sugerirTempoLutaMinutos, TEMPO_LUTA_FALLBACK_MINUTOS } from '../types/fightTime';
 
 const AZUL_ANIL = '#1e3a8a';
 const BRANCO = '#ffffff';
@@ -286,6 +288,7 @@ export function PlacarLutaCasada() {
   const [placarB, setPlacarB] = useState<PlacarLuta>(placarVazio());
   const [tempoInicial, setTempoInicial] = useState<number>(TEMPO_DEFAULT_SEGUNDOS);
   const [tempoRestante, setTempoRestante] = useState<number>(TEMPO_DEFAULT_SEGUNDOS);
+  const [tempoSugeridoMinutos, setTempoSugeridoMinutos] = useState<number>(TEMPO_LUTA_FALLBACK_MINUTOS);
   const [rodando, setRodando] = useState(false);
 
   const [finalizarOpened, { open: openFinalizar, close: closeFinalizar }] = useDisclosure(false);
@@ -300,11 +303,28 @@ export function PlacarLutaCasada() {
 
   useEffect(() => {
     if (!areaId || !lutaCasadaId) return;
-    window.electronAPI.loadLutasCasadasPorArea(areaId).then((lutas) => {
+    Promise.all([
+      window.electronAPI.loadLutasCasadasPorArea(areaId),
+      window.electronAPI.loadAthletes(),
+    ]).then(([lutas, ath]) => {
       const found = (lutas as LutaCasada[]).find(l => l.id === lutaCasadaId) ?? null;
       setLuta(found);
       if (found?.placarA) setPlacarA({ ...placarVazio(), ...found.placarA, total: calcularTotal(found.placarA) });
       if (found?.placarB) setPlacarB({ ...placarVazio(), ...found.placarB, total: calcularTotal(found.placarB) });
+      const atletas = ath as Atleta[];
+      const refA = atletas.find(a => a.id === found?.atletaAId);
+      const refB = atletas.find(a => a.id === found?.atletaBId);
+      const minutosA = refA ? sugerirTempoLutaMinutos(refA) : 0;
+      const minutosB = refB ? sugerirTempoLutaMinutos(refB) : 0;
+      const minutos = Math.max(
+        refA ? minutosA : 0,
+        refB ? minutosB : 0,
+        TEMPO_LUTA_FALLBACK_MINUTOS,
+      );
+      setTempoSugeridoMinutos(minutos);
+      const segundos = minutos * 60;
+      setTempoInicial(segundos);
+      setTempoRestante(segundos);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [areaId, lutaCasadaId]);
@@ -495,6 +515,14 @@ export function PlacarLutaCasada() {
                 aria-label="Tempo inicial em minutos"
                 size="md"
               />
+              <Badge
+                variant="light"
+                color="blue"
+                size="sm"
+                aria-label="Sugestão de tempo de luta pela IBJJF"
+              >
+                Sugestão IBJJF · {tempoSugeridoMinutos} min
+              </Badge>
             </Group>
           </Group>
         </Paper>

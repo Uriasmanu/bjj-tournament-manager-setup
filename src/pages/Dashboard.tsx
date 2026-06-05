@@ -89,8 +89,8 @@ function SidebarNav({ activeRoute, onNavigate }: { activeRoute: string; onNaviga
           <IconTrophyFilled size={20} color="#1b325f" />
         </Box>
         <div>
-          <Text fw={800} size="lg" style={{ lineHeight: 1.2, color: '#fff', letterSpacing: '0.5px' }}>ARENA</Text>
-          <Text size="xs" style={{ color: '#9cc4e4' }} fw={600} tt="uppercase" lts="1px">Championship</Text>
+          <Text fw={800} size="lg" style={{ lineHeight: 1.2, color: '#fff', letterSpacing: '0.5px' }}>BJJ</Text>
+          <Text size="xs" style={{ color: '#9cc4e4' }} fw={600} tt="uppercase" lts="1px">MANAGER</Text>
         </div>
       </Group>
 
