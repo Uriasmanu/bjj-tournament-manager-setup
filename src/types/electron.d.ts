@@ -10,6 +10,13 @@ declare global {
     electronAPI: ElectronAPI;
     activation: ActivationAPI;
   }
+
+  interface ActivationInfo {
+    activated: boolean;
+    activatedAt: string | null;
+    expiresAt: string | null;
+    daysRemaining: number | null;
+  }
 }
 
 interface ElectronAPI {
@@ -72,4 +79,5 @@ interface ActivationAPI {
   check: () => Promise<boolean>;
   validate: (password: string) => Promise<boolean>;
   activate: () => Promise<boolean>;
+  getInfo: () => Promise<ActivationInfo>;
 }

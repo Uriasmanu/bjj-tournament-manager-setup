@@ -7,7 +7,7 @@ import { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros
 import { loadAreas, saveArea, updateArea, deleteArea, deleteAreas } from './areas'
 import { registerBracketHandlers } from './brackets'
 import { loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada } from './lutasCasadas'
-import { checkActivation, validatePassword, activateLicense } from './activation'
+import { checkActivation, validatePassword, activateLicense, getActivationInfo } from './activation'
 import type { AreaLuta } from '../src/types/area'
 import type { Atleta } from '../src/types/athlete'
 import type { Arbitro } from '../src/types/referee'
@@ -211,6 +211,10 @@ function registerActivationHandlers(): void {
 
   ipcMain.handle('activate-license', (): boolean => {
     return activateLicense()
+  })
+
+  ipcMain.handle('get-activation-info', () => {
+    return getActivationInfo()
   })
 }
 

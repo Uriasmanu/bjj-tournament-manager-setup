@@ -8,6 +8,7 @@ import {
   IconChartPie, IconUser, IconUsersGroup,
   IconHierarchy2, IconSquareRounded, IconGavel,
   IconStopwatch, IconMedal, IconTrophyFilled,
+  IconLock,
 } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import type { Torneio } from '../types/tournament';
@@ -141,12 +142,50 @@ function SidebarNav({ activeRoute, onNavigate }: { activeRoute: string; onNaviga
             })}
         </Box>
       ))}
+    </Box>
+  );
+}
 
-      {/* Footer */}
-      <Box mt="auto" pt="md" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }} ta="center">
-        <Text size="xs" style={{ color: '#9cc4e4' }}>Torneio ID: #75892</Text>
-        <Text size="xs" fw={600} style={{ color: '#f26c4f' }}>Admin Panel v2.2</Text>
-      </Box>
+function getCredentialBadge(daysRemaining: number | null, activated: boolean): { label: string; color: string } {
+  if (!activated) return { label: 'Expirada', color: 'red' };
+  if (daysRemaining === null) return { label: 'Desconhecida', color: 'gray' };
+  if (daysRemaining <= 7) return { label: 'Expira em breve', color: 'red' };
+  if (daysRemaining <= 30) return { label: 'Expira em breve', color: 'yellow' };
+  return { label: 'Ativada', color: 'green' };
+}
+
+function ActivationStatus({ info }: { info: ActivationInfo }) {
+  const badge = getCredentialBadge(info.daysRemaining, info.activated);
+  const formatDate = (iso: string | null) => iso ? dayjs(iso).format('DD/MM/YYYY') : '—';
+
+  return (
+    <Box
+      mb="md"
+      p="sm"
+      role="status"
+      aria-label="Status da credencial de ativação"
+      style={{
+        background: '#f8f9fa',
+        border: '1px solid #e9ecef',
+        borderRadius: 8,
+      }}
+    >
+      <Group gap="xs" align="center" wrap="wrap">
+        <IconLock size={14} color="#6c757d" aria-hidden="true" />
+        <Text size="xs" c="dimmed">Credencial:</Text>
+        <Badge size="xs" color={badge.color} variant="light">{badge.label}</Badge>
+        {info.activatedAt && (
+          <Text size="xs" c="dimmed">· Ativada em {formatDate(info.activatedAt)}</Text>
+        )}
+        {info.activated && info.expiresAt && info.daysRemaining !== null && (
+          <Text size="xs" c="dimmed">
+            · Expira em {info.daysRemaining} dia(s) ({formatDate(info.expiresAt)})
+          </Text>
+        )}
+        {!info.activated && info.activatedAt === null && (
+          <Text size="xs" c="dimmed">· Não ativada</Text>
+        )}
+      </Group>
     </Box>
   );
 }
@@ -157,6 +196,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [cols, setCols] = useState(3);
+  const [activationInfo, setActivationInfo] = useState<ActivationInfo | null>(null);
 
   const updateCols = () => {
     const w = window.innerWidth;
@@ -179,6 +219,7 @@ export function Dashboard() {
       setTorneio(t);
       setLoading(false);
     });
+    window.activation.getInfo().then(setActivationInfo).catch(() => setActivationInfo(null));
   }, []);
 
   const formatDate = (isoDate: string) => dayjs(isoDate).format('DD/MM/YYYY');
@@ -383,6 +424,11 @@ export function Dashboard() {
               </Text>
             </Box>
           </Box>
+
+          {/* Credential status (discreto) */}
+          {activationInfo && (
+            <ActivationStatus info={activationInfo} />
+          )}
 
           {/* Cards grid */}
           <Grid>

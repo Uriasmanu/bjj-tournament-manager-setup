@@ -48,5 +48,6 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
 electron.contextBridge.exposeInMainWorld("activation", {
   check: () => electron.ipcRenderer.invoke("check-activation"),
   validate: (password) => electron.ipcRenderer.invoke("validate-password", password),
-  activate: () => electron.ipcRenderer.invoke("activate-license")
+  activate: () => electron.ipcRenderer.invoke("activate-license"),
+  getInfo: () => electron.ipcRenderer.invoke("get-activation-info")
 });

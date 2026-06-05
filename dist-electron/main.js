@@ -2065,8 +2065,9 @@ function deleteLutaCasada(torneioId, lutaCasadaId) {
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   saveTorneio(torneio);
 }
-const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "57a8d2d84be94e9bdae407ad8352065346269c6997b0be31ff32101fc51e7c3e";
+const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "f83244662ee78bf661577ecd28343bc4ff6538b6f249d6d7b1bf34817ec0ced4";
 const ACTIVATION_FILE = "activation.json";
+const EXPIRATION_YEARS = 1;
 function getActivationPath() {
   return path.join(app.getPath("userData"), ACTIVATION_FILE);
 }
@@ -2079,16 +2080,51 @@ function getMachineId() {
     return crypto.randomUUID();
   }
 }
+function isExpired(expiresAt) {
+  if (!expiresAt) return true;
+  return /* @__PURE__ */ new Date() > new Date(expiresAt);
+}
+function computeDaysRemaining(expiresAt) {
+  const diffMs = new Date(expiresAt).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diffMs / 864e5));
+}
 function checkActivation() {
   try {
     const filePath = getActivationPath();
     if (!fs.existsSync(filePath)) return false;
     const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    if (isExpired(data.expiresAt)) return false;
     const machineId = getMachineId();
     const expectedToken = crypto.createHmac("sha256", MASTER_PASSWORD_HASH).update(machineId).digest("hex");
     return data.token === expectedToken;
   } catch {
     return false;
+  }
+}
+function getActivationInfo() {
+  try {
+    const filePath = getActivationPath();
+    if (!fs.existsSync(filePath)) {
+      return { activated: false, activatedAt: null, expiresAt: null, daysRemaining: null };
+    }
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const expired = isExpired(data.expiresAt);
+    if (expired) {
+      return {
+        activated: false,
+        activatedAt: data.activatedAt ?? null,
+        expiresAt: data.expiresAt ?? null,
+        daysRemaining: 0
+      };
+    }
+    return {
+      activated: true,
+      activatedAt: data.activatedAt ?? null,
+      expiresAt: data.expiresAt,
+      daysRemaining: computeDaysRemaining(data.expiresAt)
+    };
+  } catch {
+    return { activated: false, activatedAt: null, expiresAt: null, daysRemaining: null };
   }
 }
 function validatePassword(password) {
@@ -2099,8 +2135,15 @@ function activateLicense() {
   try {
     const machineId = getMachineId();
     const token = crypto.createHmac("sha256", MASTER_PASSWORD_HASH).update(machineId).digest("hex");
+    const activatedAt = /* @__PURE__ */ new Date();
+    const expiresAt = new Date(activatedAt);
+    expiresAt.setFullYear(expiresAt.getFullYear() + EXPIRATION_YEARS);
     const filePath = getActivationPath();
-    fs.writeFileSync(filePath, JSON.stringify({ token, activatedAt: (/* @__PURE__ */ new Date()).toISOString() }), "utf-8");
+    fs.writeFileSync(
+      filePath,
+      JSON.stringify({ token, activatedAt: activatedAt.toISOString(), expiresAt: expiresAt.toISOString() }, null, 2),
+      "utf-8"
+    );
     return true;
   } catch {
     return false;
@@ -2255,6 +2298,9 @@ function registerActivationHandlers() {
   });
   ipcMain.handle("activate-license", () => {
     return activateLicense();
+  });
+  ipcMain.handle("get-activation-info", () => {
+    return getActivationInfo();
   });
 }
 function registerLutasCasadasHandlers() {

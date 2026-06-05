@@ -106,4 +106,5 @@ contextBridge.exposeInMainWorld('activation', {
   check: () => ipcRenderer.invoke('check-activation'),
   validate: (password: string) => ipcRenderer.invoke('validate-password', password),
   activate: () => ipcRenderer.invoke('activate-license'),
+  getInfo: () => ipcRenderer.invoke('get-activation-info'),
 })
