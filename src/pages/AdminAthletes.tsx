@@ -1,6 +1,6 @@
-import { Text, Button, Group, Loader, Center, Stack, TextInput, Select, Badge, ActionIcon, Table, Modal } from '@mantine/core';
+import { Text, Button, Group, Loader, Center, Stack, TextInput, Select, Badge, ActionIcon, Table, Modal, Switch, Checkbox } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlus, IconFileUpload, IconFileCode, IconSearch, IconPencil, IconTrash, IconUsers, IconTrophy } from '@tabler/icons-react';
+import { IconPlus, IconFileUpload, IconFileCode, IconSearch, IconPencil, IconTrash, IconUsers, IconTrophy, IconRestore } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState, useMemo } from 'react';
 import type { Atleta, Faixa } from '../types/athlete';
@@ -38,6 +38,12 @@ function calcularIdade(anoNascimento: number): number {
   return new Date().getFullYear() - anoNascimento;
 }
 
+function formatDeletedAt(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+}
+
 export function AdminAthletes() {
   const [athletes, setAthletes] = useState<Atleta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,15 +52,23 @@ export function AdminAthletes() {
   const [searchQuery, setSearchQuery] = useState('');
   const [beltFilter, setBeltFilter] = useState<string>('');
   const [deleteTarget, setDeleteTarget] = useState<Atleta | null>(null);
+  const [permanentTarget, setPermanentTarget] = useState<Atleta | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkPermanentOpen, setBulkPermanentOpen] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
+  const [permanentOpened, { open: openPermanent, close: closePermanent }] = useDisclosure(false);
 
-  const loadAthletes = async () => {
+  const loadList = async () => {
     setLoading(true);
     setError(false);
     try {
-      const list = await window.electronAPI.loadAthletes();
+      const list = showDeleted
+        ? await window.electronAPI.loadDeletedAthletes()
+        : await window.electronAPI.loadAthletes();
       setAthletes(list.sort((a, b) => a.nome.localeCompare(b.nome)));
+      setSelectedIds([]);
     } catch {
       setError(true);
     } finally {
@@ -72,11 +86,11 @@ export function AdminAthletes() {
         (categoriaLabels[a.categoria] || a.categoria).toLowerCase().includes(q)
       );
     }
-    if (beltFilter) {
+    if (beltFilter && !showDeleted) {
       result = result.filter(a => a.faixa === beltFilter);
     }
     return result;
-  }, [athletes, searchQuery, beltFilter]);
+  }, [athletes, searchQuery, beltFilter, showDeleted]);
 
   const faixaCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -87,8 +101,9 @@ export function AdminAthletes() {
   }, [athletes]);
 
   useEffect(() => {
-    loadAthletes();
-  }, []);
+    loadList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showDeleted]);
 
   const handleNew = () => {
     setSelectedAthlete(null);
@@ -103,6 +118,21 @@ export function AdminAthletes() {
   const handleDelete = (athlete: Atleta) => {
     setDeleteTarget(athlete);
     openDelete();
+  };
+
+  const handleRestore = async (athlete: Atleta) => {
+    try {
+      await window.electronAPI.restoreAthlete(athlete.id);
+      notifications.show({ title: 'Sucesso', message: 'Atleta restaurado com sucesso!', color: 'green' });
+      await loadList();
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao restaurar o atleta.', color: 'red' });
+    }
+  };
+
+  const handlePermanent = (athlete: Atleta) => {
+    setPermanentTarget(athlete);
+    openPermanent();
   };
 
   const handleSave = async (athlete: Atleta): Promise<boolean> => {
@@ -124,7 +154,7 @@ export function AdminAthletes() {
         await window.electronAPI.saveAthlete(athlete);
         notifications.show({ title: 'Sucesso', message: 'Atleta cadastrado com sucesso!', color: 'green' });
       }
-      await loadAthletes();
+      await loadList();
       return true;
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao salvar o atleta.', color: 'red' });
@@ -138,10 +168,36 @@ export function AdminAthletes() {
       await window.electronAPI.deleteAthlete(deleteTarget.id);
       closeDelete();
       setDeleteTarget(null);
-      notifications.show({ title: 'Sucesso', message: 'Atleta excluído com sucesso!', color: 'green' });
-      await loadAthletes();
+      notifications.show({ title: 'Sucesso', message: 'Atleta movido para os deletados.', color: 'green' });
+      await loadList();
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao excluir o atleta.', color: 'red' });
+    }
+  };
+
+  const handlePermanentConfirm = async () => {
+    if (!permanentTarget) return;
+    try {
+      await window.electronAPI.permanentlyDeleteAthlete(permanentTarget.id);
+      closePermanent();
+      setPermanentTarget(null);
+      notifications.show({ title: 'Sucesso', message: 'Atleta excluído permanentemente.', color: 'green' });
+      await loadList();
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao excluir permanentemente.', color: 'red' });
+    }
+  };
+
+  const handleBulkPermanent = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      await window.electronAPI.permanentlyDeleteAthletes(selectedIds);
+      setBulkPermanentOpen(false);
+      setSelectedIds([]);
+      notifications.show({ title: 'Sucesso', message: `${selectedIds.length} atleta(s) excluído(s) permanentemente.`, color: 'green' });
+      await loadList();
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao excluir permanentemente.', color: 'red' });
     }
   };
 
@@ -160,10 +216,26 @@ export function AdminAthletes() {
       if (result.imported === 0 && result.skipped === 0) return;
       const msg = `${result.imported} atleta(s) importado(s)${result.skipped > 0 ? `, ${result.skipped} ignorado(s) (já existentes)` : ''}.`;
       notifications.show({ title: 'Sucesso', message: msg, color: 'green' });
-      await loadAthletes();
+      await loadList();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao importar atletas.';
       notifications.show({ title: 'Erro ao importar', message: msg, color: 'red', autoClose: false });
+    }
+  };
+
+  const allSelected = athletes.length > 0 && selectedIds.length === athletes.length;
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(athletes.map(a => a.id));
     }
   };
 
@@ -180,7 +252,7 @@ export function AdminAthletes() {
       <Center py="xl" style={{ minHeight: '100vh' }}>
         <Stack align="center" gap="md">
           <Text c="red">Erro ao carregar atletas.</Text>
-          <Button onClick={loadAthletes}>Tentar novamente</Button>
+          <Button onClick={loadList}>Tentar novamente</Button>
         </Stack>
       </Center>
     );
@@ -194,122 +266,137 @@ export function AdminAthletes() {
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
               <Text fw={800} size="xl" style={{ color: '#1b325f' }}>
-                Lista Oficial de Atletas
+                {showDeleted ? 'Atletas Deletados' : 'Lista Oficial de Atletas'}
               </Text>
               <Text size="sm" c="dimmed" mt={2}>
-                Gerencie inscrições, importe dados e controle os atletas.
+                {showDeleted
+                  ? 'Restaurar ou excluir permanentemente atletas deletados.'
+                  : 'Gerencie inscrições, importe dados e controle os atletas.'}
               </Text>
             </div>
             <Group gap="sm">
-              <Button
-                variant="default"
-                leftSection={<IconFileUpload size={16} />}
-                onClick={handleImport}
-                styles={{ root: { borderRadius: 12 } }}
-              >
-                Importar
-              </Button>
-              <Button
-                variant="default"
-                leftSection={<IconFileCode size={16} />}
-                onClick={handleExport}
-                styles={{ root: { borderRadius: 12 } }}
-              >
-                Exportar JSON
-              </Button>
-              <Button
-                leftSection={<IconPlus size={16} />}
-                onClick={handleNew}
-                styles={{
-                  root: {
-                    backgroundColor: '#1b325f',
-                    borderRadius: 12,
-                    '&:hover': { backgroundColor: '#3a89c9' },
-                  },
-                }}
-              >
-                Cadastrar Atleta
-              </Button>
+              <Switch
+                checked={showDeleted}
+                onChange={(e) => setShowDeleted(e.currentTarget.checked)}
+                label="Mostrar apenas os deletados"
+                size="md"
+                color="red"
+                styles={{ label: { fontWeight: 600 } }}
+              />
+              {!showDeleted && (
+                <>
+                  <Button
+                    variant="default"
+                    leftSection={<IconFileUpload size={16} />}
+                    onClick={handleImport}
+                    styles={{ root: { borderRadius: 12 } }}
+                  >
+                    Importar
+                  </Button>
+                  <Button
+                    variant="default"
+                    leftSection={<IconFileCode size={16} />}
+                    onClick={handleExport}
+                    styles={{ root: { borderRadius: 12 } }}
+                  >
+                    Exportar JSON
+                  </Button>
+                  <Button
+                    leftSection={<IconPlus size={16} />}
+                    onClick={handleNew}
+                    styles={{
+                      root: {
+                        backgroundColor: '#1b325f',
+                        borderRadius: 12,
+                        '&:hover': { backgroundColor: '#3a89c9' },
+                      },
+                    }}
+                  >
+                    Cadastrar Atleta
+                  </Button>
+                </>
+              )}
             </Group>
           </div>
 
-          {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: 24 }}>
-            <div
-              style={{
-                background: '#fff',
-                border: '1px solid rgba(0,0,0,0.06)',
-                borderRadius: 16,
-                padding: 24,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <Text size="xs" fw={700} tt="uppercase" style={{ color: 'rgba(27,50,95,0.5)', letterSpacing: 1 }}>
-                  Inscritos
-                </Text>
-                <Text fw={900} size="2.5rem" style={{ color: '#1b325f', lineHeight: 1.1, marginTop: 4 }}>
-                  {athletes.length}
-                </Text>
-                <Text size="xs" fw={600} style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                  <IconUsers size={12} /> Prontos para combate
-                </Text>
-              </div>
+          {!showDeleted && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: 24 }}>
               <div
                 style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: '50%',
-                  background: '#e9f2f9',
+                  background: '#fff',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  borderRadius: 16,
+                  padding: 24,
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  justifyContent: 'space-between',
                 }}
               >
-                <IconUsers size={24} color="#1b325f" />
+                <div>
+                  <Text size="xs" fw={700} tt="uppercase" style={{ color: 'rgba(27,50,95,0.5)', letterSpacing: 1 }}>
+                    Inscritos
+                  </Text>
+                  <Text fw={900} size="2.5rem" style={{ color: '#1b325f', lineHeight: 1.1, marginTop: 4 }}>
+                    {athletes.length}
+                  </Text>
+                  <Text size="xs" fw={600} style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                    <IconUsers size={12} /> Prontos para combate
+                  </Text>
+                </div>
+                <div
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    background: '#e9f2f9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <IconUsers size={24} color="#1b325f" />
+                </div>
               </div>
-            </div>
 
-            <div
-              style={{
-                background: '#fff',
-                border: '1px solid rgba(0,0,0,0.06)',
-                borderRadius: 16,
-                padding: 24,
-              }}
-            >
-              <Text fw={700} size="sm" style={{ color: '#1b325f', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <IconTrophy size={16} /> Graduações (Faixas)
-              </Text>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-                {faixaOrder.map((faixa) => {
-                  const count = faixaCounts[faixa] || 0;
-                  return (
-                    <div
-                      key={faixa}
-                      style={{
-                        padding: 8,
-                        border: `1px solid ${count > 0 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.04)'}`,
-                        borderRadius: 12,
-                        textAlign: 'center',
-                        opacity: count > 0 ? 1 : 0.4,
-                        background: count > 0 ? '#f8fafd' : 'transparent',
-                      }}
-                    >
-                      <Text size="xs" fw={600} style={{ color: 'rgba(27,50,95,0.5)' }}>
-                        {faixaLabels[faixa].toUpperCase()}
-                      </Text>
-                      <Text fw={900} size="lg" style={{ color: '#1b325f', marginTop: 2 }}>
-                        {count}
-                      </Text>
-                    </div>
-                  );
-                })}
+              <div
+                style={{
+                  background: '#fff',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  borderRadius: 16,
+                  padding: 24,
+                }}
+              >
+                <Text fw={700} size="sm" style={{ color: '#1b325f', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <IconTrophy size={16} /> Graduações (Faixas)
+                </Text>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+                  {faixaOrder.map((faixa) => {
+                    const count = faixaCounts[faixa] || 0;
+                    return (
+                      <div
+                        key={faixa}
+                        style={{
+                          padding: 8,
+                          border: `1px solid ${count > 0 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.04)'}`,
+                          borderRadius: 12,
+                          textAlign: 'center',
+                          opacity: count > 0 ? 1 : 0.4,
+                          background: count > 0 ? '#f8fafd' : 'transparent',
+                        }}
+                      >
+                        <Text size="xs" fw={600} style={{ color: 'rgba(27,50,95,0.5)' }}>
+                          {faixaLabels[faixa].toUpperCase()}
+                        </Text>
+                        <Text fw={900} size="lg" style={{ color: '#1b325f', marginTop: 2 }}>
+                          {count}
+                        </Text>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Search + Filter */}
@@ -327,29 +414,35 @@ export function AdminAthletes() {
           }}
         >
           <TextInput
-            placeholder="Buscar atleta por nome, equipe ou categoria..."
+            placeholder={showDeleted ? 'Buscar atleta deletado...' : 'Buscar atleta por nome, equipe ou categoria...'}
             leftSection={<IconSearch size={16} />}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.currentTarget.value)}
             style={{ flex: 1, minWidth: 280 }}
           />
-          <Select
-            placeholder="Todas as Faixas"
-            data={faixaOrder.map((f) => ({ value: f, label: faixaLabels[f] }))}
-            value={beltFilter}
-            onChange={(v) => setBeltFilter(v || '')}
-            clearable
-            style={{ width: 180 }}
-          />
+          {!showDeleted && (
+            <Select
+              placeholder="Todas as Faixas"
+              data={faixaOrder.map((f) => ({ value: f, label: faixaLabels[f] }))}
+              value={beltFilter}
+              onChange={(v) => setBeltFilter(v || '')}
+              clearable
+              style={{ width: 180 }}
+            />
+          )}
         </div>
 
         {/* Table */}
         {athletes.length === 0 ? (
           <Stack align="center" gap="md" py="xl">
-            <Text c="dimmed">Nenhum atleta cadastrado</Text>
-            <Button leftSection={<IconPlus size={16} />} onClick={handleNew} styles={{ root: { borderRadius: 12 } }}>
-              Cadastrar primeiro atleta
-            </Button>
+            <Text c="dimmed">
+              {showDeleted ? 'Nenhum atleta na lixeira' : 'Nenhum atleta cadastrado'}
+            </Text>
+            {!showDeleted && (
+              <Button leftSection={<IconPlus size={16} />} onClick={handleNew} styles={{ root: { borderRadius: 12 } }}>
+                Cadastrar primeiro atleta
+              </Button>
+            )}
           </Stack>
         ) : filteredAthletes.length === 0 ? (
           <Stack align="center" gap="md" py="xl">
@@ -376,11 +469,24 @@ export function AdminAthletes() {
               <Table horizontalSpacing="clamp(8px, 1.5vw, 24px)">
                 <Table.Thead>
                   <Table.Tr style={{ background: '#f8fafd' }}>
+                    {showDeleted && (
+                      <Table.Th style={{ width: 40 }}>
+                        <Checkbox
+                          checked={allSelected}
+                          indeterminate={selectedIds.length > 0 && !allSelected}
+                          onChange={toggleAll}
+                          aria-label="Selecionar todos"
+                        />
+                      </Table.Th>
+                    )}
                     <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Nome</Table.Th>
                     <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Equipe</Table.Th>
                     <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Faixa</Table.Th>
                     <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Categoria</Table.Th>
                     <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)', textAlign: 'center' }}>Idade</Table.Th>
+                    {showDeleted && (
+                      <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Deletado em</Table.Th>
+                    )}
                     <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)', textAlign: 'center', width: 100 }}>Ações</Table.Th>
                   </Table.Tr>
                 </Table.Thead>
@@ -392,6 +498,15 @@ export function AdminAthletes() {
                       onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.02)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
                     >
+                      {showDeleted && (
+                        <Table.Td>
+                          <Checkbox
+                            checked={selectedIds.includes(a.id)}
+                            onChange={() => toggleSelect(a.id)}
+                            aria-label={`Selecionar ${a.nome}`}
+                          />
+                        </Table.Td>
+                      )}
                       <Table.Td>
                         <Text fw={700} size="sm" style={{ color: '#1b325f' }}>{a.nome}</Text>
                       </Table.Td>
@@ -425,14 +540,44 @@ export function AdminAthletes() {
                           {calcularIdade(a.anoNascimento)} <Text component="span" size="xs" style={{ color: 'rgba(27,50,95,0.4)' }}>anos</Text>
                         </Text>
                       </Table.Td>
+                      {showDeleted && (
+                        <Table.Td>
+                          <Text size="sm" c="dimmed">{formatDeletedAt(a.deletedAt)}</Text>
+                        </Table.Td>
+                      )}
                       <Table.Td>
                         <Group gap="xs" justify="center" wrap="nowrap">
-                          <ActionIcon variant="subtle" color="blue" onClick={() => handleEdit(a)} aria-label={`Editar ${a.nome}`}>
-                            <IconPencil size={18} />
-                          </ActionIcon>
-                          <ActionIcon variant="subtle" color="red" onClick={() => handleDelete(a)} aria-label={`Excluir ${a.nome}`}>
-                            <IconTrash size={18} />
-                          </ActionIcon>
+                          {showDeleted ? (
+                            <>
+                              <ActionIcon
+                                variant="subtle"
+                                color="green"
+                                onClick={() => handleRestore(a)}
+                                aria-label={`Restaurar ${a.nome}`}
+                                title="Restaurar"
+                              >
+                                <IconRestore size={18} />
+                              </ActionIcon>
+                              <ActionIcon
+                                variant="subtle"
+                                color="red"
+                                onClick={() => handlePermanent(a)}
+                                aria-label={`Excluir permanentemente ${a.nome}`}
+                                title="Excluir permanentemente"
+                              >
+                                <IconTrash size={18} />
+                              </ActionIcon>
+                            </>
+                          ) : (
+                            <>
+                              <ActionIcon variant="subtle" color="blue" onClick={() => handleEdit(a)} aria-label={`Editar ${a.nome}`}>
+                                <IconPencil size={18} />
+                              </ActionIcon>
+                              <ActionIcon variant="subtle" color="red" onClick={() => handleDelete(a)} aria-label={`Excluir ${a.nome}`}>
+                                <IconTrash size={18} />
+                              </ActionIcon>
+                            </>
+                          )}
                         </Group>
                       </Table.Td>
                     </Table.Tr>
@@ -441,6 +586,19 @@ export function AdminAthletes() {
               </Table>
             </div>
           </div>
+        )}
+
+        {showDeleted && selectedIds.length > 0 && (
+          <Group justify="flex-end" mt="md">
+            <Button
+              color="red"
+              leftSection={<IconTrash size={16} />}
+              onClick={() => setBulkPermanentOpen(true)}
+              styles={{ root: { borderRadius: 12 } }}
+            >
+              Excluir Selecionados ({selectedIds.length})
+            </Button>
+          </Group>
         )}
       </div>
 
@@ -459,15 +617,61 @@ export function AdminAthletes() {
         size="sm"
       >
         <Text size="sm" mb="md">
-          Deseja realmente excluir o atleta{' '}
+          O atleta{' '}
           <Text component="span" fw={600}>
             {deleteTarget?.nome}
-          </Text>
-          ? Esta ação não pode ser desfeita.
+          </Text>{' '}
+          será movido para os deletados. Você poderá restaurá-lo na aba "Mostrar apenas os deletados".
         </Text>
         <Group justify="flex-end">
           <Button variant="outline" onClick={closeDelete} styles={{ root: { borderRadius: 12 } }}>Cancelar</Button>
           <Button color="red" onClick={handleDeleteConfirm} styles={{ root: { borderRadius: 12 } }}>Excluir</Button>
+        </Group>
+      </Modal>
+
+      <Modal
+        opened={permanentOpened}
+        onClose={closePermanent}
+        title="Excluir Permanentemente"
+        centered
+        size="sm"
+      >
+        <Text size="sm" mb="md" fw={600} c="red">
+          Esta ação é IRREVERSÍVEL.
+        </Text>
+        <Text size="sm" mb="md">
+          O atleta{' '}
+          <Text component="span" fw={600}>
+            {permanentTarget?.nome}
+          </Text>{' '}
+          será removido para sempre e não poderá ser restaurado.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="outline" onClick={closePermanent} styles={{ root: { borderRadius: 12 } }}>Cancelar</Button>
+          <Button color="red" onClick={handlePermanentConfirm} styles={{ root: { borderRadius: 12 } }}>
+            Excluir Permanentemente
+          </Button>
+        </Group>
+      </Modal>
+
+      <Modal
+        opened={bulkPermanentOpen}
+        onClose={() => setBulkPermanentOpen(false)}
+        title="Excluir Permanentemente"
+        centered
+        size="sm"
+      >
+        <Text size="sm" mb="md" fw={600} c="red">
+          Esta ação é IRREVERSÍVEL.
+        </Text>
+        <Text size="sm" mb="md">
+          Os {selectedIds.length} atleta(s) selecionado(s) serão removidos para sempre e não poderão ser restaurados.
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="outline" onClick={() => setBulkPermanentOpen(false)} styles={{ root: { borderRadius: 12 } }}>Cancelar</Button>
+          <Button color="red" onClick={handleBulkPermanent} styles={{ root: { borderRadius: 12 } }}>
+            Excluir {selectedIds.length} Permanentemente
+          </Button>
         </Group>
       </Modal>
     </PageLayout>

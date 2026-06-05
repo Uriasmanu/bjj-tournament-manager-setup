@@ -24,7 +24,19 @@ function saveTorneio(torneio: Torneio): void {
 
 function loadArbitros(torneioId: string): Arbitro[] {
   const torneio = loadTorneio(torneioId)
-  return torneio.arbitros ?? []
+  const list = torneio.arbitros ?? []
+  let modified = false
+  for (const a of list) {
+    if (a.deletedAt === undefined) {
+      a.deletedAt = null
+      modified = true
+    }
+  }
+  if (modified) {
+    torneio.updatedAt = new Date().toISOString()
+    saveTorneio(torneio)
+  }
+  return list.filter(a => a.deletedAt == null)
 }
 
 function saveArbitro(torneioId: string, data: Omit<Arbitro, 'id' | 'createdAt' | 'updatedAt'>): Arbitro {
@@ -39,6 +51,7 @@ function saveArbitro(torneioId: string, data: Omit<Arbitro, 'id' | 'createdAt' |
     chaveIds: data.chaveIds ?? [],
     createdAt: now,
     updatedAt: now,
+    deletedAt: null,
   }
   list.push(arbitro)
   torneio.arbitros = list
@@ -52,10 +65,13 @@ function updateArbitro(torneioId: string, data: Arbitro): Arbitro {
   const list = torneio.arbitros ?? []
   const index = list.findIndex(a => a.id === data.id)
   if (index === -1) throw new Error('Árbitro não encontrado')
+  const previous = list[index]
   const now = new Date().toISOString()
   list[index] = {
     ...data,
     nome: data.nome.trim().toLowerCase(),
+    createdAt: previous.createdAt,
+    deletedAt: previous.deletedAt ?? null,
     updatedAt: now,
   }
   torneio.arbitros = list
@@ -66,7 +82,15 @@ function updateArbitro(torneioId: string, data: Arbitro): Arbitro {
 
 function deleteArbitro(torneioId: string, arbitroId: string): void {
   const torneio = loadTorneio(torneioId)
-  torneio.arbitros = (torneio.arbitros ?? []).filter(a => a.id !== arbitroId)
+  const list = torneio.arbitros ?? []
+  const now = new Date().toISOString()
+  const index = list.findIndex(a => a.id === arbitroId)
+  if (index === -1) throw new Error('Árbitro não encontrado')
+  list[index] = {
+    ...list[index],
+    deletedAt: now,
+    updatedAt: now,
+  }
   const t = torneio as unknown as Record<string, unknown>
   const chaves = t.chaves as { arbitroId?: string | null }[] | undefined
   if (chaves) {
@@ -76,14 +100,25 @@ function deleteArbitro(torneioId: string, arbitroId: string): void {
       }
     }
   }
-  torneio.updatedAt = new Date().toISOString()
+  torneio.arbitros = list
+  torneio.updatedAt = now
   saveTorneio(torneio)
 }
 
 function deleteArbitros(torneioId: string, arbitroIds: string[]): void {
   const torneio = loadTorneio(torneioId)
   const idSet = new Set(arbitroIds)
-  torneio.arbitros = (torneio.arbitros ?? []).filter(a => !idSet.has(a.id))
+  const list = torneio.arbitros ?? []
+  const now = new Date().toISOString()
+  for (let i = 0; i < list.length; i += 1) {
+    if (idSet.has(list[i].id)) {
+      list[i] = {
+        ...list[i],
+        deletedAt: now,
+        updatedAt: now,
+      }
+    }
+  }
   const t = torneio as unknown as Record<string, unknown>
   const chaves = t.chaves as { arbitroId?: string | null }[] | undefined
   if (chaves) {
@@ -93,6 +128,49 @@ function deleteArbitros(torneioId: string, arbitroIds: string[]): void {
       }
     }
   }
+  torneio.arbitros = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+}
+
+function restoreArbitro(torneioId: string, arbitroId: string): void {
+  const torneio = loadTorneio(torneioId)
+  const list = torneio.arbitros ?? []
+  const now = new Date().toISOString()
+  const index = list.findIndex(a => a.id === arbitroId)
+  if (index === -1) throw new Error('Árbitro não encontrado')
+  list[index] = {
+    ...list[index],
+    deletedAt: null,
+    updatedAt: now,
+  }
+  torneio.arbitros = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+}
+
+function loadDeletedArbitros(torneioId: string): Arbitro[] {
+  const torneio = loadTorneio(torneioId)
+  const list = torneio.arbitros ?? []
+  return list.filter(a => a.deletedAt != null)
+}
+
+function permanentlyDeleteArbitro(torneioId: string, arbitroId: string): void {
+  const torneio = loadTorneio(torneioId)
+  const list = torneio.arbitros ?? []
+  const index = list.findIndex(a => a.id === arbitroId)
+  if (index === -1) throw new Error('Árbitro não encontrado')
+  list.splice(index, 1)
+  torneio.arbitros = list
+  torneio.updatedAt = new Date().toISOString()
+  saveTorneio(torneio)
+}
+
+function permanentlyDeleteArbitros(torneioId: string, arbitroIds: string[]): void {
+  const torneio = loadTorneio(torneioId)
+  const idSet = new Set(arbitroIds)
+  const list = torneio.arbitros ?? []
+  torneio.arbitros = list.filter(a => !idSet.has(a.id))
   torneio.updatedAt = new Date().toISOString()
   saveTorneio(torneio)
 }
@@ -147,6 +225,7 @@ function importArbitrosFromFile(torneioId: string, filePath: string): { imported
         chaveIds: (a.chaveIds as string[]) ?? [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        deletedAt: null,
       })
       imported++
     } else {
@@ -172,4 +251,4 @@ async function exportArbitros(torneioId: string): Promise<void> {
   }
 }
 
-export { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros }
+export { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, restoreArbitro, permanentlyDeleteArbitro, permanentlyDeleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros }

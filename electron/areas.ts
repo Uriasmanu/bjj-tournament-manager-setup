@@ -44,12 +44,14 @@ function normalizeArea(area: Record<string, unknown>): AreaLuta {
         : [],
     createdAt: (area.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (area.updatedAt as string) ?? new Date().toISOString(),
+    deletedAt: (area.deletedAt as string | null | undefined) ?? null,
   }
 }
 
 function loadAreas(torneioId: string): AreaLuta[] {
   const torneio = loadTorneio(torneioId)
-  return (torneio.areas ?? []).map(a => normalizeArea(a as unknown as Record<string, unknown>))
+  const list = (torneio.areas ?? []).map(a => normalizeArea(a as unknown as Record<string, unknown>))
+  return list.filter(a => a.deletedAt == null)
 }
 
 function checkRefereeNotInUse(torneioId: string, arbitroIds: string[], excludeAreaId?: string): void {
@@ -73,18 +75,20 @@ function saveArea(torneioId: string, data: { nome: string; arbitroIds: string[] 
   const arbitroIds = data.arbitroIds ?? []
   checkRefereeNotInUse(torneioId, arbitroIds)
   const torneio = loadTorneio(torneioId)
-  const list = loadAreas(torneioId)
+  const allAreas = (torneio.areas ?? []).map(a => normalizeArea(a as unknown as Record<string, unknown>))
+  const activeAreas = allAreas.filter(a => a.deletedAt == null)
   const now = new Date().toISOString()
-  const nomeFinal = data.nome.trim() === '' ? gerarNomeAreaPadrao(list) : data.nome.trim()
+  const nomeFinal = data.nome.trim() === '' ? gerarNomeAreaPadrao(activeAreas) : data.nome.trim()
   const area: AreaLuta = {
     id: crypto.randomUUID(),
     nome: nomeFinal,
     arbitroIds: arbitroIds.filter(Boolean),
     createdAt: now,
     updatedAt: now,
+    deletedAt: null,
   }
-  list.push(area)
-  torneio.areas = list
+  allAreas.push(area)
+  torneio.areas = allAreas
   torneio.updatedAt = now
   saveTorneio(torneio)
   return area
@@ -94,34 +98,100 @@ function updateArea(torneioId: string, data: AreaLuta): AreaLuta {
   const arbitroIds = data.arbitroIds ?? []
   checkRefereeNotInUse(torneioId, arbitroIds, data.id)
   const torneio = loadTorneio(torneioId)
-  const list = loadAreas(torneioId)
-  const index = list.findIndex(a => a.id === data.id)
+  const allAreas = (torneio.areas ?? []).map(a => normalizeArea(a as unknown as Record<string, unknown>))
+  const index = allAreas.findIndex(a => a.id === data.id)
   if (index === -1) throw new Error('Área de luta não encontrada')
+  const previous = allAreas[index]
   const now = new Date().toISOString()
-  const nomeFinal = data.nome.trim() === '' ? gerarNomeAreaPadrao(list.filter(a => a.id !== data.id)) : data.nome.trim()
-  list[index] = {
+  const activeOthers = allAreas.filter(a => a.deletedAt == null && a.id !== data.id)
+  const nomeFinal = data.nome.trim() === '' ? gerarNomeAreaPadrao(activeOthers) : data.nome.trim()
+  allAreas[index] = {
     ...data,
     nome: nomeFinal,
     arbitroIds: arbitroIds.filter(Boolean),
+    createdAt: previous.createdAt,
+    deletedAt: previous.deletedAt ?? null,
     updatedAt: now,
   }
-  torneio.areas = list
+  torneio.areas = allAreas
   torneio.updatedAt = now
   saveTorneio(torneio)
-  return list[index]
+  return allAreas[index]
 }
 
 function deleteArea(torneioId: string, areaId: string): void {
   const torneio = loadTorneio(torneioId)
-  torneio.areas = (torneio.areas ?? []).filter(a => a.id !== areaId)
-  torneio.updatedAt = new Date().toISOString()
+  const list = torneio.areas ?? []
+  const now = new Date().toISOString()
+  const index = list.findIndex(a => a.id === areaId)
+  if (index === -1) throw new Error('Área de luta não encontrada')
+  list[index] = {
+    ...list[index],
+    deletedAt: now,
+    updatedAt: now,
+  }
+  torneio.areas = list
+  torneio.updatedAt = now
   saveTorneio(torneio)
 }
 
 function deleteAreas(torneioId: string, areaIds: string[]): void {
   const torneio = loadTorneio(torneioId)
   const idSet = new Set(areaIds)
-  torneio.areas = (torneio.areas ?? []).filter(a => !idSet.has(a.id))
+  const list = torneio.areas ?? []
+  const now = new Date().toISOString()
+  for (let i = 0; i < list.length; i += 1) {
+    if (idSet.has(list[i].id)) {
+      list[i] = {
+        ...list[i],
+        deletedAt: now,
+        updatedAt: now,
+      }
+    }
+  }
+  torneio.areas = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+}
+
+function restoreArea(torneioId: string, areaId: string): void {
+  const torneio = loadTorneio(torneioId)
+  const list = torneio.areas ?? []
+  const now = new Date().toISOString()
+  const index = list.findIndex(a => a.id === areaId)
+  if (index === -1) throw new Error('Área de luta não encontrada')
+  list[index] = {
+    ...list[index],
+    deletedAt: null,
+    updatedAt: now,
+  }
+  torneio.areas = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+}
+
+function loadDeletedAreas(torneioId: string): AreaLuta[] {
+  const torneio = loadTorneio(torneioId)
+  const list = (torneio.areas ?? []).map(a => normalizeArea(a as unknown as Record<string, unknown>))
+  return list.filter(a => a.deletedAt != null)
+}
+
+function permanentlyDeleteArea(torneioId: string, areaId: string): void {
+  const torneio = loadTorneio(torneioId)
+  const list = torneio.areas ?? []
+  const index = list.findIndex(a => a.id === areaId)
+  if (index === -1) throw new Error('Área de luta não encontrada')
+  list.splice(index, 1)
+  torneio.areas = list
+  torneio.updatedAt = new Date().toISOString()
+  saveTorneio(torneio)
+}
+
+function permanentlyDeleteAreas(torneioId: string, areaIds: string[]): void {
+  const torneio = loadTorneio(torneioId)
+  const idSet = new Set(areaIds)
+  const list = torneio.areas ?? []
+  torneio.areas = list.filter(a => !idSet.has(a.id))
   torneio.updatedAt = new Date().toISOString()
   saveTorneio(torneio)
 }
@@ -135,7 +205,8 @@ function importAreasFromFile(torneioId: string, filePath: string): { imported: n
   }
 
   const torneio = loadTorneio(torneioId)
-  const current = loadAreas(torneioId)
+  const allAreas = (torneio.areas ?? []).map(a => normalizeArea(a as unknown as Record<string, unknown>))
+  const activeAreas = allAreas.filter(a => a.deletedAt == null)
   const now = new Date().toISOString()
   let imported = 0
   let skipped = 0
@@ -154,7 +225,7 @@ function importAreasFromFile(torneioId: string, filePath: string): { imported: n
       ? (itemObj.arbitroIds as unknown[]).filter((x): x is string => typeof x === 'string' && x.length > 0)
       : []
 
-    const duplicate = current.some(
+    const duplicate = activeAreas.some(
       (ex) => ex.nome.trim().toLowerCase() === nomeRaw.toLowerCase() && nomeRaw !== ''
     )
     if (duplicate) {
@@ -164,19 +235,21 @@ function importAreasFromFile(torneioId: string, filePath: string): { imported: n
 
     checkRefereeNotInUse(torneioId, arbitroIdsIn)
 
-    const nomeFinal = nomeRaw === '' ? gerarNomeAreaPadrao(current) : nomeRaw
+    const nomeFinal = nomeRaw === '' ? gerarNomeAreaPadrao(activeAreas) : nomeRaw
     const area: AreaLuta = {
       id: crypto.randomUUID(),
       nome: nomeFinal,
       arbitroIds: arbitroIdsIn,
       createdAt: now,
       updatedAt: now,
+      deletedAt: null,
     }
-    current.push(area)
+    allAreas.push(area)
+    activeAreas.push(area)
     imported += 1
   }
 
-  torneio.areas = current
+  torneio.areas = allAreas
   torneio.updatedAt = now
   saveTorneio(torneio)
   return { imported, skipped }
@@ -202,4 +275,4 @@ async function exportAreas(torneioId: string): Promise<void> {
   }
 }
 
-export { loadAreas, saveArea, updateArea, deleteArea, deleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas }
+export { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas }

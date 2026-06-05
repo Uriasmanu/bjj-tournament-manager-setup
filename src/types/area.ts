@@ -4,4 +4,5 @@ export interface AreaLuta {
   arbitroIds: string[];
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
 }

@@ -116,6 +116,7 @@ export function registerTournamentHandlers(): void {
           updatedAt: new Date().toISOString(),
           nome: nomeLower,
           equipe: (a.equipe || '').trim().toLowerCase(),
+          deletedAt: null,
         });
       }
     }
@@ -156,6 +157,7 @@ export function registerTournamentHandlers(): void {
           updatedAt: new Date().toISOString(),
           nome: nomeLower,
           equipe: (a.equipe || '').trim().toLowerCase(),
+          deletedAt: null,
         });
       }
     }

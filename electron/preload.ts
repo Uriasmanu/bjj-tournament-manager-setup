@@ -27,6 +27,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('read-file', path),
   loadAthletes: () =>
     ipcRenderer.invoke('load-athletes'),
+  loadDeletedAthletes: () =>
+    ipcRenderer.invoke('load-deleted-athletes'),
   saveAthlete: (athlete: { id: string; nome: string; equipe: string; genero: string; categoria: string; pesoKg: number; faixa: string; anoNascimento: number; createdAt: string; updatedAt: string }) =>
     ipcRenderer.invoke('save-athlete', athlete),
   updateAthlete: (athlete: { id: string; nome: string; equipe: string; genero: string; categoria: string; pesoKg: number; faixa: string; anoNascimento: number; createdAt: string; updatedAt: string }) =>
@@ -35,6 +37,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('delete-athlete', id),
   deleteAthletes: (ids: string[]) =>
     ipcRenderer.invoke('delete-athletes', ids),
+  restoreAthlete: (id: string) =>
+    ipcRenderer.invoke('restore-athlete', id),
+  permanentlyDeleteAthlete: (id: string) =>
+    ipcRenderer.invoke('permanently-delete-athlete', id),
+  permanentlyDeleteAthletes: (ids: string[]) =>
+    ipcRenderer.invoke('permanently-delete-athletes', ids),
   importAthletes: () =>
     ipcRenderer.invoke('import-athletes'),
   exportAthletes: () =>
@@ -47,8 +55,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('delete-arbitro', arbitroId),
   deleteArbitros: (arbitroIds: string[]) =>
     ipcRenderer.invoke('delete-arbitros', arbitroIds),
+  restoreArbitro: (arbitroId: string) =>
+    ipcRenderer.invoke('restore-arbitro', arbitroId),
+  permanentlyDeleteArbitro: (arbitroId: string) =>
+    ipcRenderer.invoke('permanently-delete-arbitro', arbitroId),
+  permanentlyDeleteArbitros: (arbitroIds: string[]) =>
+    ipcRenderer.invoke('permanently-delete-arbitros', arbitroIds),
   loadArbitros: () =>
     ipcRenderer.invoke('load-arbitros'),
+  loadDeletedArbitros: () =>
+    ipcRenderer.invoke('load-deleted-arbitros'),
   importArbitros: () =>
     ipcRenderer.invoke('import-arbitros'),
   exportArbitros: () =>
@@ -71,6 +87,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('export-chaves'),
   loadAreas: () =>
     ipcRenderer.invoke('load-areas'),
+  loadDeletedAreas: () =>
+    ipcRenderer.invoke('load-deleted-areas'),
   saveArea: (data: { nome: string; arbitroIds: string[] }) =>
     ipcRenderer.invoke('save-area', data),
   updateArea: (data: AreaLuta) =>
@@ -79,6 +97,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('delete-area', areaId),
   deleteAreas: (areaIds: string[]) =>
     ipcRenderer.invoke('delete-areas', areaIds),
+  restoreArea: (areaId: string) =>
+    ipcRenderer.invoke('restore-area', areaId),
+  permanentlyDeleteArea: (areaId: string) =>
+    ipcRenderer.invoke('permanently-delete-area', areaId),
+  permanentlyDeleteAreas: (areaIds: string[]) =>
+    ipcRenderer.invoke('permanently-delete-areas', areaIds),
   importAreas: () =>
     ipcRenderer.invoke('import-areas'),
   exportAreas: () =>

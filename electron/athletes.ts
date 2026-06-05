@@ -40,28 +40,34 @@ function loadAthletes(torneioId: string): Atleta[] {
       a.updatedAt = new Date().toISOString()
       modified = true
     }
+    if (a.deletedAt === undefined) {
+      a.deletedAt = null
+      modified = true
+    }
   }
   if (modified) {
     torneio.updatedAt = new Date().toISOString()
     saveTorneio(torneio)
   }
-  return list
+  return list.filter(a => a.deletedAt == null)
 }
 
 function saveAthlete(torneioId: string, athlete: Atleta): Atleta[] {
   const torneio = loadTorneio(torneioId)
   const list = torneio.atletas ?? []
+  const now = new Date().toISOString()
   const data: Atleta = {
     ...athlete,
     id: athlete.id || crypto.randomUUID(),
-    createdAt: athlete.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+    createdAt: athlete.createdAt || now,
+    updatedAt: now,
+    deletedAt: null,
   }
   list.push(data)
   torneio.atletas = list
-  torneio.updatedAt = new Date().toISOString()
+  torneio.updatedAt = now
   saveTorneio(torneio)
-  return list
+  return list.filter(a => a.deletedAt == null)
 }
 
 function updateAthlete(torneioId: string, updated: Atleta): Atleta[] {
@@ -69,32 +75,99 @@ function updateAthlete(torneioId: string, updated: Atleta): Atleta[] {
   const list = torneio.atletas ?? []
   const index = list.findIndex(a => a.id === updated.id)
   if (index === -1) throw new Error('Atleta não encontrado')
-  list[index] = updated
+  const previous = list[index]
+  list[index] = {
+    ...updated,
+    createdAt: previous.createdAt,
+    deletedAt: previous.deletedAt ?? null,
+    updatedAt: new Date().toISOString(),
+  }
   torneio.atletas = list
   torneio.updatedAt = new Date().toISOString()
   saveTorneio(torneio)
-  return list
+  return list.filter(a => a.deletedAt == null)
 }
 
 function deleteAthlete(torneioId: string, id: string): Atleta[] {
   const torneio = loadTorneio(torneioId)
-  let list = torneio.atletas ?? []
-  list = list.filter(a => a.id !== id)
+  const list = torneio.atletas ?? []
+  const now = new Date().toISOString()
+  const index = list.findIndex(a => a.id === id)
+  if (index === -1) throw new Error('Atleta não encontrado')
+  list[index] = {
+    ...list[index],
+    deletedAt: now,
+    updatedAt: now,
+  }
   torneio.atletas = list
-  torneio.updatedAt = new Date().toISOString()
+  torneio.updatedAt = now
   saveTorneio(torneio)
-  return list
+  return list.filter(a => a.deletedAt == null)
 }
 
 function deleteAthletes(torneioId: string, ids: string[]): Atleta[] {
   const torneio = loadTorneio(torneioId)
   const idSet = new Set(ids)
-  let list = torneio.atletas ?? []
-  list = list.filter(a => !idSet.has(a.id))
+  const list = torneio.atletas ?? []
+  const now = new Date().toISOString()
+  for (let i = 0; i < list.length; i += 1) {
+    if (idSet.has(list[i].id)) {
+      list[i] = {
+        ...list[i],
+        deletedAt: now,
+        updatedAt: now,
+      }
+    }
+  }
+  torneio.atletas = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+  return list.filter(a => a.deletedAt == null)
+}
+
+function restoreAthlete(torneioId: string, id: string): Atleta[] {
+  const torneio = loadTorneio(torneioId)
+  const list = torneio.atletas ?? []
+  const now = new Date().toISOString()
+  const index = list.findIndex(a => a.id === id)
+  if (index === -1) throw new Error('Atleta não encontrado')
+  list[index] = {
+    ...list[index],
+    deletedAt: null,
+    updatedAt: now,
+  }
+  torneio.atletas = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+  return list.filter(a => a.deletedAt == null)
+}
+
+function loadDeletedAthletes(torneioId: string): Atleta[] {
+  const torneio = loadTorneio(torneioId)
+  const list = torneio.atletas ?? []
+  return list.filter(a => a.deletedAt != null)
+}
+
+function permanentlyDeleteAthlete(torneioId: string, id: string): Atleta[] {
+  const torneio = loadTorneio(torneioId)
+  const list = torneio.atletas ?? []
+  const index = list.findIndex(a => a.id === id)
+  if (index === -1) throw new Error('Atleta não encontrado')
+  list.splice(index, 1)
   torneio.atletas = list
   torneio.updatedAt = new Date().toISOString()
   saveTorneio(torneio)
-  return list
+  return list.filter(a => a.deletedAt == null)
+}
+
+function permanentlyDeleteAthletes(torneioId: string, ids: string[]): Atleta[] {
+  const torneio = loadTorneio(torneioId)
+  const idSet = new Set(ids)
+  const list = torneio.atletas ?? []
+  torneio.atletas = list.filter(a => !idSet.has(a.id))
+  torneio.updatedAt = new Date().toISOString()
+  saveTorneio(torneio)
+  return torneio.atletas.filter(a => a.deletedAt == null)
 }
 
 function importAthletesFromFile(torneioId: string, filePath: string): { imported: number; skipped: number } {
@@ -137,6 +210,7 @@ function importAthletesFromFile(torneioId: string, filePath: string): { imported
         id: a.id || crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        deletedAt: null,
       })
       imported++
     } else {
@@ -170,4 +244,4 @@ async function exportAthletes(torneioId: string): Promise<void> {
   }
 }
 
-export { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes }
+export { loadAthletes, loadDeletedAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, restoreAthlete, permanentlyDeleteAthlete, permanentlyDeleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes }

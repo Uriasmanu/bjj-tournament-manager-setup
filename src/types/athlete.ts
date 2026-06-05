@@ -21,4 +21,5 @@ export interface Atleta {
   emChave?: boolean;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
 }

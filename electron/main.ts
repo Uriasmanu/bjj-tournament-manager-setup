@@ -2,9 +2,9 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
-import { loadAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
-import { loadArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
-import { loadAreas, saveArea, updateArea, deleteArea, deleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas } from './areas'
+import { loadAthletes, loadDeletedAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, restoreAthlete, permanentlyDeleteAthlete, permanentlyDeleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
+import { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, restoreArbitro, permanentlyDeleteArbitro, permanentlyDeleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
+import { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas } from './areas'
 import { registerBracketHandlers } from './brackets'
 import { loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada } from './lutasCasadas'
 import { checkActivation, validatePassword, activateLicense, getActivationInfo } from './activation'
@@ -107,6 +107,30 @@ function registerAthleteHandlers(): void {
     return deleteAthletes(torneioId, ids)
   })
 
+  ipcMain.handle('restore-athlete', (_event, id: string): ReturnType<typeof restoreAthlete> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return restoreAthlete(torneioId, id)
+  })
+
+  ipcMain.handle('load-deleted-athletes', (): ReturnType<typeof loadDeletedAthletes> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadDeletedAthletes(torneioId)
+  })
+
+  ipcMain.handle('permanently-delete-athlete', (_event, id: string): ReturnType<typeof permanentlyDeleteAthlete> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return permanentlyDeleteAthlete(torneioId, id)
+  })
+
+  ipcMain.handle('permanently-delete-athletes', (_event, ids: string[]): ReturnType<typeof permanentlyDeleteAthletes> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return permanentlyDeleteAthletes(torneioId, ids)
+  })
+
   ipcMain.handle('import-athletes', async (): Promise<{ imported: number; skipped: number }> => {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
@@ -145,6 +169,30 @@ function registerRefereeHandlers(): void {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return deleteArbitros(torneioId, arbitroIds)
+  })
+
+  ipcMain.handle('restore-arbitro', (_event, arbitroId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return restoreArbitro(torneioId, arbitroId)
+  })
+
+  ipcMain.handle('load-deleted-arbitros', (): Arbitro[] => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadDeletedArbitros(torneioId)
+  })
+
+  ipcMain.handle('permanently-delete-arbitro', (_event, arbitroId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return permanentlyDeleteArbitro(torneioId, arbitroId)
+  })
+
+  ipcMain.handle('permanently-delete-arbitros', (_event, arbitroIds: string[]): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return permanentlyDeleteArbitros(torneioId, arbitroIds)
   })
 
   ipcMain.handle('load-arbitros', (): Arbitro[] => {
@@ -197,6 +245,30 @@ function registerAreaHandlers(): void {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return deleteAreas(torneioId, areaIds)
+  })
+
+  ipcMain.handle('restore-area', (_event, areaId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return restoreArea(torneioId, areaId)
+  })
+
+  ipcMain.handle('load-deleted-areas', (): AreaLuta[] => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadDeletedAreas(torneioId)
+  })
+
+  ipcMain.handle('permanently-delete-area', (_event, areaId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return permanentlyDeleteArea(torneioId, areaId)
+  })
+
+  ipcMain.handle('permanently-delete-areas', (_event, areaIds: string[]): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return permanentlyDeleteAreas(torneioId, areaIds)
   })
 
   ipcMain.handle('import-areas', async (): Promise<{ imported: number; skipped: number }> => {

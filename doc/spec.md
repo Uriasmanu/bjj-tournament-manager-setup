@@ -15,14 +15,39 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 -->
 ### [resolvido] Botao cadastrar atleta no formulario esta feio
 ### [resolvido] peso e genero deveriam estar lado a lado e não um a baixo do outro no formulario
-### [aberto] Deletar atleta, arbitro,area,deve ser soft delete
-### [aberto] Nas listas de atleta, arbitro,area tera um botao de exibir apenas os deletados, e no nome tera o botao de desfazer ou apagar, esse apagar é permanente, aparece uma mensagem no centro da tela perguntando se tem certeza
+### [resolvido] Deletar atleta, arbitro,area,deve ser soft delete
+### [Aberto] Nas listas de atleta, arbitro,area tera um botao de exibir apenas os deletados, e no nome tera o botao de desfazer ou apagar, esse apagar é permanente, aparece uma mensagem no centro da tela perguntando se tem certeza (ao abilitar o botão os atltas deletados reaparecem na lista, só que meio apagados)
 ### [aberto] import de torneio, deveria fazer merge nas informações caso o id do torneio seja o mesmo, exemplo, eu adicionei um atleta 10h50 e ele não existe nos outros JSON, então quando juntar tudo em uma maquina, esse atleta tem que permanecer, a data da ultima atualização vai ser importante, pois caso em um arquivo ele tenha sido adicionado as 10h50 e em outro arquivo ele foi deletado as 10h51, a informação de delete deve ser a que manda. 
 ---
 
 
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
+
+- **2026-06-05 — UI de Lixeira para Atleta, Árbitro e Área de Luta**
+  - **Problema:** após o ciclo de soft delete, a UI de listagem (atletas/árbitros/áreas) não oferecia nenhuma forma de visualizar, restaurar ou excluir permanentemente os itens que foram soft-deletados. O usuário ficava sem回收 (回收) para itens deletados acidentalmente, e a ação de soft delete era efetivamente uma "exclusão definitiva" do ponto de vista do usuário.
+  - **Solução:** adicionada a view "Lixeira" em `AdminAthletes.tsx`, `AdminArbitros.tsx` e `AdminAreas.tsx` acionada por um `Switch` "Mostrar apenas os deletados" no header de cada listagem. Quando o toggle é ligado, a página chama `loadDeleted*` (novo IPC) e exibe apenas os itens com `deletedAt != null`. A view de deletados oferece duas ações por linha: restaurar (`IconRestore` verde) e excluir permanentemente (`IconTrash` vermelho + modal centralizado de confirmação com aviso "Esta ação é IRREVERSÍVEL."). A view também suporta exclusão permanente em lote via checkboxes. O texto do modal de soft delete (visível na view ativos) foi atualizado para informar que o item "será movido para os deletados. Você poderá restaurá-lo na aba 'Mostrar apenas os deletados'.".
+  - **Backend (novos handlers IPC):** 9 novos handlers em `electron/main.ts` — `load-deleted-athletes`/`restore-athlete` (já existente) + `permanently-delete-athlete`/`permanently-delete-athletes`; idem para árbitros e áreas. Funções correspondentes adicionadas em `electron/athletes.ts`, `electron/referees.ts` e `electron/areas.ts`. As funções `permanentlyDelete*` aplicam `splice` físico no array (não soft delete) e atualizam `updatedAt` do torneio. `loadDeleted*` reusa o auto-fix de `normalize*` para preencher `deletedAt` em itens legados.
+  - **Tipagem/preload:** 9 novos métodos expostos em `electron/preload.ts` e tipados em `src/types/electron.d.ts` (já com `loadDeleted*`, `permanentlyDelete*(s)`).
+  - **UI — comportamento detalhado:**
+    - **Switch "Mostrar apenas os deletados":** `Switch` Mantine (label fontWeight 600, color="red") no header. Ao alternar, dispara `useEffect` que recarrega a lista (`loadAthletes` ou `loadDeletedAthletes`). Título da página muda dinamicamente (`"Atletas Deletados"` / `"Atletas"`).
+    - **View ativos:** botões `Importar` / `Exportar` / `Cadastrar` visíveis; dashboard de estatísticas (Inscritos + Graduações) visível apenas em `AdminAthletes` na view ativos; coluna "Deletado em" oculta.
+    - **View deletados:** botões `Importar` / `Exportar` / `Cadastrar` ocultos; dashboard de estatísticas oculto; coluna extra "Deletado em" exibida; ações mudam para `[restaurar, excluir permanente]`. Bulk delete muda para bulk permanent delete.
+    - **Modal de exclusão permanente:** `Modal centered` com aviso "Esta ação é IRREVERSÍVEL." em vermelho + texto dinâmico (nome do item) + botões "Cancelar" (outline) e "Excluir Permanentemente" (vermelho). Não usa padding/custom visual além do padrão Mantine.
+    - **Modal de soft delete — texto atualizado:** alterado de "Esta ação não pode ser desfeita" para "será movido para os deletados. Você poderá restaurá-lo na aba 'Mostrar apenas os deletados'." — aplicado aos 3 modais de soft delete (atleta, árbitro com/sem chaves vinculadas, área) e aos 3 modais de soft delete em lote.
+  - **Spec da feature:** `spec/lixeira-soft-delete-ui.md`.
+  - **Critérios de aceite:** CA-01 a CA-08 verificados — toggle, view condicional, restore individual, permanent delete individual + modal, bulk permanent delete, atualização do modal de soft delete, título dinâmico, formatação de `deletedAt`.
+  - **Impacto:** mudança puramente de UI. Backend (soft delete + restore) já estava pronto do ciclo anterior. A view de lixeira completa o ciclo de soft delete.
+  - **Compatibilidade:** nenhuma migração necessária. `deletedAt` já existe em todos os tipos. JSONs legados continuam funcionando.
+  - **Observação de design:** a confirmação de exclusão permanente SEMPRE exige modal (não há "skip confirmation" no fluxo). O texto "Esta ação é IRREVERSÍVEL." é fixo (não parametrizado) para garantir consistência entre atleta/árbitro/área e entre individual/lote.
+
+- **2026-06-05 — Soft delete para Atleta, Árbitro e Área de Luta**
+  - **Problema:** exclusão de atletas/árbitros/áreas era hard delete (remoção física do JSON), sem possibilidade de recuperação após clique acidental.
+  - **Solução:** adicionado campo `deletedAt: string | null` em `Atleta`, `Arbitro`, `AreaLuta`; handlers `delete*` agora setam `deletedAt = new Date().toISOString()` em vez de remover; `load*` filtra itens com `deletedAt != null`; novos handlers `restoreAthlete`/`restoreArbitro`/`restoreArea` (IPC `restore-athlete`/`restore-arbitro`/`restore-area`) limpam `deletedAt`. `deleteArbitro` mantém o efeito colateral de limpar `chave.arbitroId`. Importação (de atletas/árbitros/áreas e de torneio) força `deletedAt: null` nos itens importados.
+  - **Spec da feature:** `spec/soft-delete-atleta-arbitro-area.md`.
+  - **Critérios de aceite:** CA-01 a CA-07 verificados — soft delete, restore, cascade em chave, preservação de `deletedAt` em update, import sem `deletedAt`, load filtrado, APIs expostas.
+  - **Impacto:** mudança de comportamento transparente para o frontend atual (item continua sumindo da lista após delete). UI de lixeira (visualizar/restaurar/excluir permanentemente) é o próximo item `[aberto]` em `doc/spec.md` e será tratada em ciclo separado.
+  - **Compatibilidade:** JSONs antigos sem `deletedAt` continuam funcionando — auto-fix ao carregar preenche `deletedAt: null`. Nenhuma migração necessária.
 
 - **2026-06-05 — `AthleteForm`: Gênero e Peso lado a lado**
   - **Problema:** no modal `AthleteForm`, os campos `Gênero` (`Select`) e `Peso (kg)` (`NumberInput`) eram renderizados um abaixo do outro, deixando o formulário desnecessariamente longo.
