@@ -38,6 +38,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
 | Áreas de Luta | ✅ Completo | CRUD com nome + múltiplos árbitros por área. Validação de unicidade de árbitro entre áreas. Migração retroativa de dados legados. Menu com Cadastrar/Listar, tabela com busca, exclusão individual/em lote. |
 | Placar (Scoreboard) | ✅ Completo | Fluxo `PlacarMenu → PlacarChaves → PlacarBracket → PlacarLuta` (seleção de área, lista de chaves da área, bracket com lutas iniciáveis, placar funcional com cronômetro, pontos 2/3/4, vantagens, punições, finalização/DQ/desempate, persistência no JSON do torneio). Cores azul anil (Atleta A) e branco (Atleta B). Vencedor propagado para a próxima rodada. Validação de pontos/vantagens ao selecionar vencedor por pontos com modal de aviso. `desclassificadoId` identifica atleta desclassificado. Correção de propagação em chaves de 2, 3 e 4 atletas. |
+| Registro de horário de lutas | ✅ Completo | Cada `Luta` e `LutaCasada` grava `horarioInicio` (1º clique em "Iniciar" do cronômetro) e `horarioTermino`/`dataFinalizacao` (confirmação do resultado no modal final) no formato `DD/MM/YYYY HH:mm:ss` (timezone local). Exibidos em Resultados na info de cada luta. JSONs legados sem os campos continuam funcionando (campos opcionais, exibidos como "—"). |
 
 ### 2.2. Não Implementado (Planejado)
 
@@ -579,6 +580,18 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Normalização retroativa:** Chaves legadas sem `placarA`/`placarB` carregam sem erro; `normalizeLuta` adiciona defaults.
 - **Estado bloqueado:** Lutas com `tbd`/`bye` ou `completed`/`wo` exibem placar congelado e desabilitam controles e "Finalizar Luta".
 - **Especificação detalhada:** Ver `spec/placar.md` (fluxo), `spec/placar-jiu-jitsu.md` (placar funcional), `spec/placar-voltar-bracket.md` (correção do botão Voltar) e `spec/finalizar-luta-desclassificacao.md` (confirmação de resultado e habilitação de opções).
+
+#### 3.19.1. Registro de Horário de Início e Término de Lutas (Implementado)
+
+- **Campos gravados:** Cada `Luta` (em `src/types/bracket.ts`) grava dois campos opcionais: `horarioInicio?: string` e `horarioTermino?: string`. Cada `LutaCasada` (em `src/types/lutaCasada.ts`) grava `horarioInicio?: string` (e reutiliza o campo `dataFinalizacao?: string | null` já existente como horário de término).
+- **Formato:** String `DD/MM/YYYY HH:mm:ss` (ex.: `05/06/2026 14:32:10`), gerada client-side via `dayjs().format('DD/MM/YYYY HH:mm:ss')`. Timezone é o do sistema operacional do usuário (sem `dayjs.tz.setDefault`).
+- **Captura do horário de início:** Gravado no **primeiro clique** no botão "Iniciar" do cronômetro em `PlacarLuta.tsx` ou `PlacarLutaCasada.tsx`. Uso de `useRef<string | null>` (não `useState`) para evitar re-render desnecessário. Pausar e retomar o cronômetro **não** sobrescreve `horarioInicio` (verificado por `if (!rodando && horarioInicioRef.current === null)`). Se o operador nunca clicar em "Iniciar" e for direto para "Finalizar Luta", `horarioInicio` permanece `undefined`.
+- **Captura do horário de término:** Gravado no momento da **confirmação final** do resultado (clique em "Confirmar resultado" no segundo modal de `PlacarLuta.tsx`, ou no `persistirResultado` de `PlacarLutaCasada.tsx`). Para `LutaCasada`, gravado em `dataFinalizacao`; para `Luta`, gravado em `horarioTermino`.
+- **Persistência:** Os timestamps são enviados no mesmo payload do `registrarResultado` (Luta) ou no objeto `LutaCasada` completo (LutaCasada) e gravados atomicamente no JSON do torneio ativo pelo main process. O handler `registrarResultadoHandler` em `electron/brackets.ts:1442` preserva timestamps existentes se o payload não os trouxer (idempotente).
+- **Visualização:** A tela de Resultados exibe, em `LutaResumoCard` (`src/pages/Resultados.tsx`), um bloco com `Início: HH:MM:SS` e `Término: HH:MM:SS` para cada luta finalizada (chave e casada). Campos ausentes exibem `—`. `aria-label` descritivo em cada texto para acessibilidade.
+- **Normalização retroativa:** `normalizeLuta` (`electron/brackets.ts:954`) e `normalizeLutaCasada` (`electron/lutasCasadas.ts:25`) garantem defaults `undefined` para os novos campos, permitindo que JSONs de torneios legados (sem os campos) sejam lidos sem erro.
+- **Limitação conhecida — reabertura de luta:** O sistema não implementa handler explícito de "reabrir luta" (limpar vencedor e voltar status para `pending`). Quando um handler de reabertura for introduzido em ciclo futuro, ele deverá limpar `horarioInicio` e `horarioTermino`/`dataFinalizacao` para forçar nova captura. Atualmente, refinalizações subsequentes sobrescrevem os timestamps (ou preservam se o payload não os trouxer, comportamento idempotente).
+- **Especificação detalhada:** Ver `spec/timestamp-inicio-fim-lutas.md`.
 
 ---
 

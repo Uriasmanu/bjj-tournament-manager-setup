@@ -189,6 +189,8 @@ function LutaResumoCard({
   desempateArbitro,
   status,
   tempoRealSegundos,
+  horarioInicio,
+  horarioTermino,
   isCasada,
   statusBadge,
 }: {
@@ -206,6 +208,8 @@ function LutaResumoCard({
   desempateArbitro?: boolean;
   status: 'completed' | 'wo' | 'pending';
   tempoRealSegundos?: number;
+  horarioInicio?: string;
+  horarioTermino?: string;
   isCasada?: boolean;
   statusBadge?: { label: string; color: string };
 }) {
@@ -251,6 +255,15 @@ function LutaResumoCard({
               {tempoRealSegundos !== undefined ? formatarDuracao(tempoRealSegundos) : '—'}
             </Text>
           </Group>
+        </Group>
+
+        <Group gap="md" align="center" wrap="wrap" aria-label="Horários da luta">
+          <Text size="xs" c="dimmed" aria-label={`Iniciada em ${horarioInicio ?? 'desconhecido'}`}>
+            <b>Início:</b> {horarioInicio ?? '—'}
+          </Text>
+          <Text size="xs" c="dimmed" aria-label={`Terminada em ${horarioTermino ?? 'desconhecido'}`}>
+            <b>Término:</b> {horarioTermino ?? '—'}
+          </Text>
         </Group>
 
         <Group align="flex-start" gap="md" wrap="nowrap">
@@ -729,6 +742,8 @@ export function Resultados() {
                                     desempateArbitro={l.desempateArbitro}
                                     status={l.status as 'completed' | 'wo' | 'pending'}
                                     tempoRealSegundos={l.tempoRealSegundos}
+                                    horarioInicio={l.horarioInicio}
+                                    horarioTermino={l.horarioTermino}
                                     statusBadge={statusBadge}
                                   />
                                 );
@@ -822,6 +837,8 @@ export function Resultados() {
                             desempateArbitro={luta.desempateArbitro}
                             status={luta.status as 'completed' | 'wo' | 'pending'}
                             tempoRealSegundos={luta.tempoRealSegundos}
+                            horarioInicio={luta.horarioInicio}
+                            horarioTermino={luta.dataFinalizacao ?? undefined}
                             isCasada
                             statusBadge={statusBadge}
                           />

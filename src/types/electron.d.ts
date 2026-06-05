@@ -68,6 +68,8 @@ interface ElectronAPI {
     finalizacao?: boolean;
     desclassificacao?: boolean;
     desempateArbitro?: boolean;
+    horarioInicio?: string;
+    horarioTermino?: string;
   }) => Promise<Chave>;
   loadLutasCasadasPorArea: (areaId: string) => Promise<LutaCasada[]>;
   saveLutaCasada: (data: Omit<LutaCasada, 'id' | 'tag' | 'createdAt' | 'updatedAt'>) => Promise<LutaCasada>;

@@ -26,6 +26,7 @@ import {
 } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import dayjs from 'dayjs';
 import { PageLayout } from '../components/PageLayout';
 import type { Chave, Luta, PlacarLuta } from '../types/bracket';
 import type { Atleta } from '../types/athlete';
@@ -297,6 +298,7 @@ export function PlacarLuta() {
   const [salvando, setSalvando] = useState(false);
 
   const intervalRef = useRef<number | null>(null);
+  const horarioInicioRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!chaveId || !lutaId) return;
@@ -388,6 +390,9 @@ export function PlacarLuta() {
 
   const handleIniciarPausar = () => {
     if (bloqueado) return;
+    if (!rodando && horarioInicioRef.current === null) {
+      horarioInicioRef.current = dayjs().format('DD/MM/YYYY HH:mm:ss');
+    }
     setRodando(r => !r);
   };
 
@@ -459,6 +464,8 @@ export function PlacarLuta() {
         finalizacao: resultadoTipo === 'finalizacao',
         desclassificacao: resultadoTipo === 'desclassificacao',
         desempateArbitro: resultadoTipo === 'desempate',
+        horarioInicio: horarioInicioRef.current ?? undefined,
+        horarioTermino: dayjs().format('DD/MM/YYYY HH:mm:ss'),
       });
       setChave(updatedChave);
       const updatedLuta = updatedChave.lutas.find(l => l.id === luta.id) ?? null;

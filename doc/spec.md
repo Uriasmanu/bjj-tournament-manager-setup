@@ -20,6 +20,74 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
+### [2026-06-05] Registro de horário de início e término de lutas — implementado
+
+**Gatilho:** seção **Feature** do `doc/spec.md`:
+> *"registrar horario em que q luta começou e terminou(timestamp)"*
+
+A seção **Feature** permanece inalterada (regra "NÃO apagar algo"). Esta entry documenta a implementação.
+
+**Decisões consolidadas (com o usuário via `question`):**
+- **Início:** gravado no **1º clique em "Iniciar"** do cronômetro (não ao abrir a tela, não ao finalizar). Pausar e retomar não sobrescreve.
+- **Término:** gravado no **confirme do resultado no modal final** (não ao abrir o modal, não quando o cronômetro chega a 0).
+- **Escopo:** **ambas** — `Luta` (bracket) e `LutaCasada`.
+- **Visualização:** em **Resultados**, na info de cada luta (luta de chave e luta casada).
+- **Formato:** string **`DD/MM/YYYY HH:mm:ss`** (timezone local do usuário).
+
+**Spec completa:** [`spec/timestamp-inicio-fim-lutas.md`](../spec/timestamp-inicio-fim-lutas.md) — 12 seções do guia, 8 CA verificáveis, 10 passos de implementação.
+
+**Implementação:**
+
+**1) Tipos (`src/types/`)**
+- `bracket.ts`: adicionados `horarioInicio?: string` e `horarioTermino?: string` ao tipo `Luta` (campos opcionais, retroativos).
+- `lutaCasada.ts`: adicionado `horarioInicio?: string` ao tipo `LutaCasada`. `dataFinalizacao?: string | null` permanece como "término" (sem renomear para preservar compatibilidade com JSONs legados).
+
+**2) Main process — normalização**
+- `electron/brackets.ts:954` `normalizeLuta`: defaults para `horarioInicio` e `horarioTermino` = `undefined`.
+- `electron/lutasCasadas.ts:25` `normalizeLutaCasada`: default para `horarioInicio` = `undefined`.
+- JSONs legados sem os campos são lidos sem erro; UI exibe "—".
+
+**3) Main process — handler**
+- `electron/brackets.ts:1442` `registrarResultadoHandler`: aceita `horarioInicio` e `horarioTermino` opcionais no payload e grava na luta antes do `saveTorneio`. Preserva timestamps existentes se o novo payload não os trouxer (idempotente).
+- Tipo do IPC atualizado em `src/types/electron.d.ts:61` com os 2 novos campos opcionais.
+
+**4) Renderer — PlacarLuta.tsx**
+- Importado `dayjs` (não estava).
+- Novo `useRef<string | null>(null)` chamado `horarioInicioRef` (uso de `useRef` em vez de `useState` para evitar re-render ao gravar o 1º "Iniciar").
+- `handleIniciarPausar`: se `!rodando && horarioInicioRef.current === null`, seta `horarioInicioRef.current = dayjs().format('DD/MM/YYYY HH:mm:ss')`.
+- `persistirResultado`: envia `horarioInicio: horarioInicioRef.current ?? undefined` e `horarioTermino: dayjs().format('DD/MM/YYYY HH:mm:ss')` no payload do `registrarResultado`.
+
+**5) Renderer — PlacarLutaCasada.tsx**
+- Importado `dayjs` (não estava).
+- Novo `useRef<string | null>(null)` chamado `horarioInicioRef`.
+- `handleIniciarPausar`: mesma lógica de gravar no 1º "Iniciar".
+- `persistirResultado`: envia `horarioInicio: horarioInicioRef.current ?? luta.horarioInicio` e `dataFinalizacao: dayjs().format('DD/MM/YYYY HH:mm:ss')` no objeto `LutaCasada` enviado ao `updateLutaCasada`.
+
+**6) Renderer — Resultados.tsx (visualização)**
+- `LutaResumoCard` (linhas 180-253): adicionadas props `horarioInicio?: string` e `horarioTermino?: string`. Novo `<Group>` com `aria-label="Horários da luta"` exibe `Início: HH:MM:SS` e `Término: HH:MM:SS` (ou "—" se ausentes). `aria-label` em cada `<Text>` para acessibilidade.
+- Renderização de chaves (linha ~716): passa `horarioInicio={l.horarioInicio}` e `horarioTermino={l.horarioTermino}`.
+- Renderização de lutas casadas (linha ~813): passa `horarioInicio={luta.horarioInicio}` e `horarioTermino={luta.dataFinalizacao ?? undefined}`.
+
+**Validação:**
+- `npx tsc --noEmit` — 0 erros.
+- `npm run lint` — 3 erros pré-existentes (`PageLayout.tsx` props não usadas, `PlacarBracket.tsx` bloco vazio); 0 erros/warnings novos.
+- 8 CA verificados conceitualmente:
+  - CA-01: 1º clique "Iniciar" grava `horarioInicio` (formato regex `^\d{2}/\d{2}/\d{4} \d{2}:\d{2}:\d{2}$`).
+  - CA-02: pausar/retomar não sobrescreve (uso de `useRef` + check `=== null`).
+  - CA-03: confirmação final grava `horarioTermino`/`dataFinalizacao`.
+  - CA-04: Resultados exibe "Início" e "Término" ou "—".
+  - CA-05: JSONs legados sem campos = `undefined` no normalize = "—" na UI.
+  - CA-06: luta finalizada sem Iniciar = "—" no Início + horário no Término.
+  - CA-07: app crashou no meio = Início exibido, Término "—".
+  - CA-08: reabertura (RF-05) — note: a reabertura não tem handler explícito neste ciclo; flag como limitação.
+
+**Observações e limitações:**
+- **Reabertura (RF-05, CA-08) não implementada neste ciclo:** a lógica de "reabrir uma luta" (limpar vencedor + status) não tem handler explícito no código atual — não há IPC nem UI para isso. Os timestamps antigos permanecem na luta até o próximo `registrarResultado`, que sobrescreve (RF-03) ou preserva (regra `data.horarioInicio ?? luta.horarioInicio`). O CA-08 foi interpretado como "ao refinalizar, novos timestamps substituem". Se a reabertura for introduzida em ciclo futuro, será trivial estender com `luta.horarioInicio = undefined` e `luta.horarioTermino = undefined` no handler.
+- **Timezone local:** os timestamps são gerados client-side via `dayjs()` no renderer (sem `dayjs.tz.setDefault`), portanto refletem o timezone do sistema operacional do usuário. Adequado para uso em torneio local.
+- **Nenhuma nova dependência** — `dayjs` já era usado em vários arquivos do projeto.
+- **Nenhuma migração de dados** — campos são opcionais; JSONs legados continuam funcionando.
+- **`tempoRealSegundos` permanece intocado** — o campo existe no tipo mas não é gravado em nenhum lugar. Fora do escopo desta feature.
+
 ---
 
 ## Feature

@@ -1385,7 +1385,9 @@ function normalizeLuta(luta) {
     finalizacao: luta.finalizacao ?? void 0,
     desclassificacao: luta.desclassificacao ?? void 0,
     desclassificadoId: luta.desclassificadoId ?? void 0,
-    desempateArbitro: luta.desempateArbitro ?? void 0
+    desempateArbitro: luta.desempateArbitro ?? void 0,
+    horarioInicio: luta.horarioInicio ?? void 0,
+    horarioTermino: luta.horarioTermino ?? void 0
   };
 }
 function normalizeChave(chave) {
@@ -1820,6 +1822,8 @@ function registrarResultadoHandler(torneioId, data) {
   luta.finalizacao = data.finalizacao ?? false;
   luta.desclassificacao = data.desclassificacao ?? false;
   luta.desempateArbitro = data.desempateArbitro ?? false;
+  luta.horarioInicio = data.horarioInicio ?? luta.horarioInicio;
+  luta.horarioTermino = data.horarioTermino ?? luta.horarioTermino;
   if (data.desclassificacao && luta.vencedorId) {
     luta.desclassificadoId = luta.atletaAId === luta.vencedorId ? luta.atletaBId : luta.atletaAId;
   } else {
@@ -1995,6 +1999,7 @@ function normalizeLutaCasada(raw) {
     desclassificacao: raw.desclassificacao ?? false,
     desempateArbitro: raw.desempateArbitro ?? false,
     dataFinalizacao: raw.dataFinalizacao ?? null,
+    horarioInicio: raw.horarioInicio ?? void 0,
     createdAt: raw.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
     updatedAt: raw.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
   };

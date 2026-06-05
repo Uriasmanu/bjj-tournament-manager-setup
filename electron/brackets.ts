@@ -966,6 +966,8 @@ function normalizeLuta(luta: Record<string, unknown>): Luta {
     desclassificacao: (luta.desclassificacao as boolean) ?? undefined,
     desclassificadoId: (luta.desclassificadoId as string | undefined) ?? undefined,
     desempateArbitro: (luta.desempateArbitro as boolean) ?? undefined,
+    horarioInicio: (luta.horarioInicio as string | undefined) ?? undefined,
+    horarioTermino: (luta.horarioTermino as string | undefined) ?? undefined,
   };
 }
 
@@ -1451,6 +1453,8 @@ function registrarResultadoHandler(
     finalizacao?: boolean;
     desclassificacao?: boolean;
     desempateArbitro?: boolean;
+    horarioInicio?: string;
+    horarioTermino?: string;
   }
 ): Chave {
   const torneio = loadTorneio(torneioId);
@@ -1474,6 +1478,8 @@ function registrarResultadoHandler(
   luta.finalizacao = data.finalizacao ?? false;
   luta.desclassificacao = data.desclassificacao ?? false;
   luta.desempateArbitro = data.desempateArbitro ?? false;
+  luta.horarioInicio = data.horarioInicio ?? luta.horarioInicio;
+  luta.horarioTermino = data.horarioTermino ?? luta.horarioTermino;
 
   // Compute which athlete was disqualified (the one who is NOT the winner)
   if (data.desclassificacao && luta.vencedorId) {

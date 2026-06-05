@@ -25,6 +25,7 @@ import {
 } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import dayjs from 'dayjs';
 import { PageLayout } from '../components/PageLayout';
 import type { PlacarLuta } from '../types/bracket';
 import type { LutaCasada, AtletaSnapshot } from '../types/lutaCasada';
@@ -300,6 +301,7 @@ export function PlacarLutaCasada() {
   const [salvando, setSalvando] = useState(false);
 
   const intervalRef = useRef<number | null>(null);
+  const horarioInicioRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!areaId || !lutaCasadaId) return;
@@ -364,6 +366,9 @@ export function PlacarLutaCasada() {
 
   const handleIniciarPausar = () => {
     if (bloqueado) return;
+    if (!rodando && horarioInicioRef.current === null) {
+      horarioInicioRef.current = dayjs().format('DD/MM/YYYY HH:mm:ss');
+    }
     setRodando(r => !r);
   };
 
@@ -434,7 +439,8 @@ export function PlacarLutaCasada() {
         finalizacao: resultadoTipo === 'finalizacao',
         desclassificacao: resultadoTipo === 'desclassificacao',
         desempateArbitro: resultadoTipo === 'desempate',
-        dataFinalizacao: new Date().toISOString(),
+        dataFinalizacao: dayjs().format('DD/MM/YYYY HH:mm:ss'),
+        horarioInicio: horarioInicioRef.current ?? luta.horarioInicio,
       };
       const updated = await window.electronAPI.updateLutaCasada(atualizada);
       setLuta(updated);

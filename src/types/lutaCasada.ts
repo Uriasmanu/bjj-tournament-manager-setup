@@ -29,6 +29,7 @@ export interface LutaCasada {
   desempateArbitro?: boolean;
   dataFinalizacao?: string | null;
   tempoRealSegundos?: number;
+  horarioInicio?: string;
   createdAt: string;
   updatedAt: string;
 }
