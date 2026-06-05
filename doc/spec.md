@@ -13,80 +13,19 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Tem que exibir no dashbord que esta com a credencial ativa e quanto tempo ate expirar
+
 ---
 
 
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-### [2026-06-05] Credencial anual + indicador discreto no Dashboard — implementado
-
-**Gatilho:** seção **Feature** do `doc/spec.md`:
-> *"em dashbor, tem que mostrar se esta usando credencial, credencial deve expirar a cada 1 ano, e depois pedir a senha novamente (me fale a senha pq vou trocar manualmente)"*
-
-A seção **Feature** permanece inalterada (regra "NÃO apagar algo"). Esta entry documenta a implementação.
-
-**Decisões consolidadas (com o usuário):**
-- **Senha padrão:** usuário forneceu a senha desejada (NÃO exposta nesta entry por segurança). O hash SHA-256 correspondente (`f83244662ee78bf661577ecd28343bc4ff6538b6f249d6d7b1bf34817ec0ced4`) foi gravado em `electron/activation.ts` como novo `MASTER_PASSWORD_HASH`. A senha plaintext **não** está em nenhum arquivo do repositório.
-- **UI no Dashboard:** "tem que ser um lugar discreto" — seção sutil entre o hero banner e o grid de cards, com cores neutras (`#f8f9fa`/`#e9ecef`), tipografia `xs`, badge de status.
-
-**Spec completa:** [`spec/credencial-dashboard-expiracao.md`](../spec/credencial-dashboard-expiracao.md) — 12 seções do guia preenchidas, 12 CA verificáveis, 11 passos de implementação.
-
-**Implementação:**
-
-**1) `electron/activation.ts` (modificado)**
-- `MASTER_PASSWORD_HASH` substituído pelo hash da nova senha (via `process.env.MASTER_PASSWORD_HASH || '<novo hash>'`).
-- Nova constante `EXPIRATION_YEARS = 1`.
-- `checkActivation()` agora valida `expiresAt`:
-  - Se `activation.json` não tem `expiresAt` (formato legado) → `false` (força re-ativação).
-  - Se `new Date() > new Date(expiresAt)` → `false` (expirado).
-  - Caso contrário, valida `token` HMAC como antes.
-- `activateLicense()` agora grava `{ token, activatedAt, expiresAt }`, onde `expiresAt = activatedAt + 1 ano`.
-- Nova função `getActivationInfo()` retorna `{ activated, activatedAt, expiresAt, daysRemaining }`. Helpers internos: `isExpired()` e `computeDaysRemaining()`.
-- Tipo `ActivationInfo` exportado.
-
-**2) `electron/main.ts` (modificado)**
-- Importa `getActivationInfo` de `./activation`.
-- Novo IPC handler em `registerActivationHandlers()`: `ipcMain.handle('get-activation-info', () => getActivationInfo())`.
-
-**3) `electron/preload.ts` (modificado)**
-- Novo método `getInfo: () => ipcRenderer.invoke('get-activation-info')` no objeto `activation`.
-
-**4) `src/types/electron.d.ts` (modificado)**
-- Interface `ActivationInfo` adicionada **dentro de `declare global`** (o arquivo tem `import` → é módulo; tipos precisam estar em `declare global` para serem acessíveis sem import explícito).
-- `ActivationAPI` ganha `getInfo: () => Promise<ActivationInfo>`.
-
-**5) `src/pages/Dashboard.tsx` (modificado)**
-- Novo import: `IconLock` de `@tabler/icons-react`.
-- Novo estado: `const [activationInfo, setActivationInfo] = useState<ActivationInfo | null>(null)`.
-- `useEffect` existente agora também carrega `window.activation.getInfo()`.
-- Novo componente interno `ActivationStatus({ info })`:
-  - Container: `<Box mb="md" p="sm" style={{ background: '#f8f9fa', border: '1px solid #e9ecef', borderRadius: 8 }} role="status">`.
-  - Conteúdo: `<Group gap="xs">` com `IconLock` + label "Credencial:" + `Badge` de status + datas.
-  - Helper `getCredentialBadge(daysRemaining, activated)`: verde `>30`, amarelo `7<x≤30`, vermelho `≤7` ou expirado.
-- Renderizado entre o hero banner e o `<Grid>` de cards (condicional a `activationInfo !== null`).
-
-**Validação:**
-- `npx tsc --noEmit` — 0 erros.
-- `npm run lint` — 3 erros pré-existentes (`PageLayout.tsx` props não usadas, `PlacarBracket.tsx` bloco vazio); 0 erros/warnings novos.
-- 12 CA verificados:
-  - Hash atualizado, `expiresAt` gravado, expiração funcional, formato legado tratado como expirado, seção sutil renderiza, badge muda de cor, **senha plaintext não está em nenhum arquivo do repo** (CA-10 verificado via grep — 0 matches).
-- Comportamento para usuários ativos antes do deploy: precisam re-inserir a senha uma vez (intencional — alinhado com a feature de expiração).
-
-**Observações:**
-- Senha plaintext **NUNCA** foi gravada em arquivo do repo. Apenas o hash.
-- Senha pode ser rotacionada futuramente editando `MASTER_PASSWORD_HASH` em `electron/activation.ts` ou via env var `MASTER_PASSWORD_HASH` (já suportado).
-- Edge case tratado: `activation.json` corrompido → `checkActivation`/`getActivationInfo` retornam estado seguro (`false` / metadados nulos) via try/catch.
-- Nenhuma mudança em `App.tsx` ou `ActivationScreen.tsx` — o ciclo de re-ativação após expiração já era coberto pelo fluxo existente (`App.tsx` mostra `ActivationScreen` quando `checkActivation()` retorna `false`).
-- Nenhum IPC novo além de `get-activation-info`. Nenhum tipo novo além de `ActivationInfo`. Nenhuma migração de dados (formato legado tratado como expirado).
-- Nenhum item `[aberto]` pendente em `doc/spec.md` (a regra do template em `doc/spec.md:11-15` permanece como guia para futuros ciclos).
-
 ---
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
-### em dashbor, tem que mostrar se esta usando credencial, credencial deve expirar a cada 1 ano, e depois pedir a senha novamente (me fale a senha pq vou trocar manualmente)
+
+### registrar horario em que q luta começou e terminou(timestamp)
 
 ---
 
