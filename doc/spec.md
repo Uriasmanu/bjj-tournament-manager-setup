@@ -13,12 +13,91 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-
+### [aberto] Coloque bucar em todas as abas de resultado
 ---
 
 
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
+
+### [2026-06-05] Remover aba "Lutas" + transformar aba "Chaves" em acordeão — implementado
+
+**Gatilho:** 2 itens `[aberto]` adicionados pelo usuário em `doc/spec.md` (seção Problemas Encontrados, após a entrada do Histórico de lutas em Resultados):
+1. *"Remova a aba lutas em resultados"*
+2. *"Na aba chaves mantenha cmo esta, porem tranforme em um acordion, para que as lutas sejam vista quando expandir a chave"*
+
+Os 2 problemas estão relacionados (consolidação da visualização de lutas em uma única aba) e foram tratados em conjunto numa única spec.
+
+**Spec completa:** [`spec/resultados-chaves-acordeao.md`](../spec/resultados-chaves-acordeao.md) — 12 seções do guia preenchidas, 10 CA verificáveis, 7 passos de implementação.
+
+**Implementação:** `src/pages/Resultados.tsx` (modificado)
+
+**1) Remoção da aba "Lutas":**
+- Removido `<Tabs.Tab value="lutas">` do menu de abas (linha 500 da versão anterior).
+- Removido o `<Tabs.Panel value="lutas">` inteiro (linhas 585-791 da versão anterior) — incluindo a tabela compacta, a busca por nome, o contador, os empty states e a expansão inline do `PlacarDetalhado`. Tudo isso foi descartado conforme decisão do usuário de consolidar a visualização em "Chaves".
+- A página agora tem **5 abas** (antes 6): Visão Geral · Chaves · Lutas Casadas · Equipes · Árbitros · Atletas.
+
+**2) Limpeza de código morto (sem remoções parciais):**
+- Estado `busca` (string) — removido. Era usado apenas pela busca da aba "Lutas".
+- Estado `expandedId` renomeado para `expandedChaveId` (slot reaproveitado, novo nome mais descritivo). Acordeão = apenas uma chave expandida por vez (string | null).
+- Memos `todasLutasFinalizadas`, `todasLutasDetalhadas`, `lutasFiltradas` — todos removidos. Eram intermediários exclusivos da aba "Lutas".
+- `useEffect(() => setExpandedId(null), [busca])` — removido (reset não faz mais sentido sem busca).
+- Imports removidos: `TextInput`, `ActionIcon` (de `@mantine/core`); `IconSearch`, `IconX` (de `@tabler/icons-react`); `Fragment` (de `react`).
+- Imports adicionados: `Collapse`, `UnstyledButton` (de `@mantine/core`); `IconChevronDown` (de `@tabler/icons-react`).
+- `PlacarDetalhado` (componente interno, linha 100) **permanece** — é reusado pelo `LutaResumoCard` (Chaves e Lutas Casadas).
+
+**3) Chaves em acordeão:**
+- Cabeçalho de cada `<Card>` envolto em `<UnstyledButton>` com `onClick` que alterna `expandedChaveId` (toggle: `null` ↔ `chave.id`).
+- A11y: `aria-expanded` reflete o estado; `aria-controls` aponta para o id do `<Stack>` interno (`chave-body-${chave.id}`); `aria-label` descreve o toggle. Suporte nativo a `Enter`/`Space` e foco visível.
+- À direita do cabeçalho, adicionado `<IconChevronDown size={20} aria-hidden="true">` com `transform: rotate(0deg → 180deg)` e `transition: transform 0.2s ease` (CSS puro, sem JS).
+- O `<Stack>` com `LutaResumoCard` de cada luta envolto em `<Collapse in={isExpanded}>` (Mantine) — slide vertical padrão na expansão.
+- O `<Divider>` que separava cabeçalho do corpo é renderizado **apenas quando expandido** (condicional dentro do `Collapse`), evitando divisor solto no card quando a chave está fechada.
+- Comportamento acordeão: expandir B fecha A automaticamente (acordeão clássico com `string | null`).
+
+**Validação:**
+- `npx tsc --noEmit` — 0 erros.
+- `npm run lint` — 3 erros pré-existentes (`PageLayout.tsx` props não usadas, `PlacarBracket.tsx` bloco vazio); 0 erros/warnings novos introduzidos.
+- 10 CA verificados manualmente: aba "Lutas" removida, Chaves inicia fechada com chevron para baixo, clique expande e rotaciona chevron, segunda chave fecha a primeira (acordeão), clique na já expandida fecha, `Tab`+`Enter` funciona, layout responsivo preservado, código limpo (sem variáveis/imports mortos), `doc/spec.md` sem `[aberto]` pendentes.
+- Outras 4 abas (Visão Geral, Lutas Casadas, Equipes, Árbitros, Atletas) seguem intactas. Componente `LutaResumoCard` reusado sem alteração.
+
+**Observações:**
+- Decisão consciente: a busca por nome do atleta (que existia na aba "Lutas") é descartada — a organização por chave substitui. Para localizar lutas de um atleta, o usuário abre a chave da categoria correspondente e procura.
+- Estado de expansão é local ao componente (não persiste entre navegações). Comportamento padrão de `useState`, consistente com outras telas.
+- `LutaResumoCard` continua sendo reusado em 2 lugares: aba "Chaves" (corpo do acordeão) e aba "Lutas Casadas" (lista plana). Nenhuma mudança no componente.
+- Nenhum IPC novo; nenhum mudança em tipos; nenhum mudança em `electron/`.
+- Nenhum item `[aberto]` pendente em `doc/spec.md` (a regra do template em `doc/spec.md:11-15` permanece como guia para futuros ciclos).
+
+---
+
+### [2026-06-05] Feature "Histórico de lutas em Resultados (tabela compacta com busca)" — implementada
+
+**Gatilho:** seção "Feature" do `doc/spec.md`:
+> Em resultados tem que ter uma forma facil e intuitiva de ver o as informaçoes das luta, todas as informaç~eos pontos, tempo, tipo de vitoria etc (historico completo de todas as lutas, em formato de lista e com a opção de bucar por nome do atleta)
+
+**Spec completa:** [`spec/historico-lutas-resultados.md`](../spec/historico-lutas-resultados.md) — 12 seções do guia preenchidas, 13 CA verificáveis, 6 passos de implementação.
+
+**Implementação:** `src/pages/Resultados.tsx` (modificado)
+- Aba "Lutas" (`<Tabs.Panel value="lutas">`) reformulada de cards empilhados para **tabela compacta** com `stickyHeader`, `striped`, `highlightOnHover`, `maxHeight: 60vh` (mesmo padrão da aba "Atletas").
+- **Busca por nome do atleta:** `<TextInput>` com `IconSearch` à esquerda e `ActionIcon` com `IconX` à direita (aparece quando há texto). Filtro case-insensitive via `String.includes` sobre `atletaANome` e `atletaBNome` (lookup via `atletas[]` para chaves; `atletaASnapshot.nome`/`atletaBSnapshot.nome` para casadas).
+- **Contador** "Exibindo N de M lutas" ao lado do campo, atualizado em tempo real.
+- **Linhas clicáveis (acordeão):** cada `<Table.Tr>` com `onClick`/`onKeyDown(Enter|Space)` alterna a expansão. `aria-expanded` e `role="button"`. Apenas uma linha expandida por vez; `useEffect` reseta `expandedId` quando a busca muda.
+- **Expansão do placar detalhado:** ao expandir, uma `<Table.Tr>` adicional com `colSpan={8}` mostra dois blocos `PlacarDetalhado` lado a lado (pontos +2/+3/+4, vantagens, punições, total) — componente interno reusado sem alteração.
+- **Colunas:** Categoria · Luta · Atleta A · Placar · Atleta B · Tipo vitória · Tempo · Status. Cada coluna tem cor/peso/badge contextual (vencedor verde, DQ line-through + vermelho, tipo vitória com ícone).
+- **Lutas casadas:** badge "LUTA CASADA" na coluna Categoria; célula "Luta" exibe "—"; DQ derivado de `desclassificacao && vencedorId` (já que `LutaCasada` não tem `desclassificadoId`).
+- **Empty states:** preservado "Nenhuma luta finalizada ainda." (M=0) + novo "Nenhuma luta encontrada para o termo '{busca}'." com botão "Limpar busca" (M>0 e N=0).
+
+**Validação:**
+- `npx tsc --noEmit` — 0 erros.
+- `npm run lint` — 3 erros pré-existentes (`PageLayout.tsx` props não usadas, `PlacarBracket.tsx` bloco vazio); 0 erros/warnings novos introduzidos.
+- 13 CA verificados manualmente: tabela renderiza, busca filtra em tempo real, contador atualiza, expansão acordeão funciona, lutas casadas marcadas, DQ com line-through, sticky header em scroll, status FINALIZADA/WO, empty states distintos.
+- Outras 5 abas (Visão Geral, Chaves, Lutas Casadas, Equipes, Árbitros, Atletas) seguem intactas.
+
+**Observações:**
+- Novo `useMemo` `todasLutasDetalhadas` (linha ~423) — adiciona `atletaANome`/`atletaBNome` ao memo `todasLutasFinalizadas` existente, sem recomputação desnecessária.
+- Novo `useMemo` `lutasFiltradas` (linha ~445) — aplica o filtro de busca sobre `todasLutasDetalhadas`.
+- Novo `useEffect` (linha ~454) — `setExpandedId(null)` quando `busca` muda, evitando linhas "fantasma" expandidas após filtro.
+- Componente `PlacarDetalhado` reusado sem alteração.
+- Nenhum IPC novo; nenhum mudança em tipos; nenhum mudança em `electron/`.
 
 ---
 
