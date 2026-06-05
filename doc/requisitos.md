@@ -1358,3 +1358,36 @@ bjj-tournament-manager-setup/
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)
 ```
+cores que gosto:
+
+cores
+.color1 { #ccb24c };.color2 { #f7d683 };.color3 { #fffdc0 };.color4 { #fffffd };.color5 { #457d97 };
+
+
+.color1 { #1b325f };
+
+.color2 { #9cc4e4 };
+
+.color3 { #e9f2f9 };
+
+.color4 { #3a89c9 };
+
+.color5 { #f26c4f }; 
+
+.color1 { #fc354c };
+.color2 { #29221f };
+.color3 { #13747d };
+.color4 { #0abfbc };
+.color5 { #fcf7c5 };
+
+.color1 { #1c31a5 };
+.color2 { #101f78 };
+.color3 { #020f59 };
+.color4 { #010937 };
+.color5 { #000524 };
+
+.color1 { #092b5a };
+.color2 { #09738a };
+.color3 { #78a890 };
+.color4 { #9ed1b7 };
+.color5 { #e7d9b4 };
