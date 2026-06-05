@@ -6,16 +6,34 @@
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #f5f7fa;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+  background-attachment: fixed;
   color: #000;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
 #root {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+:root {
+  --header-height: 60px;
+}
+
+.mantine-Table-table {
+  white-space: nowrap;
+}
+
+@layer mantine {
+  .mantine-Modal-header {
+    border-bottom: 1px solid var(--mantine-color-gray-2);
+    padding-bottom: var(--mantine-spacing-sm);
+    margin-bottom: var(--mantine-spacing-sm);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

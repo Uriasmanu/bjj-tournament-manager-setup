@@ -37,7 +37,7 @@ export function ActivationScreen({ onActivated }: ActivationScreenProps) {
     <Container size="xs" py="xl" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
       <Paper withBorder shadow="sm" p="lg" radius="md">
         <Stack align="center" gap="md">
-          <IconLock size={48} color="#1565C0" />
+          <IconLock size={48} color="blue" />
           <Title order={2} ta="center">Ativação do Software</Title>
           <Text ta="center" size="sm" c="dimmed">
             Informe a senha de ativação fornecida pelo desenvolvedor para liberar o acesso.

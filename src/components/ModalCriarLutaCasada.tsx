@@ -38,7 +38,7 @@ interface AtletaCardProps {
 
 function AtletaCard({ label, atleta }: AtletaCardProps) {
   return (
-    <Paper withBorder p="sm" radius="sm" style={{ backgroundColor: '#f8f9fa' }}>
+    <Paper withBorder p="sm" radius="sm" bg="var(--mantine-color-gray-0)">
       <Group justify="space-between" mb={4}>
         <Text size="xs" fw={700} c="dimmed" tt="uppercase">{label}</Text>
         {atleta && <Badge size="xs" color="green" leftSection={<IconCheck size={10} />}>OK</Badge>}
@@ -160,7 +160,7 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
         <Paper withBorder p="sm" radius="sm" bg="dark.0">
           <Group justify="space-between">
             <Text size="sm" fw={600}>Árbitro da Área</Text>
-            <Badge color="dark" variant="filled">
+            <Badge variant="filled">
               {arbitroAtual ? `${capitalize(arbitroAtual.nome)} (${FAIXA_LABEL[arbitroAtual.faixa] ?? arbitroAtual.faixa})` : 'Sem árbitro'}
             </Badge>
           </Group>
@@ -206,10 +206,10 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
         )}
 
         <Group justify="flex-end" mt="sm">
-          <Button variant="default" onClick={onClose} disabled={salvando}>
+          <Button variant="outline" onClick={onClose} disabled={salvando}>
             Cancelar
           </Button>
-          <Button color="dark" onClick={handleCriar} disabled={!podeCriar} loading={salvando}>
+          <Button onClick={handleCriar} disabled={!podeCriar} loading={salvando}>
             Criar Luta Casada
           </Button>
         </Group>

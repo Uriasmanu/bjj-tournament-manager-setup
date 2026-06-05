@@ -161,7 +161,7 @@ export function Resultados() {
     return (
       <PageLayout title="Resultados" backRoute="/admin/dashboard">
         <Stack align="center" gap="md" py="xl">
-          <IconTrophy size={48} stroke={1.5} color="#ccc" />
+          <IconTrophy size={48} stroke={1.5} color="var(--mantine-color-gray-4)" />
           <Text c="dimmed" size="lg">Nenhum torneio ativo</Text>
           <Text c="dimmed" size="sm">Crie ou importe um torneio para visualizar os resultados.</Text>
           <Button onClick={() => navigate('/')}>Voltar ao menu inicial</Button>

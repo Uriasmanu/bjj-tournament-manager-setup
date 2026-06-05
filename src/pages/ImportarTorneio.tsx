@@ -114,9 +114,9 @@ export function ImportarTorneio() {
 
   return (
     <PageLayout title="Importar Torneio" backRoute="/">
-      <Stack align="center" gap="xs" mb="lg">
+      <Stack gap="xs" mb="lg">
         <Title order={2}>BJJ TOURNAMENT MANAGER</Title>
-        <Text c="#1565C0" fw={500}>Importar Torneio</Text>
+        <Text c="blue" fw={500}>Importar Torneio</Text>
       </Stack>
 
       <Stack gap="md">
@@ -135,13 +135,10 @@ export function ImportarTorneio() {
             borderStyle: 'dashed',
             cursor: 'pointer',
             textAlign: 'center',
-            transition: 'background-color 0.2s',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#f8f9fa'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = ''; }}
           onClick={() => fileInputRef.current?.click()}
         >
-          <IconFileUpload size="1em" color="#1565C0" style={{ display: 'block', margin: '0 auto 8px', fontSize: 'clamp(36px, 6vw, 56px)' }} />
+          <IconFileUpload size="1em" color="blue" style={{ display: 'block', margin: '0 auto 8px', fontSize: 'clamp(36px, 6vw, 56px)' }} />
           <Text size="sm" c="dimmed">
             {selectedFile ? selectedFile.name : 'Arraste o arquivo JSON aqui ou clique para selecionar'}
           </Text>

@@ -1,4 +1,4 @@
-import { Container, Paper, Title, Text, Button, Stack, Group, Loader, Center, Table, Badge, TextInput } from '@mantine/core';
+import { Paper, Title, Text, Button, Stack, Group, Loader, Center, Table, Badge, TextInput } from '@mantine/core';
 import { IconBuildingSkyscraper, IconSearch } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useMemo } from 'react';
@@ -54,24 +54,20 @@ export function Equipes() {
 
   if (loading) {
     return (
-      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
-        <Center py="xl" style={{ minHeight: 'calc(100vh - 4rem)' }}>
-          <Loader />
-        </Center>
-      </Container>
+      <Center py="xl" style={{ minHeight: '100vh' }}>
+        <Loader />
+      </Center>
     );
   }
 
   if (error) {
     return (
-      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
-        <Paper withBorder shadow="sm" p="lg" radius="md" style={{ minHeight: 'calc(100vh - 4rem)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Stack align="center" gap="md">
-            <Text c="red">Erro ao carregar atletas.</Text>
-            <Button onClick={loadAthletes}>Tentar novamente</Button>
-          </Stack>
-        </Paper>
-      </Container>
+      <Center py="xl" style={{ minHeight: '100vh' }}>
+        <Stack align="center" gap="md">
+          <Text c="red">Erro ao carregar atletas.</Text>
+          <Button onClick={loadAthletes}>Tentar novamente</Button>
+        </Stack>
+      </Center>
     );
   }
 
@@ -111,7 +107,7 @@ export function Equipes() {
         </Stack>
       ) : (
         <Paper withBorder shadow="sm" radius="md" style={{ overflow: 'hidden' }}>
-          <Table striped highlightOnHover>
+          <Table>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Equipe</Table.Th>

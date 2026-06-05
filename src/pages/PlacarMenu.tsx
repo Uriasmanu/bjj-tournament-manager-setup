@@ -1,4 +1,4 @@
-import { Container, Text, Select, Button, Center, Stack, Loader } from '@mantine/core';
+import { Text, Select, Button, Center, Stack, Loader } from '@mantine/core';
 import { IconScoreboard } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
@@ -20,17 +20,15 @@ export function PlacarMenu() {
 
   if (loading) {
     return (
-      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
-        <Center py="xl" style={{ minHeight: 'calc(100vh - 4rem)' }}>
-          <Loader />
-        </Center>
-      </Container>
+      <Center py="xl" style={{ minHeight: '100vh' }}>
+        <Loader />
+      </Center>
     );
   }
 
   return (
     <PageLayout title="Placar" backRoute="/admin/dashboard">
-      <Stack gap="lg" align="center" style={{ paddingTop: '10vh' }}>
+      <Stack gap="lg" align="center">
         <IconScoreboard size={48} />
 
         {areas.length === 0 ? (

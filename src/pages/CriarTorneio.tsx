@@ -54,9 +54,9 @@ export function CriarTorneio() {
 
   return (
     <PageLayout title="Criar Torneio" backRoute="/">
-      <Stack align="center" gap="xs" mb="lg">
+      <Stack gap="xs" mb="lg">
         <Title order={2}>BJJ TOURNAMENT MANAGER</Title>
-        <Text c="#1565C0" fw={500}>Cadastre um novo torneio</Text>
+        <Text c="blue" fw={500}>Cadastre um novo torneio</Text>
       </Stack>
 
       <form onSubmit={form.onSubmit(handleSubmit)}>

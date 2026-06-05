@@ -1,4 +1,4 @@
-import { Container, Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput, NumberInput } from '@mantine/core';
+import { Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput, NumberInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
 import { IconArrowUp, IconArrowDown, IconAward, IconSearch } from '@tabler/icons-react';
@@ -359,11 +359,9 @@ export function GerenciarChaves() {
 
   if (loading) {
     return (
-      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
-        <Center py="xl" style={{ minHeight: 'calc(100vh - 4rem)' }}>
-          <Loader />
-        </Center>
-      </Container>
+      <Center py="xl" style={{ minHeight: '100vh' }}>
+        <Loader />
+      </Center>
     );
   }
 

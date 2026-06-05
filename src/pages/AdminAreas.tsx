@@ -1,4 +1,4 @@
-import { Container, Paper, Text, Button, Stack, Group, Loader, Center, Modal, Badge, Table, ActionIcon, Checkbox, TextInput } from '@mantine/core';
+import { Text, Button, Stack, Group, Loader, Center, Modal, Badge, Table, ActionIcon, Checkbox, TextInput } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconPlus, IconPencil, IconTrash, IconSearch } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
@@ -151,24 +151,20 @@ export function AdminAreas() {
 
   if (loading) {
     return (
-      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
-        <Center py="xl" style={{ minHeight: 'calc(100vh - 4rem)' }}>
-          <Loader />
-        </Center>
-      </Container>
+      <Center py="xl" style={{ minHeight: '100vh' }}>
+        <Loader />
+      </Center>
     );
   }
 
   if (error) {
     return (
-      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
-        <Paper withBorder shadow="sm" p="lg" radius="md" style={{ minHeight: 'calc(100vh - 4rem)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Stack align="center" gap="md">
-            <Text c="red">Erro ao carregar áreas de luta.</Text>
-            <Button onClick={loadData}>Tentar novamente</Button>
-          </Stack>
-        </Paper>
-      </Container>
+      <Center py="xl" style={{ minHeight: '100vh' }}>
+        <Stack align="center" gap="md">
+          <Text c="red">Erro ao carregar áreas de luta.</Text>
+          <Button onClick={loadData}>Tentar novamente</Button>
+        </Stack>
+      </Center>
     );
   }
 

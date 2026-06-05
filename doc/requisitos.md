@@ -21,10 +21,10 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Importar Torneio | ✅ Completo | Upload JSON, validação de estrutura, modal de sobrescrita |
 | Listar Torneios | ✅ Completo | Tabela com Iniciar/Exportar/Excluir; registro de startedAt no Play |
 | Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (`electron/tournament.ts`) |
-| Tema Mantine UI | ✅ Completo | Tema azul royal (#1565C0), fonte Inter, componentes responsivos com `clamp()` |
+| Tema Mantine UI | ✅ Completo | Tema azul royal (#1565C0), ouro (#ccb24c), teal (#09738a), coral (#f26c4f); fonte Inter, componentes responsivos com `clamp()` |
 | Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC. Atletas armazenados por torneio (dentro do JSON do torneio). Campos `genero` e `categoria` IBJJF obrigatórios no formulário e importação. |
 | Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente. Validação de `genero` e `categoria` como obrigatórios, com verificação contra lista de categorias IBJJF. |
-| Dashboard Administrativo | ✅ Completo | Tela com cards em grid (1-4 colunas responsivas), funcionalidades implementadas × planejadas |
+| Dashboard Administrativo | ✅ Completo | Tela com header stats (Atletas, Equipes), hero banner gradient, cards em grid responsivo com badges e link "Acessar →", sidebar de navegação |
 | Resumo de Equipes | ✅ Completo | Tela que consulta a lista de atletas e exibe nome das equipes com contagem de atletas por equipe |
 | Cadastro de Árbitros | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação, duplicata por nome. Faixas permitidas: roxa, marrom, preta. Importação/exportação JSON. Campo de busca por nome, equipe e faixa. |
 | Busca em Atletas | ✅ Completo | Campo de busca na tela de listagem que filtra por nome, equipe e categoria |
@@ -104,11 +104,18 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 - O Dashboard é a tela central de administração do torneio ativo, acessível via `/admin/dashboard`.
 - Ao carregar, obtém o torneio ativo via IPC `get-active-tournament`.
-- Exibe o nome e data do torneio ativo, além de um badge verde "Iniciado {data}" se `startedAt` existir.
-- Contém cards em layout **Grid** (1 coluna <700px, 2 colunas <1400px, 3 colunas <1800px, 4 colunas ≥1800px).
-- Cards de funcionalidades implementadas: clicáveis com hover elevado (translateY(-2px)), opacidade 1.
+- **Header do Dashboard** exibe:
+  - Nome e data do torneio.
+  - Badge "Iniciado {data}" com dot pulsante se `startedAt` existir.
+  - Stats rápidos à direita: total de **Atletas** e total de **Equipes** (cards com número grande e label uppercase).
+- Contém um **hero banner** com fundo gradient `#1b325f → #3a89c9 → #1b325f`, badge "Painel Geral", título e descrição do painel.
+- Cards de navegação em layout **Grid** responsivo (1 coluna <700px, 2 colunas <1000px, 2 colunas <1400px, 3 colunas <1800px, 4 colunas ≥1800px).
+- Cada card possui: ícone em container circular com cor vibrante, título, descrição, badge de contagem informativa no rodapé, link "Acessar →" com hover effect (translateX).
+- Cards de funcionalidades implementadas: clicáveis com hover (translateY(-2px)), opacidade 1.
 - Cards de funcionalidades não implementadas: opacidade 0.5, cursor `not-allowed`, badge "Em breve".
-- Atalho: card "Atletas" navega para `/admin/atletas` (menu intermediário).
+- **Sidebar de navegação** (opcional em telas largas): fundo marinho, links com ícones para todas as seções, active tab com destaque e borda esquerda azul.
+- Card "Atletas" navega para `/admin/atletas` (menu intermediário) e exibe contagem de inscritos.
+- Card "Equipes" navega para `/admin/equipes` e exibe número de academias.
 - Botão "Voltar": ícone de seta que retorna ao Menu Inicial (`/`).
 
 ### 3.7. Exclusão de Torneio
@@ -1025,7 +1032,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 
 ### 9.1 Tema Principal
 
-A identidade visual utiliza cores que transmitam organização, confiança e profissionalismo.
+A identidade visual utiliza cores que transmitam organização, confiança e profissionalismo, com acentos dourados e azuis inspirados em design de medalhas e pódios de competições.
 
 #### 9.1.1 Paleta de Cores
 
@@ -1038,7 +1045,12 @@ A identidade visual utiliza cores que transmitam organização, confiança e pro
 | **Texto secundário** | `#6c757d` (Gray 6) | Descrições e textos auxiliares |
 | **Divisores/Bordas** | `#e9ecef` (Gray 2) | Separar elementos |
 | **Confirmação** | Verde (`#2E7D32`) | Resultados positivos, status concluídos |
-| **Alerta** | Vermelho | Erros, exclusões |
+| **Alerta** | Coral (`#f26c4f`) | Erros, exclusões |
+| **Acento ouro** | `#ccb24c` | Badges de campeão, destaques especiais, medalhas |
+| **Ouro claro** | `#f7d683` | Hover de elementos dourados, realces suaves |
+| **Azul acinzentado** | `#457d97` | Cartões secundários, backgrounds alternativos |
+| **Azul teal** | `#09738a` | Acento de informação, badges de status, links secundários |
+| **Creme** | `#e7d9b4` | Background de cards de destaque, áreas especiais |
 
 ### 9.2 Tipografia
 
@@ -1071,36 +1083,31 @@ A primeira tela exibe um menu com três opções principais:
 ### 10.3 Layout
 
 ```
-+--------------------------------------------------+
-|   ┌──────────────────────────────────────────┐    |
-|   │           BJJ TOURNAMENT MANAGER          │    |
-|   │         Gerencie seu campeonato           │    |
-|   └──────────────────────────────────────────┘    |
-|                                                    |
-|   ┌──────────────────────────────────────────┐    |
-|   │   [IconPlus]  Criar Torneio              │    |
-|   │   Cadastre um novo torneio               │    |
-|   └──────────────────────────────────────────┘    |
-|   ┌──────────────────────────────────────────┐    |
-|   │   [IconFileUpload]  Importar Torneio     │    |
-|   │   Importe torneio de arquivo JSON        │    |
-|   └──────────────────────────────────────────┘    |
-|   ┌──────────────────────────────────────────┐    |
-|   │   [IconList]  Listar Torneios            │    |
-|   │   Veja todos os torneios cadastrados     │    |
-|   └──────────────────────────────────────────┘    |
-|                                                    |
-|   Pressione 1, 2 ou 3 para selecionar             |
-+--------------------------------------------------+
++----------------------------------------------------------+
+|  ┌───── BJJ TOURNAMENT MANAGER (header gradient) ──────┐ |
+|  │                    [back]  Título                     │ |
+|  └──────────────────────────────────────────────────────┘ |
+|                                                           |
+|                    ⭐ Gestão de Competições                |
+|            BJJ TOURNAMENT MANAGER (gradient text)         |
+|       Crie e coordene chaves de lutas dinâmicas...        |
+|                                                           |
+|   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐   |
+|   │ [blue icon]  │  │ [gray icon]  │  │ [teal icon]  │   |
+|   │ Criar Novo   │  │ Importar     │  │ Central de   │   |
+|   │ Torneio      │  │ via JSON     │  │ Torneios     │   |
+|   │ Acessar →    │  │ Acessar →    │  │ Acessar →    │   |
+|   └──────────────┘  └──────────────┘  └──────────────┘   |
+|                                                           |
++----------------------------------------------------------+
 ```
 
 ### 10.4 Comportamento
 
 - Ao iniciar o Electron, a rota `/` é carregada imediatamente.
 - O menu é exibido independentemente de haver torneios cadastrados.
-- Seleção: clique/touch, teclado numérico (1/2/3) ou Tab + Enter.
+- Seleção: clique/touch, Tab + Enter.
 - Feedback visual: hover (translateY(-2px), sombra), active (scale 0.98), foco (outline).
-- Teclas 1/2/3 registradas via `window.addEventListener('keydown')` no `useEffect`.
 
 ---
 
@@ -1169,6 +1176,32 @@ A validação ocorre:
 | Nome obrigatório, mínimo 2 caracteres | `"Nome deve ter ao menos 2 caracteres."` |
 | Faixa deve ser roxa, marrom ou preta | `"Faixa inválida."` |
 | Se equipe informada, mínimo 2 caracteres | `"Equipe deve ter ao menos 2 caracteres se informada."` |
+
+### 11.8. Aplicação do Tema Visual (Aparência Moderna)
+
+Todas as cores definidas em §9.1.1 (Paleta de Cores) devem ser referenciadas via tema Mantine, nunca hardcoded como hex.
+
+| Regra | Comportamento |
+|---|---|
+| Cores de destaque (Azul Royal `#1565C0`) | Usar `c="blue"` ou `color="blue"` em componentes Mantine e Icon |
+| Cores de texto secundário (`#6c757d`) | Usar `c="dimmed"` |
+| Cores de fundo (`#f8f9fa`) | Usar `'var(--mantine-color-gray-0)'` em estilos inline |
+| Acento ouro / teal / coral | Usar `c="yellow"`, `c="teal"`, `c="red"` respectivamente — mapeados no tema para os hex definidos em §9.1.1 |
+| Exceções | PlacarLuta e PlacarLutaCasada mantêm azul anil/branco por design do scoreboard |
+
+### 11.9. Layout Moderno (Refatoração Visual)
+
+O layout da aplicação segue um padrão moderno e consistente.
+
+| Elemento | Comportamento |
+|---|---|
+| **Header** | Barra fixa no topo com gradient `#1565C0 → #0d47a1`, título da página, botão voltar quando aplicável |
+| **Cards de menu** | Componente `MenuCard` reutilizável com hover (translateY -3px, shadow lg), active (scale 0.98), cores de ícone variáveis por card (azul royal, cinza, teal) e link "Acessar →" |
+| **Tabelas** | `striped` + `highlightOnHover` por padrão (via tema) |
+| **Modais** | `centered` + `size="lg"` por padrão (via tema) |
+| **Loading/Error** | `Center` simples com `Loader` / Stack de erro, sem Container/Paper redundantes |
+| **Toolbars** | `Group justify="space-between"` com actions à esquerda e busca à direita |
+| **Background** | Gradient fixo `#f8f9fa → #e3f2fd` no body |
 
 ---
 

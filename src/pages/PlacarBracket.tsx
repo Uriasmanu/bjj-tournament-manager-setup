@@ -1,4 +1,4 @@
-import { Container, Paper, Text, Stack, Loader, Center, Button, Table, Badge } from '@mantine/core';
+import { Paper, Text, Stack, Loader, Center, Button, Table, Badge } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconPlayerPlay } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -110,11 +110,9 @@ export function PlacarBracket() {
 
   if (loading) {
     return (
-      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
-        <Center py="xl" style={{ minHeight: 'calc(100vh - 4rem)' }}>
-          <Loader />
-        </Center>
-      </Container>
+      <Center py="xl" style={{ minHeight: '100vh' }}>
+        <Loader />
+      </Center>
     );
   }
 
@@ -133,7 +131,7 @@ export function PlacarBracket() {
           Árbitro: {getArbitroNome(chave.arbitroId)} — {chave.totalLutas} luta(s), {chave.totalAtletas} atleta(s)
         </Text>
 
-        <Paper withBorder p="md" radius="md" style={{ overflowX: 'auto', backgroundColor: '#FFF' }}>
+        <Paper withBorder p="md" radius="md">
           <BracketTree
             chave={chave}
             getAtletaNome={getAtletaNome}

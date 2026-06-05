@@ -37,15 +37,49 @@ export const theme = createTheme({
     lg: 'clamp(1.125rem, 0.9vw, 1.25rem)',
     xl: 'clamp(1.25rem, 1vw, 1.5rem)',
   },
+  shadows: {
+    xs: '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
+    sm: '0 1px 3px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04)',
+    md: '0 4px 6px rgba(0,0,0,0.05), 0 2px 4px rgba(0,0,0,0.03)',
+    lg: '0 10px 15px rgba(0,0,0,0.05), 0 4px 6px rgba(0,0,0,0.02)',
+    xl: '0 20px 25px rgba(0,0,0,0.06), 0 10px 10px rgba(0,0,0,0.02)',
+  },
   components: {
     Button: {
-      defaultProps: {
-        size: 'md',
-      },
+      defaultProps: { size: 'md' },
     },
     Input: {
+      defaultProps: { size: 'md' },
+    },
+    Card: {
       defaultProps: {
-        size: 'md',
+        withBorder: true,
+        shadow: 'sm',
+        radius: 'md',
+      },
+    },
+    Paper: {
+      defaultProps: {
+        withBorder: true,
+        shadow: 'sm',
+        radius: 'md',
+      },
+    },
+    Modal: {
+      defaultProps: {
+        centered: true,
+        size: 'lg',
+      },
+    },
+    Table: {
+      defaultProps: {
+        striped: true,
+        highlightOnHover: true,
+      },
+    },
+    Badge: {
+      defaultProps: {
+        size: 'sm',
       },
     },
   },

@@ -1,4 +1,4 @@
-import { Container, Text, Card, Stack, Group, Badge, Loader, Center, SimpleGrid, TextInput, Button } from '@mantine/core';
+import { Text, Card, Stack, Group, Badge, Loader, Center, SimpleGrid, TextInput, Button } from '@mantine/core';
 import { IconSearch, IconPlus } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
@@ -113,11 +113,9 @@ export function PlacarChaves() {
 
   if (loading) {
     return (
-      <Container fluid px="xl" py="xl" style={{ minHeight: '100vh' }}>
-        <Center py="xl" style={{ minHeight: 'calc(100vh - 4rem)' }}>
-          <Loader />
-        </Center>
-      </Container>
+      <Center py="xl" style={{ minHeight: '100vh' }}>
+        <Loader />
+      </Center>
     );
   }
 
@@ -169,15 +167,7 @@ export function PlacarChaves() {
                   radius="md"
                   role="button"
                   tabIndex={0}
-                  style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-2px)';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = '';
-                    e.currentTarget.style.boxShadow = '';
-                  }}
+                  style={{ cursor: 'pointer', position: 'relative' }}
                   onClick={() => navigate(`/admin/placar/chave/${areaId}/${chave.id}`)}
                 >
                   {(() => {
@@ -238,15 +228,7 @@ export function PlacarChaves() {
                     radius="md"
                     role="button"
                     tabIndex={0}
-                    style={{ cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = '';
-                      e.currentTarget.style.boxShadow = '';
-                    }}
+                    style={{ cursor: 'pointer', position: 'relative' }}
                     onClick={() => navigate(`/admin/placar/luta-casada/${areaId}/${luta.id}`)}
                   >
                     <Badge size="sm" color="dark" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
