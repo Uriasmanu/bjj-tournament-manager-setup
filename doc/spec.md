@@ -20,34 +20,11 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-### [2026-06-05] Feature "Tempo de luta padrão IBJJF" + regra do MAX em lutas casadas — implementada
-
-**Gatilho:** seção "Feature" do `doc/spec.md` (linha 27):
-> Em lutas casadas, o tempo de sugestão é sempre do que tem a maior categoria, ou maior cor de faixa
-
-**Spec completa:** [`spec/tempo-luta-padrao-ibjjf.md`](../spec/tempo-luta-padrao-ibjjf.md) — 12 seções do guia preenchidas, 11 CA verificáveis, 5 passos de implementação.
-
-**Implementação:**
-- **Novo:** `src/types/fightTime.ts` — função pura `sugerirTempoLutaMinutos(atleta)` cobrindo a tabela IBJJF (Mirim 2 min, Infantil 3 min, Infanto-Juvenil 4 min, Juvenil 5 min, Adulto 5–10 min por faixa, Master 5–7 min por faixa) com fallback de 5 min.
-- **Modificado:** `src/pages/PlacarLuta.tsx` — pré-preenche `tempoInicial`/`tempoRestante` com a sugestão do atleta de referência (A com fallback B) e exibe `<Badge>` "Sugestão IBJJF · N min" ao lado do input.
-- **Modificado:** `src/pages/PlacarLutaCasada.tsx` — carrega `loadAthletes()` em paralelo, aplica a sugestão aos dois atletas, usa `Math.max(minutosA, minutosB)` (com fallback para `TEMPO_LUTA_FALLBACK_MINUTOS` se ambos ausentes) e exibe o mesmo `<Badge>`. **Resolve a regra da Feature** — em luta casada, o tempo é o maior entre os dois atletas (maior categoria ou maior cor de faixa).
-
-**Validação:**
-- `npx tsc --noEmit` — 0 erros.
-- `npm run lint` — 3 erros pré-existentes em `PageLayout.tsx` (`_title`/`_headerExtras` não usados) e `PlacarBracket.tsx` (bloco vazio), não relacionados a esta feature.
-- CA-01 a CA-11 da spec verificados manualmente conforme tabela de tempos IBJJF; MAX em luta casada respeitado; Badge permanece após edição manual do tempo; fallback funciona quando atleta removido.
-
-**Observações:**
-- A constante `TEMPO_DEFAULT_SEGUNDOS = 5 * 60` foi preservada como fallback em ambos os arquivos.
-- Nenhuma função removida; nenhum IPC novo além de `loadAthletes` (já existente em `PlacarLuta`).
-- A Feature original (`Em lutas casadas, o tempo de sugestão é sempre do que tem a maior categoria, ou maior cor de faixa`) foi resolvida pela regra do `MAX` e está refletida em RF-03 e CA-10/CA-07b/CA-10 da spec.
-- Sugestão de título do problema aberto (caso seja reaberto no futuro): **"Em lutas casadas, o tempo sugerido é o maior entre os dois atletas (regra do MAX)"** — mais claro que a formulação original.
-
 ---
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
-### Em lutas casadas, o tempo de sugestão é sempre do que tem a maior categoria, ou maior cor de faixa
+### Em resultados tem que ter uma forma facil e intuitiva de ver o as informaçoes das luta, todas as informaç~eos pontos, tempo, tipo de vitoria etc (historico completo de todas as lutas, em formato de lista e com a opção de bucar por nome do atleta)
 
 
 ---
