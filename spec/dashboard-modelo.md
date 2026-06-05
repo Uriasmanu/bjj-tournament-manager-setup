@@ -33,12 +33,14 @@ para que eu possa monitorar o evento e acessar rapidamente qualquer módulo do s
 ## 4. Requisitos Funcionais
 
 - [x] RF-01: Header do Dashboard exibe nome/data do torneio, badge "Iniciado {data}" com dot pulsante, e stats rápidos de **Atletas** (contagem total) e **Equipes** (contagem total).
-- [x] RF-02: Hero banner com fundo gradient (marinho → azul → marinho), badge "Painel Geral", título e subtítulo.
+- [x] RF-02: Hero banner com fundo sólido (marinho `#1b325f`), badge "Painel Geral", título e subtítulo.
 - [x] RF-03: Cards de navegação em grid responsivo (1 col <700px, 2 col <1000px, 2 col <1400px, 3 col <1800px, 4 col ≥1800px).
-- [x] RF-04: Cada card possui: ícone em container circular com cor distinta, título, descrição, badge de contagem no rodapé, link "Acessar →" com hover translateX.
-- [x] RF-05: Sidebar de navegação (opcional em telas ≥ 1024px) com fundo marinho, links para todas as seções, active tab com destaque azul e borda esquerda.
+- [x] RF-04: Cada card possui: ícone em container circular com cor distinta (`#3a89c9` para maioria, `#f26c4f` para Placar/Resultados), título, descrição, badge no rodapé, link "Acessar →" com hover translateX.
+- [x] RF-05: Sidebar de navegação (visível ≥ 1024px) com fundo marinho `#1b325f`, links para todas as seções, active tab com destaque azul e borda esquerda.
 - [x] RF-06: Labels renomeados: "Atletas Confirmados" → "Atletas", "Equipes Ativas" → "Equipes".
 - [x] RF-07: Stats do header obtidos via consulta à lista de atletas e equipes do torneio ativo.
+- [x] RF-08: Hero banner sem gradient — fundo sólido `#1b325f`.
+- [x] RF-09: Ícones dos cards usam a mesma cor do container (ex.: ícone azul em fundo azul transparente), sem ícone branco.
 
 ---
 

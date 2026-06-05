@@ -342,7 +342,7 @@ export function Dashboard() {
             mb="xl"
             style={{
               position: 'relative',
-              background: 'linear-gradient(135deg, #1b325f, #3a89c9, #1b325f)',
+              background: '#1b325f',
               borderRadius: 16,
               padding: 'clamp(20px, 3vw, 32px)',
               overflow: 'hidden',

@@ -449,12 +449,9 @@ export function PlacarLutaCasada() {
   const corCronometro = tempoEsgotado ? '#fa5252' : rodando ? '#2e7d32' : '#212529';
 
   return (
-    <PageLayout
-      title="Placar · Luta Casada"
-      backRoute={`/admin/placar/chaves/${areaId}`}
-      headerExtras={<Badge color="dark" variant="filled" size="lg">LUTA CASADA</Badge>}
-    >
+    <PageLayout title="Placar · Luta Casada" backRoute={`/admin/placar/chaves/${areaId}`}>
       <Stack gap="md">
+        <Badge color="dark" variant="filled" size="lg" style={{ alignSelf: 'flex-start' }}>LUTA CASADA</Badge>
         {lutaFinalizada && (
           <Alert color="green" icon={<IconFlag size={18} />}>
             Luta casada finalizada. Vencedor registrado: {luta.vencedorId === luta.atletaAId ? nomeA : nomeB}
