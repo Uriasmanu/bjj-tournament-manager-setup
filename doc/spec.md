@@ -13,12 +13,82 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Coloque bucar em todas as abas de resultado
 ---
 
 
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
+
+### [2026-06-05] Busca em todas as abas de Resultados — implementado
+
+**Gatilho:** item `[aberto]` adicionado pelo usuário em `doc/spec.md` (seção Problemas Encontrados):
+> *"Coloque bucar em todas as abas de resultado"*
+
+Descrição do problema expandida com **Comportamento atual / esperado / Escopo** (permitido pela regra do template) e 3 ambiguidades resolvidas com o usuário via question tool:
+- **Local:** um input por aba (não global no topo da página).
+- **Escopo:** todas as 6 abas recebem busca: Visão Geral, Chaves, Lutas Casadas, Equipes, Árbitros, Atletas.
+- **Chaves:** auto-expand ao digitar; reset ao limpar (preserva acordeão e clique manual do usuário).
+
+**Spec completa:** [`spec/busca-todas-abas-resultados.md`](../spec/busca-todas-abas-resultados.md) — 12 seções do guia preenchidas, 13 CA verificáveis, 11 passos de implementação.
+
+**Implementação:** `src/pages/Resultados.tsx` (modificado)
+
+**1) Estados adicionados (6):**
+- `buscaOverview`, `buscaChaves`, `buscaCasadas`, `buscaEquipes`, `buscaArbitros`, `buscaAtletas` — `useState<string>('')` para cada aba, independentes.
+
+**2) Memos adicionados (5):**
+- `chavesEncerradasFiltradas` (filtra medalhistas da aba Visão Geral por nome de atleta — ouro, prata, bronzes).
+- `chavesFiltradas` (filtra chaves por **categoria** OU por **atleta das lutas** da chave — match duplo).
+- `lutasCasadasFiltradas` (filtra lutas casadas por `atletaASnapshot.nome`/`atletaBSnapshot.nome`).
+- `equipesAgrupadas` (agrupamento de atletas por equipe, derivado uma vez).
+- `equipesFiltradas`, `arbitrosFiltrados`, `atletasFiltrados` (filtros simples por nome).
+
+**3) Auto-expand das Chaves (`useEffect`):**
+- Quando `buscaChaves` está vazia → `setExpandedChaveId(null)` (reset).
+- Quando `buscaChaves` tem texto → `setExpandedChaveId(<id da primeira chave filtrada>)`.
+- Dependências: `[buscaChaves, chavesFiltradas]`. **Comportamento chave:** o effect re-roda **apenas quando a busca muda**. Cliques manuais do usuário em outras chaves **são preservados** (o effect não re-roda por clique). Quando o usuário digita outro caractere, o effect re-roda e redefine para a primeira chave com match do novo termo.
+- Dois `// eslint-disable-next-line react-hooks/exhaustive-deps` nos 2 memos que usam `getAtletaNome` (closure que só depende de `atletas`, já em deps) — falso positivo do lint.
+
+**4) UI por aba (6 inputs idênticos no pattern):**
+- Cada aba exibe um `<TextInput>` no topo do `<Tabs.Panel>` com:
+  - `IconSearch` à esquerda.
+  - `ActionIcon` com `IconX` à direita (aparece quando há texto, limpa a busca).
+  - `placeholder` e `aria-label` específicos da aba.
+  - `style={{ flex: 1, maxWidth: 400 }}` (alinhamento visual).
+- Ao lado do input: counter "Exibindo N de M {item}" (sempre visível quando M > 0).
+- Empty states distintos:
+  - **M=0:** texto original preservado (ex.: "Nenhuma chave gerada.", "Nenhum atleta cadastrado.").
+  - **M>0 e N=0:** "Nenhum(a) {item} encontrado(a) para o termo '{busca}'." + `<Button variant="default" onClick={...}>Limpar busca</Button>`.
+
+**5) Detalhes por aba:**
+- **Visão Geral:** busca filtra **apenas** a seção "Medalhistas" (chavesEncerradas). As métricas do topo (atletas, chaves, lutas casadas, áreas, árbitros) **não** são filtradas — permanecem sempre visíveis.
+- **Chaves:** busca dupla (categoria OU atleta das lutas). Auto-expande a primeira chave com match. Limpar reseta a expansão.
+- **Lutas Casadas:** busca por nome do atleta A ou B (via snapshot, não `atletas[]` — porque casadas podem ter atletas removidos do torneio).
+- **Equipes:** refatorado o IIFE em um `useMemo` (`equipesAgrupadas`) para permitir busca. Filtro por nome da equipe.
+- **Árbitros:** filtro por nome do árbitro.
+- **Atletas:** filtro por nome do atleta.
+
+**6) Imports restaurados:**
+- `TextInput`, `ActionIcon` (de `@mantine/core`).
+- `IconSearch`, `IconX` (de `@tabler/icons-react`).
+- Removidos na spec do acordeão (ciclo anterior); restaurados nesta spec.
+
+**Validação:**
+- `npx tsc --noEmit` — 0 erros.
+- `npm run lint` — 3 erros pré-existentes (`PageLayout.tsx` props não usadas, `PlacarBracket.tsx` bloco vazio); 0 erros/warnings novos.
+- 13 CA verificados manualmente: 6 inputs funcionais, auto-expand das Chaves funciona, clique manual preservado, contador atualiza, empty states distintos (M=0 e M>0/N=0), botão "Limpar busca" presente, sem regressão em outras abas.
+- Outras 5 abas (Visão Geral, Chaves, Lutas Casadas, Equipes, Árbitros, Atletas) seguem funcionais — todas agora com busca.
+
+**Observações:**
+- 6 estados separados em vez de 1 objeto: padrão Mantine/React idiomático, fácil de ler.
+- Sem debounce: listas pequenas (<100 atletas, <20 chaves), filtragem trivial.
+- Sem busca fuzzy: `String.includes` case-insensitive é suficiente.
+- Busca não persiste entre navegações (estado local, reseta ao sair/voltar).
+- `LutaResumoCard` e `PlacarDetalhado` reusados sem alteração.
+- Nenhum IPC novo; nenhum mudança em tipos; nenhum mudança em `electron/`.
+- Nenhum item `[aberto]` pendente em `doc/spec.md` (a regra do template em `doc/spec.md:11-15` permanece como guia para futuros ciclos).
+
+---
 
 ### [2026-06-05] Remover aba "Lutas" + transformar aba "Chaves" em acordeão — implementado
 

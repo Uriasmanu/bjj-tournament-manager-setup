@@ -15,6 +15,8 @@ import {
   Divider,
   Collapse,
   UnstyledButton,
+  TextInput,
+  ActionIcon,
 } from '@mantine/core';
 import {
   IconTrophy,
@@ -26,6 +28,8 @@ import {
   IconChartBar,
   IconClock,
   IconChevronDown,
+  IconSearch,
+  IconX,
 } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -298,6 +302,12 @@ export function Resultados() {
   const [torneio, setTorneio] = useState<Torneio | null>(null);
   const [loading, setLoading] = useState(true);
   const [expandedChaveId, setExpandedChaveId] = useState<string | null>(null);
+  const [buscaOverview, setBuscaOverview] = useState<string>('');
+  const [buscaChaves, setBuscaChaves] = useState<string>('');
+  const [buscaCasadas, setBuscaCasadas] = useState<string>('');
+  const [buscaEquipes, setBuscaEquipes] = useState<string>('');
+  const [buscaArbitros, setBuscaArbitros] = useState<string>('');
+  const [buscaAtletas, setBuscaAtletas] = useState<string>('');
 
   useEffect(() => {
     window.electronAPI.getActiveTournament().then((t) => {
@@ -377,6 +387,80 @@ export function Resultados() {
     }
     return counts;
   }, [chaves, lutasCasadas]);
+
+  const chavesFiltradas = useMemo(() => {
+    const termo = buscaChaves.trim().toLowerCase();
+    if (!termo) return chaves;
+    return chaves.filter(c => {
+      const categoria = getCategoriaTitulo(c.categoriaId).toLowerCase();
+      if (categoria.includes(termo)) return true;
+      return c.lutas.some(l => {
+        const nomeA = getAtletaNome(l.atletaAId).toLowerCase();
+        const nomeB = getAtletaNome(l.atletaBId).toLowerCase();
+        return nomeA.includes(termo) || nomeB.includes(termo);
+      });
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chaves, buscaChaves, atletas]);
+
+  const chavesEncerradasFiltradas = useMemo(() => {
+    const termo = buscaOverview.trim().toLowerCase();
+    if (!termo) return chavesEncerradas;
+    return chavesEncerradas.filter(c => {
+      const ouro = getAtletaNome(getChaveVencedorId(c)).toLowerCase();
+      const prata = getAtletaNome(getChavePerdedorFinalId(c)).toLowerCase();
+      const bronzes = getPerdedoresSemifinal(c).map(id => getAtletaNome(id).toLowerCase());
+      return ouro.includes(termo) || prata.includes(termo) || bronzes.some(n => n.includes(termo));
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chavesEncerradas, buscaOverview, atletas]);
+
+  const lutasCasadasFiltradas = useMemo(() => {
+    const sorted = lutasCasadas.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const termo = buscaCasadas.trim().toLowerCase();
+    if (!termo) return sorted;
+    return sorted.filter(l =>
+      l.atletaASnapshot.nome.toLowerCase().includes(termo) ||
+      l.atletaBSnapshot.nome.toLowerCase().includes(termo)
+    );
+  }, [lutasCasadas, buscaCasadas]);
+
+  const equipesAgrupadas = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const a of atletas) {
+      const key = a.equipe || 'Sem equipe';
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    return Object.entries(counts).sort(([a], [b]) => a.localeCompare(b));
+  }, [atletas]);
+
+  const equipesFiltradas = useMemo(() => {
+    const termo = buscaEquipes.trim().toLowerCase();
+    if (!termo) return equipesAgrupadas;
+    return equipesAgrupadas.filter(([nome]) => nome.toLowerCase().includes(termo));
+  }, [equipesAgrupadas, buscaEquipes]);
+
+  const arbitrosFiltrados = useMemo(() => {
+    const termo = buscaArbitros.trim().toLowerCase();
+    if (!termo) return arbitros;
+    return arbitros.filter(a => a.nome.toLowerCase().includes(termo));
+  }, [arbitros, buscaArbitros]);
+
+  const atletasFiltrados = useMemo(() => {
+    const termo = buscaAtletas.trim().toLowerCase();
+    if (!termo) return atletas;
+    return atletas.filter(a => a.nome.toLowerCase().includes(termo));
+  }, [atletas, buscaAtletas]);
+
+  useEffect(() => {
+    const termo = buscaChaves.trim();
+    if (!termo) {
+      setExpandedChaveId(null);
+      return;
+    }
+    const first = chavesFiltradas[0];
+    if (first) setExpandedChaveId(first.id);
+  }, [buscaChaves, chavesFiltradas]);
 
   if (loading) {
     return (
@@ -464,7 +548,42 @@ export function Resultados() {
                 <Text c="dimmed">Nenhuma chave encerrada ainda.</Text>
               ) : (
                 <Stack gap="md">
-                  {chavesEncerradas.map(chave => {
+                  <Group gap="md" align="center" wrap="wrap" w="100%">
+                    <TextInput
+                      leftSection={<IconSearch size={16} />}
+                      placeholder="Buscar medalhista por nome"
+                      value={buscaOverview}
+                      onChange={(e) => setBuscaOverview(e.currentTarget.value)}
+                      rightSection={
+                        buscaOverview ? (
+                          <ActionIcon
+                            variant="subtle"
+                            color="gray"
+                            onClick={() => setBuscaOverview('')}
+                            aria-label="Limpar busca"
+                            size="sm"
+                          >
+                            <IconX size={14} />
+                          </ActionIcon>
+                        ) : null
+                      }
+                      aria-label="Buscar medalhistas por nome de atleta"
+                      style={{ flex: 1, maxWidth: 400 }}
+                    />
+                    <Text size="sm" c="dimmed" fw={600}>
+                      Exibindo {chavesEncerradasFiltradas.length} de {chavesEncerradas.length} chaves encerradas
+                    </Text>
+                  </Group>
+                  {chavesEncerradasFiltradas.length === 0 ? (
+                    <Stack align="center" gap="md" py="xl">
+                      <Text c="dimmed" ta="center">Nenhum medalhista encontrado para o termo '{buscaOverview}'.</Text>
+                      <Button variant="default" onClick={() => setBuscaOverview('')}>
+                        Limpar busca
+                      </Button>
+                    </Stack>
+                  ) : (
+                    <Stack gap="md">
+                      {chavesEncerradasFiltradas.map(chave => {
                     const ouro = getChaveVencedorId(chave);
                     const prata = getChavePerdedorFinalId(chave);
                     const bronzes = getPerdedoresSemifinal(chave);
@@ -494,6 +613,8 @@ export function Resultados() {
                       </Card>
                     );
                   })}
+                    </Stack>
+                  )}
                 </Stack>
               )}
             </Stack>
@@ -504,7 +625,42 @@ export function Resultados() {
               <Text c="dimmed" ta="center" py="xl">Nenhuma chave gerada.</Text>
             ) : (
               <Stack gap="md">
-                {chaves.map(chave => {
+                <Group gap="md" align="center" wrap="wrap" w="100%">
+                  <TextInput
+                    leftSection={<IconSearch size={16} />}
+                    placeholder="Buscar por categoria ou atleta"
+                    value={buscaChaves}
+                    onChange={(e) => setBuscaChaves(e.currentTarget.value)}
+                    rightSection={
+                      buscaChaves ? (
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          onClick={() => setBuscaChaves('')}
+                          aria-label="Limpar busca"
+                          size="sm"
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      ) : null
+                    }
+                    aria-label="Buscar chaves por categoria ou atleta"
+                    style={{ flex: 1, maxWidth: 400 }}
+                  />
+                  <Text size="sm" c="dimmed" fw={600}>
+                    Exibindo {chavesFiltradas.length} de {chaves.length} chaves
+                  </Text>
+                </Group>
+                {chavesFiltradas.length === 0 ? (
+                  <Stack align="center" gap="md" py="xl">
+                    <Text c="dimmed" ta="center">Nenhuma chave encontrada para o termo '{buscaChaves}'.</Text>
+                    <Button variant="default" onClick={() => setBuscaChaves('')}>
+                      Limpar busca
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Stack gap="md">
+                    {chavesFiltradas.map(chave => {
                   const status = getChaveStatus(chave);
                   const vencedor = getChaveVencedorId(chave);
                   const isExpanded = expandedChaveId === chave.id;
@@ -583,6 +739,8 @@ export function Resultados() {
                     </Card>
                   );
                 })}
+                  </Stack>
+                )}
               </Stack>
             )}
           </Tabs.Panel>
@@ -591,125 +749,226 @@ export function Resultados() {
             {lutasCasadas.length === 0 ? (
               <Text c="dimmed" ta="center" py="xl">Nenhuma luta casada cadastrada.</Text>
             ) : (
-              <Stack gap="xs">
-                {lutasCasadas
-                  .slice()
-                  .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-                  .map(luta => {
-                    const atletaA: AtletaResumo = {
-                      id: luta.atletaAId,
-                      nome: luta.atletaASnapshot.nome,
-                      equipe: luta.atletaASnapshot.equipe,
-                      faixa: luta.atletaASnapshot.faixa,
-                      pesoKg: luta.atletaASnapshot.pesoKg,
-                      categoria: luta.atletaASnapshot.categoria,
-                    };
-                    const atletaB: AtletaResumo = {
-                      id: luta.atletaBId,
-                      nome: luta.atletaBSnapshot.nome,
-                      equipe: luta.atletaBSnapshot.equipe,
-                      faixa: luta.atletaBSnapshot.faixa,
-                      pesoKg: luta.atletaBSnapshot.pesoKg,
-                      categoria: luta.atletaBSnapshot.categoria,
-                    };
-                    const statusBadge =
-                      luta.status === 'pending'
-                        ? { label: 'PENDENTE', color: 'yellow' }
-                        : luta.status === 'wo'
-                          ? { label: 'WO', color: 'red' }
-                          : undefined;
-                    return (
-                      <LutaResumoCard
-                        key={luta.id}
-                        atletaA={atletaA}
-                        atletaB={atletaB}
-                        placarA={luta.placarA}
-                        placarB={luta.placarB}
-                        vencedorId={luta.vencedorId ?? ''}
-                        finalizacao={luta.finalizacao}
-                        desclassificacao={luta.desclassificacao}
-                        desempateArbitro={luta.desempateArbitro}
-                        status={luta.status as 'completed' | 'wo' | 'pending'}
-                        tempoRealSegundos={luta.tempoRealSegundos}
-                        isCasada
-                        statusBadge={statusBadge}
-                      />
-                    );
-                  })}
+              <Stack gap="md">
+                <Group gap="md" align="center" wrap="wrap" w="100%">
+                  <TextInput
+                    leftSection={<IconSearch size={16} />}
+                    placeholder="Buscar por nome do atleta"
+                    value={buscaCasadas}
+                    onChange={(e) => setBuscaCasadas(e.currentTarget.value)}
+                    rightSection={
+                      buscaCasadas ? (
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          onClick={() => setBuscaCasadas('')}
+                          aria-label="Limpar busca"
+                          size="sm"
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      ) : null
+                    }
+                    aria-label="Buscar lutas casadas por nome do atleta"
+                    style={{ flex: 1, maxWidth: 400 }}
+                  />
+                  <Text size="sm" c="dimmed" fw={600}>
+                    Exibindo {lutasCasadasFiltradas.length} de {lutasCasadas.length} lutas casadas
+                  </Text>
+                </Group>
+                {lutasCasadasFiltradas.length === 0 ? (
+                  <Stack align="center" gap="md" py="xl">
+                    <Text c="dimmed" ta="center">Nenhuma luta casada encontrada para o termo '{buscaCasadas}'.</Text>
+                    <Button variant="default" onClick={() => setBuscaCasadas('')}>
+                      Limpar busca
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Stack gap="xs">
+                    {lutasCasadasFiltradas
+                      .map(luta => {
+                        const atletaA: AtletaResumo = {
+                          id: luta.atletaAId,
+                          nome: luta.atletaASnapshot.nome,
+                          equipe: luta.atletaASnapshot.equipe,
+                          faixa: luta.atletaASnapshot.faixa,
+                          pesoKg: luta.atletaASnapshot.pesoKg,
+                          categoria: luta.atletaASnapshot.categoria,
+                        };
+                        const atletaB: AtletaResumo = {
+                          id: luta.atletaBId,
+                          nome: luta.atletaBSnapshot.nome,
+                          equipe: luta.atletaBSnapshot.equipe,
+                          faixa: luta.atletaBSnapshot.faixa,
+                          pesoKg: luta.atletaBSnapshot.pesoKg,
+                          categoria: luta.atletaBSnapshot.categoria,
+                        };
+                        const statusBadge =
+                          luta.status === 'pending'
+                            ? { label: 'PENDENTE', color: 'yellow' }
+                            : luta.status === 'wo'
+                              ? { label: 'WO', color: 'red' }
+                              : undefined;
+                        return (
+                          <LutaResumoCard
+                            key={luta.id}
+                            atletaA={atletaA}
+                            atletaB={atletaB}
+                            placarA={luta.placarA}
+                            placarB={luta.placarB}
+                            vencedorId={luta.vencedorId ?? ''}
+                            finalizacao={luta.finalizacao}
+                            desclassificacao={luta.desclassificacao}
+                            desempateArbitro={luta.desempateArbitro}
+                            status={luta.status as 'completed' | 'wo' | 'pending'}
+                            tempoRealSegundos={luta.tempoRealSegundos}
+                            isCasada
+                            statusBadge={statusBadge}
+                          />
+                        );
+                      })}
+                  </Stack>
+                )}
               </Stack>
             )}
           </Tabs.Panel>
 
           <Tabs.Panel value="equipes" pt="md">
-            {atletas.length === 0 ? (
-              <Text c="dimmed" ta="center" py="xl">Nenhum atleta cadastrado.</Text>
-            ) : (() => {
-              const counts: Record<string, number> = {};
-              for (const a of atletas) {
-                const key = a.equipe || 'Sem equipe';
-                counts[key] = (counts[key] ?? 0) + 1;
-              }
-              const sorted = Object.entries(counts).sort(([a], [b]) => a.localeCompare(b));
-              return (
-                <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
-                  <Table striped highlightOnHover>
-                    <Table.Thead>
-                      <Table.Tr>
-                        <Table.Th>Equipe</Table.Th>
-                        <Table.Th style={{ textAlign: 'right' }}>Atletas</Table.Th>
-                        <Table.Th style={{ textAlign: 'right' }}>🥇 Ouro</Table.Th>
-                        <Table.Th style={{ textAlign: 'right' }}>🥈 Prata</Table.Th>
-                        <Table.Th style={{ textAlign: 'right' }}>🥉 Bronze</Table.Th>
-                      </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>
-                      {sorted.map(([equipe, count]) => {
-                        const m = medalhasPorEquipe[equipe] ?? { ouro: 0, prata: 0, bronze: 0 };
-                        return (
-                          <Table.Tr key={equipe}>
-                            <Table.Td><Text tt="capitalize">{equipe}</Text></Table.Td>
-                            <Table.Td style={{ textAlign: 'right' }}>{count}</Table.Td>
-                            <Table.Td style={{ textAlign: 'right' }}>{m.ouro > 0 ? <Badge color="yellow" variant="filled">{m.ouro}</Badge> : '—'}</Table.Td>
-                            <Table.Td style={{ textAlign: 'right' }}>{m.prata > 0 ? <Badge color="gray" variant="filled">{m.prata}</Badge> : '—'}</Table.Td>
-                            <Table.Td style={{ textAlign: 'right' }}>{m.bronze > 0 ? <Badge color="orange" variant="filled">{m.bronze}</Badge> : '—'}</Table.Td>
-                          </Table.Tr>
-                        );
-                      })}
-                    </Table.Tbody>
-                  </Table>
-                </Paper>
-              );
-            })()}
+            {equipesAgrupadas.length === 0 ? (
+              <Text c="dimmed" ta="center" py="xl">Nenhuma equipe cadastrada.</Text>
+            ) : (
+              <Stack gap="md">
+                <Group gap="md" align="center" wrap="wrap" w="100%">
+                  <TextInput
+                    leftSection={<IconSearch size={16} />}
+                    placeholder="Buscar por nome da equipe"
+                    value={buscaEquipes}
+                    onChange={(e) => setBuscaEquipes(e.currentTarget.value)}
+                    rightSection={
+                      buscaEquipes ? (
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          onClick={() => setBuscaEquipes('')}
+                          aria-label="Limpar busca"
+                          size="sm"
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      ) : null
+                    }
+                    aria-label="Buscar equipes por nome"
+                    style={{ flex: 1, maxWidth: 400 }}
+                  />
+                  <Text size="sm" c="dimmed" fw={600}>
+                    Exibindo {equipesFiltradas.length} de {equipesAgrupadas.length} equipes
+                  </Text>
+                </Group>
+                {equipesFiltradas.length === 0 ? (
+                  <Stack align="center" gap="md" py="xl">
+                    <Text c="dimmed" ta="center">Nenhuma equipe encontrada para o termo '{buscaEquipes}'.</Text>
+                    <Button variant="default" onClick={() => setBuscaEquipes('')}>
+                      Limpar busca
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Equipe</Table.Th>
+                          <Table.Th style={{ textAlign: 'right' }}>Atletas</Table.Th>
+                          <Table.Th style={{ textAlign: 'right' }}>🥇 Ouro</Table.Th>
+                          <Table.Th style={{ textAlign: 'right' }}>🥈 Prata</Table.Th>
+                          <Table.Th style={{ textAlign: 'right' }}>🥉 Bronze</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {equipesFiltradas.map(([equipe, count]) => {
+                          const m = medalhasPorEquipe[equipe] ?? { ouro: 0, prata: 0, bronze: 0 };
+                          return (
+                            <Table.Tr key={equipe}>
+                              <Table.Td><Text tt="capitalize">{equipe}</Text></Table.Td>
+                              <Table.Td style={{ textAlign: 'right' }}>{count}</Table.Td>
+                              <Table.Td style={{ textAlign: 'right' }}>{m.ouro > 0 ? <Badge color="yellow" variant="filled">{m.ouro}</Badge> : '—'}</Table.Td>
+                              <Table.Td style={{ textAlign: 'right' }}>{m.prata > 0 ? <Badge color="gray" variant="filled">{m.prata}</Badge> : '—'}</Table.Td>
+                              <Table.Td style={{ textAlign: 'right' }}>{m.bronze > 0 ? <Badge color="orange" variant="filled">{m.bronze}</Badge> : '—'}</Table.Td>
+                            </Table.Tr>
+                          );
+                        })}
+                      </Table.Tbody>
+                    </Table>
+                  </Paper>
+                )}
+              </Stack>
+            )}
           </Tabs.Panel>
 
           <Tabs.Panel value="arbitros" pt="md">
             {arbitros.length === 0 ? (
               <Text c="dimmed" ta="center" py="xl">Nenhum árbitro cadastrado.</Text>
             ) : (
-              <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
-                <Table striped highlightOnHover>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Árbitro</Table.Th>
-                      <Table.Th>Faixa</Table.Th>
-                      <Table.Th>Equipe</Table.Th>
-                      <Table.Th style={{ textAlign: 'right' }}>Lutas (chave + casada)</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {arbitros.map(a => (
-                      <Table.Tr key={a.id}>
-                        <Table.Td>{capitalize(a.nome)}</Table.Td>
-                        <Table.Td><Badge size="sm" variant="light">{FAIXA_LABEL[a.faixa] ?? a.faixa}</Badge></Table.Td>
-                        <Table.Td><Text tt="capitalize" size="sm">{a.equipe || '—'}</Text></Table.Td>
-                        <Table.Td style={{ textAlign: 'right' }}>
-                          <Badge size="sm" color="blue" variant="light">{lutasPorArbitro[a.id] ?? 0}</Badge>
-                        </Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              </Paper>
+              <Stack gap="md">
+                <Group gap="md" align="center" wrap="wrap" w="100%">
+                  <TextInput
+                    leftSection={<IconSearch size={16} />}
+                    placeholder="Buscar por nome do árbitro"
+                    value={buscaArbitros}
+                    onChange={(e) => setBuscaArbitros(e.currentTarget.value)}
+                    rightSection={
+                      buscaArbitros ? (
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          onClick={() => setBuscaArbitros('')}
+                          aria-label="Limpar busca"
+                          size="sm"
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      ) : null
+                    }
+                    aria-label="Buscar árbitros por nome"
+                    style={{ flex: 1, maxWidth: 400 }}
+                  />
+                  <Text size="sm" c="dimmed" fw={600}>
+                    Exibindo {arbitrosFiltrados.length} de {arbitros.length} árbitros
+                  </Text>
+                </Group>
+                {arbitrosFiltrados.length === 0 ? (
+                  <Stack align="center" gap="md" py="xl">
+                    <Text c="dimmed" ta="center">Nenhum árbitro encontrado para o termo '{buscaArbitros}'.</Text>
+                    <Button variant="default" onClick={() => setBuscaArbitros('')}>
+                      Limpar busca
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
+                    <Table striped highlightOnHover>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Árbitro</Table.Th>
+                          <Table.Th>Faixa</Table.Th>
+                          <Table.Th>Equipe</Table.Th>
+                          <Table.Th style={{ textAlign: 'right' }}>Lutas (chave + casada)</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {arbitrosFiltrados.map(a => (
+                          <Table.Tr key={a.id}>
+                            <Table.Td>{capitalize(a.nome)}</Table.Td>
+                            <Table.Td><Badge size="sm" variant="light">{FAIXA_LABEL[a.faixa] ?? a.faixa}</Badge></Table.Td>
+                            <Table.Td><Text tt="capitalize" size="sm">{a.equipe || '—'}</Text></Table.Td>
+                            <Table.Td style={{ textAlign: 'right' }}>
+                              <Badge size="sm" color="blue" variant="light">{lutasPorArbitro[a.id] ?? 0}</Badge>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </Paper>
+                )}
+              </Stack>
             )}
           </Tabs.Panel>
 
@@ -717,41 +976,78 @@ export function Resultados() {
             {atletas.length === 0 ? (
               <Text c="dimmed" ta="center" py="xl">Nenhum atleta cadastrado.</Text>
             ) : (
-              <Paper withBorder radius="md" style={{ overflow: 'auto', maxHeight: '60vh' }}>
-                <Table striped highlightOnHover stickyHeader>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Atleta</Table.Th>
-                      <Table.Th>Equipe</Table.Th>
-                      <Table.Th>Faixa</Table.Th>
-                      <Table.Th style={{ textAlign: 'right' }}>Peso (kg)</Table.Th>
-                      <Table.Th>Categoria</Table.Th>
-                      <Table.Th>Chave</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {atletas.map(a => {
-                      const chave = chaves.find(c => c.posicoesAtletas.includes(a.id));
-                      return (
-                        <Table.Tr key={a.id}>
-                          <Table.Td>{capitalize(a.nome)}</Table.Td>
-                          <Table.Td><Text tt="capitalize" size="sm">{a.equipe || '—'}</Text></Table.Td>
-                          <Table.Td><Badge size="sm" variant="light">{FAIXA_LABEL[a.faixa] ?? a.faixa}</Badge></Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>{a.pesoKg.toFixed(1)}</Table.Td>
-                          <Table.Td><Text size="sm">{getCategoriaTitulo(a.categoria)}</Text></Table.Td>
-                          <Table.Td>
-                            {chave ? (
-                              <Text size="sm">{getCategoriaTitulo(chave.categoriaId)}</Text>
-                            ) : (
-                              <Text size="sm" c="dimmed">—</Text>
-                            )}
-                          </Table.Td>
+              <Stack gap="md">
+                <Group gap="md" align="center" wrap="wrap" w="100%">
+                  <TextInput
+                    leftSection={<IconSearch size={16} />}
+                    placeholder="Buscar por nome do atleta"
+                    value={buscaAtletas}
+                    onChange={(e) => setBuscaAtletas(e.currentTarget.value)}
+                    rightSection={
+                      buscaAtletas ? (
+                        <ActionIcon
+                          variant="subtle"
+                          color="gray"
+                          onClick={() => setBuscaAtletas('')}
+                          aria-label="Limpar busca"
+                          size="sm"
+                        >
+                          <IconX size={14} />
+                        </ActionIcon>
+                      ) : null
+                    }
+                    aria-label="Buscar atletas por nome"
+                    style={{ flex: 1, maxWidth: 400 }}
+                  />
+                  <Text size="sm" c="dimmed" fw={600}>
+                    Exibindo {atletasFiltrados.length} de {atletas.length} atletas
+                  </Text>
+                </Group>
+                {atletasFiltrados.length === 0 ? (
+                  <Stack align="center" gap="md" py="xl">
+                    <Text c="dimmed" ta="center">Nenhum atleta encontrado para o termo '{buscaAtletas}'.</Text>
+                    <Button variant="default" onClick={() => setBuscaAtletas('')}>
+                      Limpar busca
+                    </Button>
+                  </Stack>
+                ) : (
+                  <Paper withBorder radius="md" style={{ overflow: 'auto', maxHeight: '60vh' }}>
+                    <Table striped highlightOnHover stickyHeader>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Atleta</Table.Th>
+                          <Table.Th>Equipe</Table.Th>
+                          <Table.Th>Faixa</Table.Th>
+                          <Table.Th style={{ textAlign: 'right' }}>Peso (kg)</Table.Th>
+                          <Table.Th>Categoria</Table.Th>
+                          <Table.Th>Chave</Table.Th>
                         </Table.Tr>
-                      );
-                    })}
-                  </Table.Tbody>
-                </Table>
-              </Paper>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {atletasFiltrados.map(a => {
+                          const chave = chaves.find(c => c.posicoesAtletas.includes(a.id));
+                          return (
+                            <Table.Tr key={a.id}>
+                              <Table.Td>{capitalize(a.nome)}</Table.Td>
+                              <Table.Td><Text tt="capitalize" size="sm">{a.equipe || '—'}</Text></Table.Td>
+                              <Table.Td><Badge size="sm" variant="light">{FAIXA_LABEL[a.faixa] ?? a.faixa}</Badge></Table.Td>
+                              <Table.Td style={{ textAlign: 'right' }}>{a.pesoKg.toFixed(1)}</Table.Td>
+                              <Table.Td><Text size="sm">{getCategoriaTitulo(a.categoria)}</Text></Table.Td>
+                              <Table.Td>
+                                {chave ? (
+                                  <Text size="sm">{getCategoriaTitulo(chave.categoriaId)}</Text>
+                                ) : (
+                                  <Text size="sm" c="dimmed">—</Text>
+                                )}
+                              </Table.Td>
+                            </Table.Tr>
+                          );
+                        })}
+                      </Table.Tbody>
+                    </Table>
+                  </Paper>
+                )}
+              </Stack>
             )}
           </Tabs.Panel>
         </Tabs>
