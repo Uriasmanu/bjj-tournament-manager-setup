@@ -144,6 +144,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - Ações por linha: lápis (editar) e lixeira (excluir).
   - Botão "Voltar" retorna para `/admin/atletas` (menu), não para o Dashboard.
 - **Modal de formulário:** `AthleteForm.tsx` usa `@mantine/form` com **modo controlado** (`mode: 'controlled'`). Cada campo recebe os props diretamente de `form.getInputProps(path)`. O `useEffect` de inicialização do formulário depende apenas de `opened` e `athlete` (não de `form`) para evitar loop de re-renderização.
+- **Botão de submit padronizado:** o botão de submit do modal (`Cadastrar Atleta` no modo novo / `Salvar Alterações` no modo edição) adota o padrão visual primário do app: `backgroundColor: '#1b325f'`, texto branco, `borderRadius: 12`, ícone `IconUserPlus` à esquerda (`leftSection`, tamanho 16), hover `backgroundColor: '#3a89c9'`. Não usa padding custom nem `borderRadius: 8` (ver `spec/athlete-form-botao-cadastrar-visual.md`).
 - Nome e equipe são obrigatórios (mínimo 2 caracteres) e armazenados em minúsculo (`.trim().toLowerCase()` no submit).
 - Gênero é obrigatório: `Select` com opções `Masculino` / `Feminino`.
 - Categoria IBJJF é obrigatória: `Select` populado com `CATEGORIAS_IBJJF`, filtrado dinamicamente por faixa etária (calculada da idade), gênero e faixa do atleta. O label de cada opção exibe o limite de peso, ex.: `"Adulto Masculino Leve (até 76,0 kg)"`.

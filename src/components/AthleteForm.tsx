@@ -1,6 +1,7 @@
 import { Modal, TextInput, NumberInput, Select, Button, Group, Stack, Box, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useEffect, useMemo } from 'react';
+import { IconUserPlus } from '@tabler/icons-react';
 import type { Atleta, Faixa } from '../types/athlete';
 import { CATEGORIAS_IBJJF } from '../types/category';
 
@@ -321,16 +322,13 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
               <Button variant="outline" onClick={onClose}>Cancelar</Button>
               <Button
                 type="submit"
+                leftSection={<IconUserPlus size={16} />}
                 styles={{
                   root: {
-                    backgroundColor: COLORS.c4,
+                    backgroundColor: '#1b325f',
                     color: '#fff',
-                    fontWeight: 700,
-                    padding: '16px',
-                    borderRadius: 8,
-                    transition: 'all 0.2s',
-                    '&:hover': { backgroundColor: COLORS.c1 },
-                    '&:active': { transform: 'scale(0.98)' },
+                    borderRadius: 12,
+                    '&:hover': { backgroundColor: '#3a89c9' },
                   },
                 }}
               >

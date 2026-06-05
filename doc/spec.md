@@ -13,12 +13,23 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-
+### [resolvido] Botao cadastrar atleta no formulario esta feio
+### [aberto] peso e genero deveriam estar lado a lado e não um a baixo do outro no formulario
+### [aberto] Deletar atleta, arbitro,area,deve ser soft delete
+### [aberto] Nas listas de atleta, arbitro,area tera um botao de exibir apenas os deletados, e no nome tera o botao de desfazer ou apagar, esse apagar é permanente, aparece uma mensagem no centro da tela perguntando se tem certeza
+### [aberto] import de torneio, deveria fazer merge nas informações caso o id do torneio seja o mesmo, exemplo, eu adicionei um atleta 10h50 e ele não existe nos outros JSON, então quando juntar tudo em uma maquina, esse atleta tem que permanecer, a data da ultima atualização vai ser importante, pois caso em um arquivo ele tenha sido adicionado as 10h50 e em outro arquivo ele foi deletado as 10h51, a informação de delete deve ser a que manda. 
 ---
 
 
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
+
+- **2026-06-05 — Botão "Cadastrar Atleta" do `AthleteForm` padronizado**
+  - **Problema:** o botão de submit do modal `AthleteForm` usava cor verde (`#78a890`), `borderRadius: 8` e `padding: 16px`, destoando do design system do app (azul `#1b325f`, `borderRadius: 12`, sem padding custom).
+  - **Solução:** ajustadas as `styles` do `<Button type="submit">` em `src/components/AthleteForm.tsx` para `backgroundColor: '#1b325f'`, `borderRadius: 12`, hover `#3a89c9`; adicionado `leftSection={<IconUserPlus size={16} />}`; removido `padding: 16px` e o `&:active` que não existe em nenhum outro botão.
+  - **Spec da correção:** `spec/athlete-form-botao-cadastrar-visual.md`.
+  - **Critérios de aceite:** CA-01, CA-02 e CA-03 verificados — botão agora é visualmente consistente com `AdminAthletes.tsx:220-232` (header da listagem) e `AthletesMenu.tsx:203-231` (cards do menu).
+  - **Impacto:** puramente visual, sem alteração de comportamento/validação.
 
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
