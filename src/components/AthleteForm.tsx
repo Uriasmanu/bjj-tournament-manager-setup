@@ -261,28 +261,30 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
               {...form.getInputProps('equipe')}
             />
 
-            <Select
-              label="Gênero *"
-              placeholder="Selecione o gênero"
-              data={[
-                { value: 'masculino', label: 'Masculino' },
-                { value: 'feminino', label: 'Feminino' },
-              ]}
-              labelProps={labelProps}
-              styles={inputStyles}
-              {...form.getInputProps('genero')}
-            />
+            <Group grow gap="md">
+              <Select
+                label="Gênero *"
+                placeholder="Selecione o gênero"
+                data={[
+                  { value: 'masculino', label: 'Masculino' },
+                  { value: 'feminino', label: 'Feminino' },
+                ]}
+                labelProps={labelProps}
+                styles={inputStyles}
+                {...form.getInputProps('genero')}
+              />
 
-            <NumberInput
-              label="Peso (kg) *"
-              placeholder="Ex.: 72.5"
-              min={1}
-              max={300}
-              decimalScale={1}
-              labelProps={labelProps}
-              styles={inputStyles}
-              {...form.getInputProps('pesoKg')}
-            />
+              <NumberInput
+                label="Peso (kg) *"
+                placeholder="Ex.: 72.5"
+                min={1}
+                max={300}
+                decimalScale={1}
+                labelProps={labelProps}
+                styles={inputStyles}
+                {...form.getInputProps('pesoKg')}
+              />
+            </Group>
 
             <Select
               label="Faixa *"
