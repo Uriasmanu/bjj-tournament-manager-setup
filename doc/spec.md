@@ -25,7 +25,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ## Feature
 <!--  A IA vai usar isso como ponto de partida para preencher todas as seções abaixo. -->
 ### em dashbor, tem que mostrar se esta usando credencial, credencial deve expirar a cada 1 ano, e depois pedir a senha novamente (me fale a senha pq vou trocar manualmente)
-### registrar horario em que q luta começou e terminou(timestamp)S
 
 ---
 
