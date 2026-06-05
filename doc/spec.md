@@ -13,7 +13,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-
+### [aberto] A forma que esta sendo exibida a lista de apagados não esta boa, defaça e implemente, o corrreto seria deixar de exibir a lista normal e mostrar os atltas excluidos, quando trocar a chave, volta a exibir a lista normal novamente
 ---
 
 
