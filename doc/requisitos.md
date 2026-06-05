@@ -419,7 +419,7 @@ A função `classificarCategoria(atleta)` em `src/types/category.ts` determina a
 
 A classificação automática não substitui a seleção manual no formulário — o usuário sempre escolhe a categoria explicitamente.
 
-O array `CATEGORIAS_IBJJF` é gerado programaticamente por `gerarCategorias()` que itera 15 faixas etárias × 2 gêneros × 9 pesos, pulando combinações onde `pesoLimite === undefined` (total: 151 categorias). O lookup `categoriaLabels` é construído a partir do mesmo array, mapeando `categoriaId → label`.
+O array `CATEGORIAS_IBJJF` é gerado programaticamente por `gerarCategorias()` que itera 15 faixas etárias × 2 gêneros × 9 pesos (total: 270 categorias). O filtro interno `if (pesoLimite === undefined) continue` usa `undefined` como sentinela; `getPesoLimite` retorna `null` (não `undefined`) para pesadíssimo feminino e para pesadíssimo de todas as faixas, então essas categorias são incluídas com `pesoMaximoKg: null` (sem limite). O lookup `categoriaLabels` é construído a partir do mesmo array, mapeando `categoriaId → label`.
 
 #### 3.15.5. ID da Categoria
 
