@@ -215,3 +215,155 @@ Passo 2: [descrição clara da ação]
 3. Crie o arquivo `spec/{nome-da-feature}.md` seguindo todas as seções deste guia antes de escrever qualquer código.
 4. Após criar o `.md`, revise-o para verificar coerência. Só então implemente.
 5. Ao finalizar qualquer ciclo (feature nova ou correção), registre no **Histórico de Correções** em spec.md NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes e atualize o documento `spec/{nome-da-feature}.md` caso seja implementado uma nova regra de negocio. Permitido melhorar a descrição e titulo do problema aberto
+
+## Antes de atualizar a doc de requisitos.md garanta que esta seguindo os principios a baixo
+
+# Pontos Principais para um Bom Documento de Requisitos
+
+> Consolidado a partir das referências clássicas: Sommerville, Wiegers, Davis, IEEE 830 e IREB.
+
+---
+
+## 1. Clareza e Não Ambiguidade
+
+Todo requisito deve ter uma única interpretação possível. Linguagem vaga como "o sistema deve ser rápido" ou "fácil de usar" é recorrentemente apontada como a principal fonte de falhas em projetos.
+
+- Evitar termos subjetivos: *eficiente*, *robusto*, *amigável*, *adequado*
+- Preferir linguagem declarativa e objetiva
+- Quando necessário, complementar texto com diagramas ou exemplos concretos
+
+**Referências:** Sommerville & Kotonya (1998), IEEE 830, Wiegers
+
+---
+
+## 2. Completude
+
+O documento deve cobrir todos os cenários relevantes: funcionamento normal, casos de borda, tratamento de erros e restrições do sistema.
+
+- Nenhum requisito deve depender de informação implícita ou "conhecimento tácito"
+- Requisitos não funcionais (desempenho, segurança, disponibilidade) devem estar presentes, não apenas os funcionais
+- Lacunas identificadas devem ser marcadas explicitamente (ex.: `TBD - a definir`)
+
+**Referências:** IEEE 830, Sommerville, SWEBOK
+
+---
+
+## 3. Consistência
+
+Nenhum requisito pode contradizer outro. Inconsistências costumam surgir quando múltiplos stakeholders contribuem sem revisão cruzada.
+
+- Usar terminologia uniforme em todo o documento (um glossário ajuda)
+- Fazer rastreabilidade entre requisitos relacionados
+- Revisões cruzadas entre autores são essenciais
+
+**Referências:** Sommerville, IEEE 830, IREB CPRE
+
+---
+
+## 4. Verificabilidade (Testabilidade)
+
+Cada requisito deve ser verificável — deve ser possível escrever um teste ou critério de aceite que confirme se o requisito foi atendido ou não.
+
+- Ruim: "O sistema deve responder rapidamente"
+- Bom: "O sistema deve responder em no máximo 2 segundos para 95% das requisições sob carga de 100 usuários simultâneos"
+
+**Referências:** IEEE 830, Wiegers, IREB
+
+---
+
+## 5. Rastreabilidade
+
+Cada requisito deve poder ser rastreado em duas direções:
+
+- **Para trás (backward):** de onde veio? Qual necessidade de negócio ou stakeholder originou este requisito?
+- **Para frente (forward):** onde foi implementado? Em qual módulo, caso de uso ou teste está coberto?
+
+Rastreabilidade é especialmente crítica em sistemas regulados (médico, industrial, aeroespacial) e é um pilar do INCOSE e do IREB.
+
+**Referências:** INCOSE SE Handbook, IREB CPRE, IEEE 830
+
+---
+
+## 6. Atomicidade
+
+Cada requisito deve expressar uma única ideia ou restrição. Requisitos compostos dificultam rastreabilidade, priorização e testes.
+
+- Ruim: "O sistema deve autenticar o usuário e registrar o log de acesso"
+- Bom: dois requisitos separados — um para autenticação, outro para log
+
+**Referências:** Wiegers, IREB, Sommerville
+
+---
+
+## 7. Priorização
+
+Os requisitos devem ser priorizados para orientar decisões de escopo, especialmente quando há restrições de prazo ou orçamento.
+
+Modelos comuns:
+
+- **MoSCoW:** Must have, Should have, Could have, Won't have
+- **Kano:** Básico, de desempenho, de encantamento
+- Numeração ou atributos de prioridade no próprio documento
+
+**Referências:** Wiegers (*Software Requirements*), IREB
+
+---
+
+## 8. Estrutura e Organização
+
+Um documento bem estruturado acelera a leitura, facilita revisões e reduz mal-entendidos.
+
+Estrutura recomendada pelo **IEEE 830**:
+
+1. Introdução (propósito, escopo, definições, visão geral)
+2. Descrição geral (contexto, funções do sistema, características dos usuários, restrições)
+3. Requisitos específicos (funcionais, não funcionais, interfaces)
+4. Apêndices e índice
+
+**Referências:** IEEE 830-1998, Wiegers
+
+---
+
+## 9. Envolvimento dos Stakeholders
+
+A elicitação de requisitos não é uma atividade técnica isolada. Sommerville e Wiegers enfatizam que requisitos mal levantados são frequentemente causados por falha de comunicação, não por incompetência técnica.
+
+- Técnicas recomendadas: entrevistas, workshops, observação, prototipação, análise de domínio
+- Validar os requisitos com os stakeholders antes de considerar o documento fechado
+- O Chaos Report (Standish Group) historicamente aponta "requisitos incompletos" e "falta de envolvimento do usuário" como as principais causas de fracasso em projetos
+
+**Referências:** Sommerville, Wiegers, Standish Group Chaos Report
+
+---
+
+## 10. Gerenciamento de Mudanças
+
+Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
+
+- Controle de versão do documento
+- Histórico de alterações com data, autor e justificativa
+- Processo formal de aprovação para mudanças após baseline
+- Avaliar impacto de cada mudança nos requisitos relacionados
+
+**Referências:** IREB CPRE, Wiegers, IEEE 12207
+
+---
+
+## Resumo Visual
+
+| Atributo           | Pergunta que deve ser respondida com "sim"                        |
+|--------------------|-------------------------------------------------------------------|
+| Claro              | Qualquer leitor interpretaria da mesma forma?                     |
+| Completo           | Todos os cenários e restrições estão cobertos?                    |
+| Consistente        | Nenhum requisito contradiz outro?                                 |
+| Verificável        | É possível escrever um teste para isso?                           |
+| Rastreável         | Sei de onde veio e onde está implementado?                        |
+| Atômico            | Expressa uma única ideia?                                         |
+| Priorizado         | Sei o que é essencial vs. desejável?                              |
+| Bem estruturado    | O documento tem seções claras e navegáveis?                       |
+| Validado           | Os stakeholders revisaram e aprovaram?                            |
+| Versionado         | Mudanças são registradas e controladas?                           |
+
+---
+
+*Fontes: Sommerville & Kotonya (1998); Wiegers (2003); IEEE 830-1998; SWEBOK v3; IREB CPRE Syllabus; INCOSE SE Handbook; Standish Group Chaos Report.*
