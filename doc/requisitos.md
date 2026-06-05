@@ -21,10 +21,10 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 | Importar Torneio | ✅ Completo | Upload JSON, validação de estrutura, modal de sobrescrita |
 | Listar Torneios | ✅ Completo | Tabela com Iniciar/Exportar/Excluir; registro de startedAt no Play |
 | Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (`electron/tournament.ts`) |
-| Tema Mantine UI | ✅ Completo | Tema azul royal (#1565C0), ouro (#ccb24c), teal (#09738a), coral (#f26c4f); fonte Inter, componentes responsivos com `clamp()` |
+| Tema Oceano & Coral | ✅ Completo | Paleta principal: marinho (#1b325f), azul acento (#3a89c9), azul claro (#9cc4e4), bg claro (#e9f2f9), coral (#f26c4f), amarelo royal (#ffbc11). Fonte Inter, componentes responsivos com `clamp()`. |
 | Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC. Atletas armazenados por torneio (dentro do JSON do torneio). Campos `genero` e `categoria` IBJJF obrigatórios no formulário e importação. |
 | Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente. Validação de `genero` e `categoria` como obrigatórios, com verificação contra lista de categorias IBJJF. |
-| Dashboard Administrativo | ✅ Completo | Tela com header stats (Atletas, Equipes), hero banner gradient, cards em grid responsivo com badges e link "Acessar →", sidebar de navegação |
+| Dashboard Administrativo | ✅ Completo | Tela com sidebar marinho, header stats (Atletas, Equipes), hero banner sólido, cards em grid responsivo com badges e link "Acessar →" |
 | Resumo de Equipes | ✅ Completo | Tela que consulta a lista de atletas e exibe nome das equipes com contagem de atletas por equipe |
 | Cadastro de Árbitros | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação, duplicata por nome. Faixas permitidas: roxa, marrom, preta. Importação/exportação JSON. Campo de busca por nome, equipe e faixa. |
 | Busca em Atletas | ✅ Completo | Campo de busca na tela de listagem que filtra por nome, equipe e categoria |
@@ -108,7 +108,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - Nome e data do torneio.
   - Badge "Iniciado {data}" com dot pulsante se `startedAt` existir.
   - Stats rápidos à direita: total de **Atletas** e total de **Equipes** (cards com número grande e label uppercase).
-- Contém um **hero banner** com fundo gradient `#1b325f → #3a89c9 → #1b325f`, badge "Painel Geral", título e descrição do painel.
+- Contém um **hero banner** com fundo sólido `#1b325f`, badge "Painel Geral", título e descrição do painel.
 - Cards de navegação em layout **Grid** responsivo (1 coluna <700px, 2 colunas <1000px, 2 colunas <1400px, 3 colunas <1800px, 4 colunas ≥1800px).
 - Cada card possui: ícone em container circular com cor vibrante, título, descrição, badge de contagem informativa no rodapé, link "Acessar →" com hover effect (translateX).
 - Cards de funcionalidades implementadas: clicáveis com hover (translateY(-2px)), opacidade 1.
@@ -134,12 +134,12 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
   - **Listar Atletas** — Navega para `/admin/atletas/lista` (tela `AdminAthletes` com tabela CRUD).
   - **Importar Atletas** — Dispara o diálogo nativo de seleção de arquivo JSON via IPC `import-athletes`.
 - **Tela de listagem (`/admin/atletas/lista`):** Exibe `AdminAthletes` com:
-  - Botões "Importar" e "Cadastrar" no topo.
-  - Campo de busca textual que filtra a tabela por nome, equipe ou categoria em tempo real.
-  - Tabela com colunas: Nome, Equipe, Gênero, Faixa, Categoria, Idade, Ações (editar/excluir). Ordenada alfabeticamente por nome do atleta.
-  - Badges de resumo de faixas e categorias no topo da tabela (top 10 categorias por quantidade).
+  - Botões "Importar" (arquivo .json), "Exportar JSON" e "Cadastrar" no topo.
+  - Campo de busca textual + filtro por faixa.
+  - Card de estatísticas: total de inscritos + grid de distribuição por faixas.
+  - Tabela com colunas: Nome, Equipe, Faixa (círculo colorido), Categoria, Idade, Ações (editar/excluir). Ordenada alfabeticamente por nome do atleta.
   - Empty state com "Nenhum atleta cadastrado" + botão "Cadastrar primeiro atleta".
-  - Empty state de busca: "Nenhum atleta encontrado para a busca {termo}" quando filtro não retorna resultados.
+  - Empty state de busca com ícone e texto "Nenhum atleta encontrado".
   - Ações por linha: lápis (editar) e lixeira (excluir).
   - Botão "Voltar" retorna para `/admin/atletas` (menu), não para o Dashboard.
 - **Modal de formulário:** `AthleteForm.tsx` usa `@mantine/form` com **modo controlado** (`mode: 'controlled'`). Cada campo recebe os props diretamente de `form.getInputProps(path)`. O `useEffect` de inicialização do formulário depende apenas de `opened` e `athlete` (não de `form`) para evitar loop de re-renderização.
@@ -1032,25 +1032,27 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 
 ### 9.1 Tema Principal
 
-A identidade visual utiliza cores que transmitam organização, confiança e profissionalismo, com acentos dourados e azuis inspirados em design de medalhas e pódios de competições.
+A identidade visual segue o tema **Oceano & Coral**, com azul marinho profundo como cor principal, azul claro como secundária, coral para destaques e amarelo royal para hovers.
 
 #### 9.1.1 Paleta de Cores
 
 | Elemento | Cor | Uso |
 |---|---|---|
-| **Fundo principal** | `#f8f9fa` (Gray 0) | Fundo da interface |
-| **Título principal** | `#212529` (Gray 9) | Títulos e logotipo |
-| **Botões / Destaques** | Azul Royal (`#1565C0`) | Botões primários, indicadores, links |
-| **Hover/Focus** | Azul escuro (`#0d47a1`) | Feedback visual em interações |
-| **Texto secundário** | `#6c757d` (Gray 6) | Descrições e textos auxiliares |
-| **Divisores/Bordas** | `#e9ecef` (Gray 2) | Separar elementos |
-| **Confirmação** | Verde (`#2E7D32`) | Resultados positivos, status concluídos |
-| **Alerta** | Coral (`#f26c4f`) | Erros, exclusões |
-| **Acento ouro** | `#ccb24c` | Badges de campeão, destaques especiais, medalhas |
-| **Ouro claro** | `#f7d683` | Hover de elementos dourados, realces suaves |
-| **Azul acinzentado** | `#457d97` | Cartões secundários, backgrounds alternativos |
-| **Azul teal** | `#09738a` | Acento de informação, badges de status, links secundários |
-| **Creme** | `#e7d9b4` | Background de cards de destaque, áreas especiais |
+| **Primária (Marinho)** | `#1b325f` | Fundo da sidebar, botões principais, textos de título, bordas de cards, cabeçalhos de tabela |
+| **Acento Azul** | `#3a89c9` | Hover de botões, borda ativa de navegação, links "Acessar", ícones de cards |
+| **Secundário (Azul Claro)** | `#9cc4e4` | Texto de navegação secundário, bordas de cards, separadores |
+| **BG Claro** | `#e9f2f9` | Fundo de página, círculos de ícones, backgrounds de badges, hover de navegação |
+| **Coral (Destaque)** | `#f26c4f` | Ao vivo, badges de alerta, hover de borda de card, versão do sistema |
+| **Amarelo Royal (Hover)** | `#ffbc11` | Hover do botão "Acessar" nos menus, glow de sombra |
+| **Confirmação** | `#22c55e` / `#2e7d32` | Texto "Prontos para combate", cronômetro rodando |
+| **Alerta / Perigo** | `#fa5252` | Punições, tempo esgotado, desclassificação |
+| **Acento Ouro** | `#ccb24c` | Badges de campeão, medalhas, hover de botões secundários |
+| **Ouro Claro** | `#f7d683` | Realces suaves, variação de ouro |
+| **Branco** | `#ffffff` | Fundo de cards, papers, tabelas, modais |
+| **Azul Anil (Placar)** | `#1e3a8a` | Painel do Atleta A no scoreboard |
+| **Fundo página** | Gradient `#f8f9fa → #e3f2fd` | Body background |
+| **Texto escuro** | `#212529` / `#374151` / `#1b325f` | Textos de corpo, labels, dados de tabela |
+| **Texto secundário** | `rgba(27,50,95,0.5)` / `rgba(27,50,95,0.6)` / `#6c757d` | Descrições, labels de estatística, metadados |
 
 ### 9.2 Tipografia
 
@@ -1084,7 +1086,7 @@ A primeira tela exibe um menu com três opções principais:
 
 ```
 +----------------------------------------------------------+
-|  ┌───── BJJ TOURNAMENT MANAGER (header gradient) ──────┐ |
+|  ┌───── BJJ TOURNAMENT MANAGER ──────┐ |
 |  │                    [back]  Título                     │ |
 |  └──────────────────────────────────────────────────────┘ |
 |                                                           |
@@ -1177,31 +1179,38 @@ A validação ocorre:
 | Faixa deve ser roxa, marrom ou preta | `"Faixa inválida."` |
 | Se equipe informada, mínimo 2 caracteres | `"Equipe deve ter ao menos 2 caracteres se informada."` |
 
-### 11.8. Aplicação do Tema Visual (Aparência Moderna)
+### 11.8. Aplicação do Tema Oceano & Coral
 
-Todas as cores definidas em §9.1.1 (Paleta de Cores) devem ser referenciadas via tema Mantine, nunca hardcoded como hex.
+As cores definidas em §9.1.1 (Paleta Oceano & Coral) são a identidade visual da aplicação.
 
 | Regra | Comportamento |
 |---|---|
-| Cores de destaque (Azul Royal `#1565C0`) | Usar `c="blue"` ou `color="blue"` em componentes Mantine e Icon |
-| Cores de texto secundário (`#6c757d`) | Usar `c="dimmed"` |
-| Cores de fundo (`#f8f9fa`) | Usar `'var(--mantine-color-gray-0)'` em estilos inline |
-| Acento ouro / teal / coral | Usar `c="yellow"`, `c="teal"`, `c="red"` respectivamente — mapeados no tema para os hex definidos em §9.1.1 |
-| Exceções | PlacarLuta e PlacarLutaCasada mantêm azul anil/branco por design do scoreboard |
+| Cor primária (Marinho `#1b325f`) | Usada em botões principais, sidebar, títulos, bordas de card |
+| Acento azul (`#3a89c9`) | Hover de botões, links "Acessar", ícones de cards do Dashboard |
+| Coral (`#f26c4f`) | Destaques de alerta, badge "Ao Vivo", hover de borda de card |
+| Amarelo royal (`#ffbc11`) | Hover do botão "Acessar" nos menus (AthletesMenu, ArbitrosMenu, AreasMenu) |
+| BG claro (`#e9f2f9`) | Fundo de página, círculos de ícone, hover de navegação |
+| Azul claro (`#9cc4e4`) | Bordas de card, texto secundário, separadores |
+| Background body | Gradient `#f8f9fa → #e3f2fd` |
+| Exceções | PlacarLuta e PlacarLutaCasada mantêm azul anil (`#1e3a8a`)/branco por design do scoreboard |
 
-### 11.9. Layout Moderno (Refatoração Visual)
+### 11.9. Layout Moderno (Oceano & Coral)
 
-O layout da aplicação segue um padrão moderno e consistente.
+O layout da aplicação segue um padrão moderno com tema Oceano & Coral.
 
 | Elemento | Comportamento |
 |---|---|
-| **Header** | Barra fixa no topo com gradient `#1565C0 → #0d47a1`, título da página, botão voltar quando aplicável |
-| **Cards de menu** | Componente `MenuCard` reutilizável com hover (translateY -3px, shadow lg), active (scale 0.98), cores de ícone variáveis por card (azul royal, cinza, teal) e link "Acessar →" |
-| **Tabelas** | `striped` + `highlightOnHover` por padrão (via tema) |
+| **Header** | Removido (PageLayout sem header). Botão "Voltar" como ícone cinza acima do Paper, canto superior esquerdo. |
+| **Cards de menu (MenuInicial)** | Componente `MenuCard` reutilizável com hover (translateY -3px, shadow lg), active (scale 0.98), cores de ícone variáveis por card (azul royal, cinza, teal) e link "Acessar →" |
+| **Cards de menu (Athletes/Arbitros/Areas)** | Cards com borda esquerda 5px `#1b325f`, hover troca para `#f26c4f` + translateY(-6px) + sombra. Botão "Acessar" marinho no rodapé, hover `#ffbc11` + scale(1.02). |
+| **Tabelas** | Container com borda arredondada 16px, fundo branco, header cinza claro (`#f8fafd`), linhas com hover suave |
 | **Modais** | `centered` + `size="lg"` por padrão (via tema) |
 | **Loading/Error** | `Center` simples com `Loader` / Stack de erro, sem Container/Paper redundantes |
 | **Toolbars** | `Group justify="space-between"` com actions à esquerda e busca à direita |
 | **Background** | Gradient fixo `#f8f9fa → #e3f2fd` no body |
+| **Sidebar (Dashboard)** | Fundo marinho `#1b325f`, nav links com ícones, active tab com borda esquerda `#3a89c9` |
+| **Hero banner (Dashboard)** | Fundo sólido `#1b325f` (sem gradient), badge "Painel Geral", título em branco |
+| **Stats (Dashboard / menus)** | Cards com ícone em círculo colorido (`#e9f2f9`), número grande em `#1b325f`, label uppercase |
 
 ---
 
