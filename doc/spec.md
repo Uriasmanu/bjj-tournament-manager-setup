@@ -23,6 +23,18 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ### Em lutas casadas, o tempo de sugestão é sempre do que tem a maior categoria, ou maior cor de faixa
 ### Em resultados tem que ter uma forma facil e intuitiva de ver o as informaçoes das luta, todas as informaç~eos pontos, tempo, tipo de vitoria etc (historico completo de todas as lutas, em formato de lista e com a opção de bucar por nome do atleta)
 ### em dashbor, tem que mostrar se esta usando credencial, credencial deve expirar a cada 1 ano, e depois pedir a senha novamente (me fale a senha pq vou trocar manualmente)
+### registrar horario em que q luta começou e terminou(timestamp)S
+
+### Tela de Resultados intuitiva (ciclo 3 — `spec/tela-resultados-intuitiva.md`)
+- Adicionado campo opcional `tempoRealSegundos?: number` em `src/types/bracket.ts::Luta` e em `src/types/lutaCasada.ts::LutaCasada`.
+- `PlacarLuta.tsx::persistirResultado` e `PlacarLutaCasada.tsx::persistirResultado` calculam `tempoRealSegundos = Math.max(0, tempoInicial - tempoRestante)` e enviam ao IPC (`registrarResultado` / `updateLutaCasada`); o handler do main process grava o campo via spread.
+- Criado `src/utils/format.ts` com `formatarDuracao(segundos)` — converte 162 → "02:42", `undefined` → "—".
+- `src/pages/Resultados.tsx` ganhou a aba "Lutas" (cards de cada combate finalizado, com placar detalhado, vencedor, badge de tipo de vitória e tempo real), melhorias nas abas "Chaves" (lista de lutas com placar/tipo/tempo por chave) e "Lutas Casadas" (card enriquecido com placar, badge de tipo e tempo).
+- Helper `getTipoVitoria` mapeia `finalizacao/desclassificacao/desempateArbitro` (fallback "Pontos") para rótulo e cor de badge.
+- Lutas com `vencedorId === 'tbd'` ou `'bye'` são filtradas da lista; W.O. exibe placar zerado com badge "WO"; lutas sem `tempoRealSegundos` (legado) exibem "—".
+- Filtros/ordenação detalhada (busca por atleta) e ordenação "mais recente primeiro" ficam para iteração futura (mantidos como "a confirmar" na spec).
+- `npx tsc --noEmit` passa. `npm run lint` mantém apenas os 3 erros pré-existentes em `PageLayout.tsx` e `PlacarBracket.tsx` — nenhum novo erro introduzido.
+- **Observação:** o item acima ("Em resultados tem que ter uma forma facil e intuitiva...") continua em "Problemas Encontrados" pela regra de NÃO apagar — esta entrada registra a entrega parcial (lista detalhada sem busca por nome). Busca por atleta segue em aberto.
 
 ---
 

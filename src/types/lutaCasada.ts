@@ -28,6 +28,7 @@ export interface LutaCasada {
   desclassificacao?: boolean;
   desempateArbitro?: boolean;
   dataFinalizacao?: string | null;
+  tempoRealSegundos?: number;
   createdAt: string;
   updatedAt: string;
 }

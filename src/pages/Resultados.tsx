@@ -12,6 +12,7 @@ import {
   Card,
   SimpleGrid,
   Button,
+  Divider,
 } from '@mantine/core';
 import {
   IconTrophy,
@@ -21,17 +22,19 @@ import {
   IconBuildingSkyscraper,
   IconSwords,
   IconChartBar,
+  IconClock,
 } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Torneio } from '../types/tournament';
 import type { Atleta } from '../types/athlete';
-import type { Chave } from '../types/bracket';
+import type { Chave, Luta, PlacarLuta } from '../types/bracket';
 import type { Arbitro } from '../types/referee';
 import type { AreaLuta } from '../types/area';
 import type { LutaCasada } from '../types/lutaCasada';
 import { categoriaLabels } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
+import { formatarDuracao } from '../utils/format';
 
 const FAIXA_LABEL: Record<string, string> = {
   'branca': 'Branca', 'cinza': 'Cinza', 'amarela': 'Amarela', 'laranja': 'Laranja',
@@ -79,6 +82,214 @@ function getCategoriaTitulo(categoriaId: string): string {
   return categoriaLabels[categoriaId] ?? categoriaId;
 }
 
+function getTipoVitoria(luta: { finalizacao?: boolean; desclassificacao?: boolean; desempateArbitro?: boolean; desclassificadoId?: string }): { label: string; color: string; icon?: string } {
+  if (luta.desclassificacao) return { label: 'Desclassificação', color: 'red', icon: '🚫' };
+  if (luta.finalizacao) return { label: 'Finalização', color: 'grape', icon: '🏁' };
+  if (luta.desempateArbitro) return { label: 'Desempate', color: 'orange', icon: '⚖️' };
+  return { label: 'Pontos', color: 'blue', icon: '🏆' };
+}
+
+function isLutaValida(luta: Luta | LutaCasada): boolean {
+  return Boolean(luta.vencedorId && luta.vencedorId !== 'tbd' && luta.vencedorId !== 'bye');
+}
+
+function PlacarDetalhado({ placar, color, dimmed }: { placar: PlacarLuta | undefined; color: string; dimmed?: boolean }) {
+  if (!placar) {
+    return <Text size="sm" c="dimmed" style={{ opacity: dimmed ? 0.6 : 1 }}>0</Text>;
+  }
+  return (
+    <Stack gap={2} align="center" style={{ opacity: dimmed ? 0.6 : 1 }}>
+      <Group gap={6} wrap="wrap" justify="center">
+        <Badge size="xs" variant="light" color="gray">+2: {placar.pontos2}</Badge>
+        <Badge size="xs" variant="light" color="gray">+3: {placar.pontos3}</Badge>
+        <Badge size="xs" variant="light" color="gray">+4: {placar.pontos4}</Badge>
+      </Group>
+      <Group gap={6} wrap="wrap" justify="center">
+        <Text size="xs" c="dimmed">Vant: <b style={{ color }}>{placar.vantagens}</b></Text>
+        <Text size="xs" c="dimmed">Pun: <b style={{ color }}>{placar.punicoes}</b></Text>
+        <Text size="sm" fw={900} c={color}>Total: {placar.total}</Text>
+      </Group>
+    </Stack>
+  );
+}
+
+type AtletaResumo = {
+  id: string;
+  nome: string;
+  equipe: string;
+  faixa: string;
+  pesoKg: number;
+  categoria: string;
+};
+
+function AtletaInfo({ resumo, lado, vencedor, desclassificado, compacto }: {
+  resumo: AtletaResumo;
+  lado: 'A' | 'B';
+  vencedor: boolean;
+  desclassificado: boolean;
+  compacto?: boolean;
+}) {
+  const faixaLabel = FAIXA_LABEL[resumo.faixa] ?? resumo.faixa;
+  const textDecoration = desclassificado ? 'line-through' : 'none';
+  return (
+    <Stack gap={2} style={{ flex: 1 }}>
+      <Group gap={4} wrap="nowrap" align="center">
+        <Text size="xs" c="dimmed" fw={700}>Atleta {lado}</Text>
+        {vencedor && (
+          <Badge size="xs" color="green" variant="filled">VENCEDOR</Badge>
+        )}
+        {desclassificado && (
+          <Badge size="xs" color="red" variant="filled">DQ</Badge>
+        )}
+      </Group>
+      <Text
+        size={compacto ? 'sm' : 'md'}
+        fw={700}
+        style={{ textDecoration }}
+      >
+        {capitalize(resumo.nome)}
+      </Text>
+      {!compacto && (
+        <Text size="xs" c="dimmed" tt="capitalize" style={{ textDecoration }}>
+          {resumo.equipe || '—'}
+        </Text>
+      )}
+      {!compacto && (
+        <Group gap={6} wrap="wrap">
+          <Badge size="xs" variant="light">{faixaLabel}</Badge>
+          <Badge size="xs" variant="light" color="dark">{resumo.pesoKg.toFixed(1)}kg</Badge>
+          {resumo.categoria && (
+            <Text size="xs" c="dimmed">{getCategoriaTitulo(resumo.categoria)}</Text>
+          )}
+        </Group>
+      )}
+    </Stack>
+  );
+}
+
+function LutaResumoCard({
+  chaveOrigem,
+  ordem,
+  rodada,
+  atletaA,
+  atletaB,
+  placarA,
+  placarB,
+  vencedorId,
+  finalizacao,
+  desclassificacao,
+  desclassificadoId,
+  desempateArbitro,
+  status,
+  tempoRealSegundos,
+  isCasada,
+  statusBadge,
+}: {
+  chaveOrigem?: string;
+  ordem?: number;
+  rodada?: number;
+  atletaA: AtletaResumo;
+  atletaB: AtletaResumo;
+  placarA?: PlacarLuta;
+  placarB?: PlacarLuta;
+  vencedorId: string;
+  finalizacao?: boolean;
+  desclassificacao?: boolean;
+  desclassificadoId?: string;
+  desempateArbitro?: boolean;
+  status: 'completed' | 'wo' | 'pending';
+  tempoRealSegundos?: number;
+  isCasada?: boolean;
+  statusBadge?: { label: string; color: string };
+}) {
+  const tipoVitoria = getTipoVitoria({ finalizacao, desclassificacao, desempateArbitro, desclassificadoId });
+  const vencedorIdEfetivo = vencedorId;
+  const aVenceu = vencedorIdEfetivo === atletaA.id;
+  const bVenceu = vencedorIdEfetivo === atletaB.id;
+  const aDesclassificado = desclassificadoId === atletaA.id;
+  const bDesclassificado = desclassificadoId === atletaB.id;
+
+  return (
+    <Card withBorder padding="md" radius="md" aria-label={`Luta: ${atletaA.nome} vs ${atletaB.nome} — ${tipoVitoria.label}${tempoRealSegundos !== undefined ? ` em ${formatarDuracao(tempoRealSegundos)}` : ''}`}>
+      <Stack gap="sm">
+        <Group justify="space-between" wrap="wrap" gap="xs">
+          <Group gap="xs" wrap="wrap">
+            {chaveOrigem && (
+              <Badge size="sm" variant="outline" color="dark">{chaveOrigem}</Badge>
+            )}
+            {ordem !== undefined && (
+              <Badge size="sm" variant="light" color="gray">Luta {ordem}</Badge>
+            )}
+            {rodada !== undefined && (
+              <Badge size="sm" variant="light" color="gray">Rodada {rodada}</Badge>
+            )}
+            {isCasada && (
+              <Badge size="sm" color="dark" variant="filled">LUTA CASADA</Badge>
+            )}
+            {statusBadge && (
+              <Badge size="sm" color={statusBadge.color} variant="light">{statusBadge.label}</Badge>
+            )}
+            <Badge
+              size="sm"
+              color={tipoVitoria.color}
+              variant={status === 'pending' ? 'light' : 'filled'}
+              aria-label={`Tipo de vitória: ${tipoVitoria.label}`}
+            >
+              {tipoVitoria.icon} {tipoVitoria.label}
+            </Badge>
+          </Group>
+          <Group gap={4} align="center">
+            <IconClock size={14} color="var(--mantine-color-gray-6)" />
+            <Text size="sm" c="dimmed" fw={600}>
+              {tempoRealSegundos !== undefined ? formatarDuracao(tempoRealSegundos) : '—'}
+            </Text>
+          </Group>
+        </Group>
+
+        <Group align="flex-start" gap="md" wrap="nowrap">
+          <AtletaInfo
+            resumo={atletaA}
+            lado="A"
+            vencedor={aVenceu}
+            desclassificado={aDesclassificado}
+          />
+          <Stack gap={2} align="center" style={{ minWidth: 90 }}>
+            <Text size="xs" c="dimmed" fw={700}>PLACAR</Text>
+            <Group gap={6} align="center" justify="center">
+              <Text fw={900} size="xl" c={aVenceu ? 'green.7' : aDesclassificado ? 'red.7' : 'dark'}>
+                {placarA?.total ?? 0}
+              </Text>
+              <Text fw={900} size="xl" c="dimmed">×</Text>
+              <Text fw={900} size="xl" c={bVenceu ? 'green.7' : bDesclassificado ? 'red.7' : 'dark'}>
+                {placarB?.total ?? 0}
+              </Text>
+            </Group>
+          </Stack>
+          <AtletaInfo
+            resumo={atletaB}
+            lado="B"
+            vencedor={bVenceu}
+            desclassificado={bDesclassificado}
+          />
+        </Group>
+
+        <Divider />
+
+        <Group justify="space-between" align="flex-start" gap="md" wrap="wrap">
+          <Stack gap={4} align="center" style={{ flex: 1, minWidth: 200 }}>
+            <Text size="xs" c="dimmed" fw={700} tt="uppercase">Placar Atleta A</Text>
+            <PlacarDetalhado placar={placarA} color={aVenceu ? 'var(--mantine-color-green-7)' : 'var(--mantine-color-dark-7)'} dimmed={aDesclassificado} />
+          </Stack>
+          <Stack gap={4} align="center" style={{ flex: 1, minWidth: 200 }}>
+            <Text size="xs" c="dimmed" fw={700} tt="uppercase">Placar Atleta B</Text>
+            <PlacarDetalhado placar={placarB} color={bVenceu ? 'var(--mantine-color-green-7)' : 'var(--mantine-color-dark-7)'} dimmed={bDesclassificado} />
+          </Stack>
+        </Group>
+      </Stack>
+    </Card>
+  );
+}
+
 export function Resultados() {
   const navigate = useNavigate();
   const [torneio, setTorneio] = useState<Torneio | null>(null);
@@ -102,6 +313,20 @@ export function Resultados() {
     const a = atletas.find(x => x.id === id);
     if (!a) return 'Atleta removido';
     return capitalize(a.nome);
+  };
+
+  const getAtletaResumo = (id: string): AtletaResumo | null => {
+    if (!id || id === 'tbd' || id === 'bye') return null;
+    const a = atletas.find(x => x.id === id);
+    if (!a) return { id, nome: 'Atleta removido', equipe: '', faixa: 'branca', pesoKg: 0, categoria: '' };
+    return {
+      id: a.id,
+      nome: a.nome,
+      equipe: a.equipe || '',
+      faixa: a.faixa,
+      pesoKg: a.pesoKg,
+      categoria: a.categoria,
+    };
   };
 
   const chavesEncerradas = useMemo(() => chaves.filter(c => {
@@ -149,6 +374,36 @@ export function Resultados() {
     return counts;
   }, [chaves, lutasCasadas]);
 
+  const todasLutasFinalizadas = useMemo(() => {
+    type Item = {
+      chaveOrigem: string;
+      ordem: number;
+      rodada: number;
+      luta: Luta | LutaCasada;
+      isCasada: boolean;
+    };
+    const itens: Item[] = [];
+    for (const c of chaves) {
+      const titulo = getCategoriaTitulo(c.categoriaId);
+      for (const l of c.lutas) {
+        if (!isLutaValida(l)) continue;
+        itens.push({ chaveOrigem: titulo, ordem: l.ordem, rodada: l.rodada, luta: l, isCasada: false });
+      }
+    }
+    for (const l of lutasCasadas) {
+      if (!isLutaValida(l)) continue;
+      const titulo = `${capitalize(l.atletaASnapshot.nome)} × ${capitalize(l.atletaBSnapshot.nome)}`;
+      const ordem = itens.length;
+      itens.push({ chaveOrigem: titulo, ordem, rodada: 0, luta: l, isCasada: true });
+    }
+    itens.sort((a, b) => {
+      if (a.chaveOrigem !== b.chaveOrigem) return a.chaveOrigem.localeCompare(b.chaveOrigem);
+      if (a.isCasada !== b.isCasada) return a.isCasada ? 1 : -1;
+      return a.ordem - b.ordem;
+    });
+    return itens;
+  }, [chaves, lutasCasadas]);
+
   if (loading) {
     return (
       <Center py="xl" style={{ minHeight: '100vh' }}>
@@ -186,6 +441,7 @@ export function Resultados() {
         <Tabs defaultValue="overview">
           <Tabs.List>
             <Tabs.Tab value="overview" leftSection={<IconChartBar size={16} />}>Visão Geral</Tabs.Tab>
+            <Tabs.Tab value="lutas" leftSection={<IconSwords size={16} />}>Lutas</Tabs.Tab>
             <Tabs.Tab value="chaves" leftSection={<IconBrackets size={16} />}>Chaves</Tabs.Tab>
             <Tabs.Tab value="casadas" leftSection={<IconSwords size={16} />}>Lutas Casadas</Tabs.Tab>
             <Tabs.Tab value="equipes" leftSection={<IconBuildingSkyscraper size={16} />}>Equipes</Tabs.Tab>
@@ -270,46 +526,165 @@ export function Resultados() {
             </Stack>
           </Tabs.Panel>
 
+          <Tabs.Panel value="lutas" pt="md">
+            {todasLutasFinalizadas.length === 0 ? (
+              <Text c="dimmed" ta="center" py="xl">Nenhuma luta finalizada ainda.</Text>
+            ) : (
+              <Stack gap="md">
+                {todasLutasFinalizadas.map((item, idx) => {
+                  const prev = todasLutasFinalizadas[idx - 1];
+                  const showHeader = !prev || prev.chaveOrigem !== item.chaveOrigem;
+                  if (item.isCasada) {
+                    const l = item.luta as LutaCasada;
+                    const atletaA: AtletaResumo = {
+                      id: l.atletaAId,
+                      nome: l.atletaASnapshot.nome,
+                      equipe: l.atletaASnapshot.equipe,
+                      faixa: l.atletaASnapshot.faixa,
+                      pesoKg: l.atletaASnapshot.pesoKg,
+                      categoria: l.atletaASnapshot.categoria,
+                    };
+                    const atletaB: AtletaResumo = {
+                      id: l.atletaBId,
+                      nome: l.atletaBSnapshot.nome,
+                      equipe: l.atletaBSnapshot.equipe,
+                      faixa: l.atletaBSnapshot.faixa,
+                      pesoKg: l.atletaBSnapshot.pesoKg,
+                      categoria: l.atletaBSnapshot.categoria,
+                    };
+                    return (
+                      <Stack gap="xs" key={l.id}>
+                        {showHeader && (
+                          <Title order={5} mt={idx === 0 ? 0 : 'md'}>{item.chaveOrigem}</Title>
+                        )}
+                        <LutaResumoCard
+                          chaveOrigem={item.chaveOrigem}
+                          atletaA={atletaA}
+                          atletaB={atletaB}
+                          placarA={l.placarA}
+                          placarB={l.placarB}
+                          vencedorId={l.vencedorId ?? ''}
+                          finalizacao={l.finalizacao}
+                          desclassificacao={l.desclassificacao}
+                          desempateArbitro={l.desempateArbitro}
+                          status={l.status as 'completed' | 'wo' | 'pending'}
+                          tempoRealSegundos={l.tempoRealSegundos}
+                          isCasada
+                        />
+                      </Stack>
+                    );
+                  }
+                  const l = item.luta as Luta;
+                  const atletaA = getAtletaResumo(l.atletaAId) ?? {
+                    id: l.atletaAId,
+                    nome: 'A definir',
+                    equipe: '',
+                    faixa: 'branca',
+                    pesoKg: 0,
+                    categoria: '',
+                  };
+                  const atletaB = getAtletaResumo(l.atletaBId) ?? {
+                    id: l.atletaBId,
+                    nome: 'A definir',
+                    equipe: '',
+                    faixa: 'branca',
+                    pesoKg: 0,
+                    categoria: '',
+                  };
+                  return (
+                    <Stack gap="xs" key={l.id}>
+                      {showHeader && (
+                        <Title order={5} mt={idx === 0 ? 0 : 'md'}>{item.chaveOrigem}</Title>
+                      )}
+                      <LutaResumoCard
+                        chaveOrigem={item.chaveOrigem}
+                        ordem={l.ordem}
+                        rodada={l.rodada}
+                        atletaA={atletaA}
+                        atletaB={atletaB}
+                        placarA={l.placarA}
+                        placarB={l.placarB}
+                        vencedorId={l.vencedorId ?? ''}
+                        finalizacao={l.finalizacao}
+                        desclassificacao={l.desclassificacao}
+                        desclassificadoId={l.desclassificadoId}
+                        desempateArbitro={l.desempateArbitro}
+                        status={l.status as 'completed' | 'wo' | 'pending'}
+                        tempoRealSegundos={l.tempoRealSegundos}
+                      />
+                    </Stack>
+                  );
+                })}
+              </Stack>
+            )}
+          </Tabs.Panel>
+
           <Tabs.Panel value="chaves" pt="md">
             {chaves.length === 0 ? (
               <Text c="dimmed" ta="center" py="xl">Nenhuma chave gerada.</Text>
             ) : (
-              <Paper withBorder radius="md" style={{ overflow: 'hidden' }}>
-                <Table striped highlightOnHover>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Categoria</Table.Th>
-                      <Table.Th style={{ textAlign: 'right' }}>Atletas</Table.Th>
-                      <Table.Th>Status</Table.Th>
-                      <Table.Th>Vencedor</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {chaves.map(chave => {
-                      const status = getChaveStatus(chave);
-                      const vencedor = getChaveVencedorId(chave);
-                      return (
-                        <Table.Tr key={chave.id}>
-                          <Table.Td>{getCategoriaTitulo(chave.categoriaId)}</Table.Td>
-                          <Table.Td style={{ textAlign: 'right' }}>{chave.totalAtletas}</Table.Td>
-                          <Table.Td>
+              <Stack gap="md">
+                {chaves.map(chave => {
+                  const status = getChaveStatus(chave);
+                  const vencedor = getChaveVencedorId(chave);
+                  return (
+                    <Card key={chave.id} withBorder padding="md" radius="md">
+                      <Stack gap="sm">
+                        <Group justify="space-between" wrap="wrap">
+                          <Stack gap={2}>
+                            <Text fw={700} size="sm">{getCategoriaTitulo(chave.categoriaId)}</Text>
+                            <Text size="xs" c="dimmed">{chave.totalAtletas} atleta(s) · {chave.totalLutas} luta(s)</Text>
+                          </Stack>
+                          <Group gap="xs">
                             <Badge color={status.color} variant={status.color === 'yellow' ? 'filled' : 'light'}>
                               {status.label}
                             </Badge>
-                          </Table.Td>
-                          <Table.Td>
-                            {vencedor ? (
-                              <Text size="sm" fw={600}>{getAtletaNome(vencedor)}</Text>
-                            ) : (
-                              <Text size="sm" c="dimmed">—</Text>
+                            {vencedor && (
+                              <Text size="sm" fw={600}>Vencedor: {getAtletaNome(vencedor)}</Text>
                             )}
-                          </Table.Td>
-                        </Table.Tr>
-                      );
-                    })}
-                  </Table.Tbody>
-                </Table>
-              </Paper>
+                          </Group>
+                        </Group>
+                        <Divider />
+                        <Stack gap="xs">
+                          {chave.lutas
+                            .slice()
+                            .sort((a, b) => a.ordem - b.ordem)
+                            .map(l => {
+                              const a = getAtletaResumo(l.atletaAId) ?? { id: l.atletaAId, nome: 'A definir', equipe: '', faixa: 'branca', pesoKg: 0, categoria: '' };
+                              const b = getAtletaResumo(l.atletaBId) ?? { id: l.atletaBId, nome: 'A definir', equipe: '', faixa: 'branca', pesoKg: 0, categoria: '' };
+                              const lutaValida = isLutaValida(l);
+                              const statusBadge = !lutaValida
+                                ? { label: 'PENDENTE', color: 'yellow' }
+                                : l.status === 'wo'
+                                  ? { label: 'WO', color: 'red' }
+                                  : undefined;
+                              return (
+                                <LutaResumoCard
+                                  key={l.id}
+                                  chaveOrigem={getCategoriaTitulo(chave.categoriaId)}
+                                  ordem={l.ordem}
+                                  rodada={l.rodada}
+                                  atletaA={a}
+                                  atletaB={b}
+                                  placarA={l.placarA}
+                                  placarB={l.placarB}
+                                  vencedorId={l.vencedorId ?? ''}
+                                  finalizacao={l.finalizacao}
+                                  desclassificacao={l.desclassificacao}
+                                  desclassificadoId={l.desclassificadoId}
+                                  desempateArbitro={l.desempateArbitro}
+                                  status={l.status as 'completed' | 'wo' | 'pending'}
+                                  tempoRealSegundos={l.tempoRealSegundos}
+                                  statusBadge={statusBadge}
+                                />
+                              );
+                            })}
+                        </Stack>
+                      </Stack>
+                    </Card>
+                  );
+                })}
+              </Stack>
             )}
           </Tabs.Panel>
 
@@ -322,33 +697,44 @@ export function Resultados() {
                   .slice()
                   .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
                   .map(luta => {
-                    const nomeA = capitalize(luta.atletaASnapshot.nome);
-                    const nomeB = capitalize(luta.atletaBSnapshot.nome);
-                    const vencedorId = luta.vencedorId;
-                    const vencedorNome = vencedorId === luta.atletaAId ? nomeA
-                      : vencedorId === luta.atletaBId ? nomeB
-                      : null;
+                    const atletaA: AtletaResumo = {
+                      id: luta.atletaAId,
+                      nome: luta.atletaASnapshot.nome,
+                      equipe: luta.atletaASnapshot.equipe,
+                      faixa: luta.atletaASnapshot.faixa,
+                      pesoKg: luta.atletaASnapshot.pesoKg,
+                      categoria: luta.atletaASnapshot.categoria,
+                    };
+                    const atletaB: AtletaResumo = {
+                      id: luta.atletaBId,
+                      nome: luta.atletaBSnapshot.nome,
+                      equipe: luta.atletaBSnapshot.equipe,
+                      faixa: luta.atletaBSnapshot.faixa,
+                      pesoKg: luta.atletaBSnapshot.pesoKg,
+                      categoria: luta.atletaBSnapshot.categoria,
+                    };
+                    const statusBadge =
+                      luta.status === 'pending'
+                        ? { label: 'PENDENTE', color: 'yellow' }
+                        : luta.status === 'wo'
+                          ? { label: 'WO', color: 'red' }
+                          : undefined;
                     return (
-                      <Card key={luta.id} withBorder padding="sm" radius="sm">
-                        <Group justify="space-between" wrap="wrap">
-                          <Stack gap={2} style={{ flex: 1 }}>
-                            <Group gap="xs">
-                              <Text size="sm" fw={600}>{nomeA}</Text>
-                              <Text size="sm" c="dimmed">vs</Text>
-                              <Text size="sm" fw={600}>{nomeB}</Text>
-                            </Group>
-                            {vencedorNome && (
-                              <Text size="xs" c="green.7">Vencedor: {vencedorNome}</Text>
-                            )}
-                          </Stack>
-                          <Group gap="xs">
-                            <Badge size="sm" color="dark" variant="filled">LUTA CASADA</Badge>
-                            {luta.status === 'pending' && <Badge size="sm" color="yellow" variant="light">PENDENTE</Badge>}
-                            {luta.status === 'completed' && <Badge size="sm" color="green" variant="filled">FINALIZADA</Badge>}
-                            {luta.status === 'wo' && <Badge size="sm" color="red" variant="filled">WO</Badge>}
-                          </Group>
-                        </Group>
-                      </Card>
+                      <LutaResumoCard
+                        key={luta.id}
+                        atletaA={atletaA}
+                        atletaB={atletaB}
+                        placarA={luta.placarA}
+                        placarB={luta.placarB}
+                        vencedorId={luta.vencedorId ?? ''}
+                        finalizacao={luta.finalizacao}
+                        desclassificacao={luta.desclassificacao}
+                        desempateArbitro={luta.desempateArbitro}
+                        status={luta.status as 'completed' | 'wo' | 'pending'}
+                        tempoRealSegundos={luta.tempoRealSegundos}
+                        isCasada
+                        statusBadge={statusBadge}
+                      />
                     );
                   })}
               </Stack>

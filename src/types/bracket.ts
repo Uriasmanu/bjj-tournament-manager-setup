@@ -21,6 +21,7 @@ export interface Luta {
   desclassificacao?: boolean;
   desclassificadoId?: string;
   desempateArbitro?: boolean;
+  tempoRealSegundos?: number;
 }
 
 export interface Chave {
