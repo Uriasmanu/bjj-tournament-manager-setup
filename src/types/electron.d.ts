@@ -24,8 +24,7 @@ interface ElectronAPI {
   listTournaments: () => Promise<Torneio[]>;
   startTournament: (id: string) => Promise<Torneio>;
   exportTournament: (id: string) => Promise<void>;
-  importTournament: (data: Torneio) => Promise<{ success: boolean; exists?: boolean }>;
-  importTournamentOverwrite: (data: Torneio) => Promise<void>;
+  importTournament: (data: Torneio) => Promise<{ success: true; merged: boolean; created: number; updated: number; kept: number; removed: number }>;
   getActiveTournament: () => Promise<Torneio | null>;
   updateTournament: (data: Torneio) => Promise<Torneio>;
   deleteTournament: (id: string) => Promise<void>;

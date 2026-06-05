@@ -15,8 +15,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('export-tournament', id),
   importTournament: (data: Torneio) =>
     ipcRenderer.invoke('import-tournament', data),
-  importTournamentOverwrite: (data: Torneio) =>
-    ipcRenderer.invoke('import-tournament-overwrite', data),
   getActiveTournament: () =>
     ipcRenderer.invoke('get-active-tournament'),
   updateTournament: (data: Torneio) =>

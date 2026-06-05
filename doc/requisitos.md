@@ -18,7 +18,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 |---|---|---|
 | Menu Inicial | ✅ Completo | Tela com 3 cartões (Criar, Importar, Listar) + teclas 1/2/3 |
 | Criar Torneio | ✅ Completo | Formulário com nome (opcional), data (futura), validação, IPC |
-| Importar Torneio | ✅ Completo | Upload JSON, validação de estrutura, modal de sobrescrita |
+| Importar Torneio | ✅ Completo | Upload JSON, validação de estrutura, merge por `updatedAt` (last-write-wins: se o `id` já existe, atletas/árbitros/áreas são mesclados por item; chaves/lutas casadas pelo `updatedAt` do torneio; delete recente vence). Retorna contadores do merge. |
 | Listar Torneios | ✅ Completo | Tabela com Iniciar/Exportar/Excluir; registro de startedAt no Play |
 | Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (`electron/tournament.ts`) |
 | Tema Oceano & Coral | ✅ Completo | Paleta principal: marinho (#1b325f), azul acento (#3a89c9), azul claro (#9cc4e4), bg claro (#e9f2f9), coral (#f26c4f), amarelo royal (#ffbc11). Fonte Inter, componentes responsivos com `clamp()`. |
@@ -75,14 +75,28 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 ### 3.3. Importação de Torneio
 
 - Apenas arquivos com extensão `.json` são aceitos (filtro nativo do diálogo).
-- O arquivo deve conter os campos obrigatórios: `data` (validação no import). `id` e `nome` são opcionais.
-- **Normalização automática ao importar:** O backend sempre normaliza os dados antes de salvar:
-  - `id`: preservado do arquivo se presente; gerado (`crypto.randomUUID()`) se ausente.
-  - `createdAt`: sempre substituído pelo timestamp atual (momento da importação).
-  - `updatedAt`: sempre substituído pelo timestamp atual (momento da importação).
-- Se o `id` do torneio importado já existir no diretório, o sistema pergunta se deseja sobrescrever via modal de confirmação.
-- Na sobrescrita (`import-tournament-overwrite`), o `id` E a `data` do arquivo são obrigatórios. O `id` é usado como nome do arquivo (não é gerado novo ID, ao contrário do `import-tournament`). `createdAt` e `updatedAt` são normalizados da mesma forma.
-- Se o arquivo de destino já existir e o usuário escolher não sobrescrever, o `import-tournament` retorna `{ success: false, exists: true }` em vez de lançar erro.
+- O arquivo deve conter os campos obrigatórios: `id` e `data` (validação no import). `nome` é opcional.
+- **Importação com merge por `updatedAt` (last-write-wins):** o handler `import-tournament` (único caminho de importação) unifica os dados do JSON com o estado do torneio em disco, quando o `id` do torneio já existir. A regra é **last-write-wins por `updatedAt`**:
+  - Para cada sub-array (`atletas`, `arbitros`, `areas`, `chaves`, `lutasCasadas`), o item é identificado pelo seu `id`. Itens com mesmo `id` em ambos os lados são resolvidos pelo `updatedAt` mais recente (string ISO 8601 — comparação lexicográfica equivalente a cronológica).
+  - Itens com `id` presente em um único lado são preservados.
+  - **Delete recente vence:** como `delete*`/`restore*` setam `updatedAt = new Date().toISOString()` junto com `deletedAt`, basta comparar `updatedAt`. Se o item vencedor tem `deletedAt != null`, o item permanece (ou passa a estar) deletado no resultado.
+  - **Top-level do torneio:** `nome` e `data` seguem o lado com `updatedAt` mais recente. O `updatedAt` do torneio mergeado é `max(existing.updatedAt, incoming.updatedAt)`. O `createdAt` é preservado do existing. O `startedAt`, se já existir no existing, é mantido (evento único); caso contrário, é copiado do incoming.
+  - **Sub-arrays sem `updatedAt` próprio:** `chaves` e `lutasCasadas` não possuem `updatedAt` por item. Para esses, o vencedor é decidido pelo `updatedAt` do torneio pai (incoming vence se for mais recente, existing vence caso contrário).
+- **Preservação de identidade na importação:** o backend preserva `id`, `createdAt`, `updatedAt`, `deletedAt`, `emChave` e demais campos dos sub-itens. Apenas `nome` e `equipe` de atletas/árbitros são normalizados (`trim().toLowerCase()`). Itens sem `id` recebem `crypto.randomUUID()`. Itens sem `createdAt`/`updatedAt` recebem o `now` da importação.
+- **Auto-fix retroativo:** JSONs legados sem o campo `deletedAt` em atletas/árbitros/áreas continuam funcionando (o auto-fix dos handlers `load*` preenche `deletedAt: null` ao carregar). O merge trata `deletedAt` ausente como `null` na comparação.
+- **Remoção do caminho destrutivo:** o handler `import-tournament-overwrite` foi removido. Não há mais modal de "Sobrescrever Torneio" na UI. Se o usuário precisar descartar o torneio local e reimportar do zero, ele usa `delete-tournament` e depois importa o JSON novamente.
+- **Retorno do handler `import-tournament`:** `{ success: true; merged: boolean; created: number; updated: number; kept: number; removed: number }`.
+  - `merged: false` → torneio novo (id não existia no disco). Contadores zerados.
+  - `merged: true` → torneio já existia; contadores somam todos os sub-arrays.
+  - `created` → sub-itens adicionados (presentes no incoming, ausentes no existing).
+  - `updated` → sub-itens sobrescritos pelo lado mais recente.
+  - `kept` → sub-itens que só existiam no existing (preservados).
+  - `removed` → sub-itens que se tornaram `deletedAt != null` como resultado do merge (estavam ativos no existing e o incoming trouxe a versão deletada, mais recente).
+- **Notificações no renderer (em `ImportarTorneio.tsx`):**
+  - Torneio novo: `"Torneio importado com sucesso!"` (verde).
+  - Merge: `"Torneio mesclado: X adicionado(s), Y atualizado(s), Z mantido(s)."` (verde).
+  - Se `removed > 0`: segunda notificação amarela `"W item(ns) marcados como deletados (delete recente prevaleceu)."`.
+  - Erro de validação: `"Arquivo inválido. Estrutura de torneio não reconhecida."` (vermelho).
 - Após importar com sucesso, o usuário é redirecionado para a listagem de torneios.
 - A importação é feita via upload de arquivo (não diálogo nativo), com leitura do conteúdo via `FileReader` e envio ao IPC.
 
@@ -156,7 +170,7 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 - **Duplicata:** Um atleta é considerado duplicata quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**. A verificação ocorre:
   - No renderer (`AdminAthletes.tsx:handleSave`) antes do IPC, tanto para cadastro quanto para edição (ignorando o próprio `id`).
   - No main process (`athletes.ts:importAthletesFromFile`) durante importação em massa.
-  - No main process (`tournament.ts:import-tournament` e `import-tournament-overwrite`) durante importação de torneio com atletas.
+  - No main process (`tournament.ts:import-tournament`) durante importação/merge de torneio com atletas — atletas duplicados por `id` são resolvidos por `updatedAt` (last-write-wins), preservando o item mais recente; atletas sem `id` no JSON recebem novo UUID e são adicionados.
 - **Exclusão em lote:** Na tela de listagem, cada linha possui um checkbox. O cabeçalho possui um checkbox "Selecionar todos" com estado indeterminado para seleção parcial. Com um ou mais atletas selecionados, um botão "Excluir Selecionados (N)" aparece no topo. A exclusão em lote é feita via IPC `delete-athletes`, que remove todos os atletas em uma única operação de leitura/escrita do arquivo JSON.
 - **Armazenamento por torneio:** Atletas são armazenados dentro do JSON do torneio (campo `atletas: Atleta[]`), não mais em arquivo global. Cada torneio possui sua própria lista exclusiva.
 - **Torneio ativo obrigatório:** Para cadastrar, editar, excluir ou importar atletas, é necessário que haja um torneio ativo. Caso contrário, o handler IPC lança erro `"Nenhum torneio ativo"` exibido como notificação vermelha.
@@ -947,8 +961,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `start-tournament` | Renderer → Main | Define torneio como ativo e registra `startedAt` |
 | `get-active-tournament` | Renderer → Main → Renderer | Retorna torneio ativo ou `null` |
 | `export-tournament` | Renderer → Main | Abre diálogo "Salvar como" e copia JSON |
-| `import-tournament` | Renderer → Main | Importa JSON verificando duplicidade de ID |
-| `import-tournament-overwrite` | Renderer → Main | Sobrescreve torneio existente (mesmo ID) |
+| `import-tournament` | Renderer → Main | Importa JSON com merge por `updatedAt` (last-write-wins por sub-array: `atletas`/`arbitros`/`areas` por item; `chaves`/`lutasCasadas` por torneio). Retorna `{ success, merged, created, updated, kept, removed }` |
 | `read-file` | Renderer → Main → Renderer | Lê conteúdo de arquivo do disco |
 | `update-tournament` | Renderer → Main | Atualiza dados do torneio |
 | `delete-tournament` | Renderer → Main | Remove arquivo JSON do torneio (+ `torneio-ativo.json` se for o ativo) |

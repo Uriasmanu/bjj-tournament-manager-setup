@@ -4,6 +4,10 @@ import fs from 'node:fs';
 import crypto from 'node:crypto';
 import type { Torneio } from '../src/types/tournament';
 import type { Atleta } from '../src/types/athlete';
+import type { Arbitro } from '../src/types/referee';
+import type { AreaLuta } from '../src/types/area';
+import type { Chave } from '../src/types/bracket';
+import type { LutaCasada } from '../src/types/lutaCasada';
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios');
@@ -26,6 +30,152 @@ export function getActiveTournamentId(): string | null {
   } catch {
     return null;
   }
+}
+
+interface MergeCounters {
+  created: number;
+  updated: number;
+  kept: number;
+  removed: number;
+}
+
+type MergeableItem = {
+  id: string;
+  updatedAt: string;
+  deletedAt?: string | null | undefined;
+};
+
+function mergeById<T extends MergeableItem>(
+  existing: T[],
+  incoming: T[]
+): { merged: T[]; counters: MergeCounters } {
+  const existingMap = new Map<string, T>();
+  for (const item of existing) existingMap.set(item.id, item);
+
+  const incomingMap = new Map<string, T>();
+  for (const item of incoming) incomingMap.set(item.id, item);
+
+  const result: T[] = [];
+  let created = 0;
+  let updated = 0;
+  let removed = 0;
+
+  for (const inc of incomingMap.values()) {
+    const ext = existingMap.get(inc.id);
+    if (!ext) {
+      result.push(inc);
+      created += 1;
+    } else if (inc.updatedAt > ext.updatedAt) {
+      result.push(inc);
+      updated += 1;
+      if (ext.deletedAt == null && inc.deletedAt != null) {
+        removed += 1;
+      }
+    } else {
+      result.push(ext);
+    }
+  }
+
+  let kept = 0;
+  for (const [id, ext] of existingMap) {
+    if (!incomingMap.has(id)) {
+      result.push(ext);
+      kept += 1;
+    }
+  }
+
+  return { merged: result, counters: { created, updated, kept, removed } };
+}
+
+function mergeByIdForceWinner<T extends { id: string }>(
+  existing: T[],
+  incoming: T[],
+  incomingWins: boolean
+): { merged: T[]; counters: MergeCounters } {
+  const existingMap = new Map<string, T>();
+  for (const item of existing) existingMap.set(item.id, item);
+
+  const incomingMap = new Map<string, T>();
+  for (const item of incoming) incomingMap.set(item.id, item);
+
+  const result: T[] = [];
+  let created = 0;
+  let updated = 0;
+
+  for (const inc of incomingMap.values()) {
+    const ext = existingMap.get(inc.id);
+    if (!ext) {
+      result.push(inc);
+      created += 1;
+    } else if (incomingWins) {
+      result.push(inc);
+      updated += 1;
+    } else {
+      result.push(ext);
+    }
+  }
+
+  let kept = 0;
+  for (const [id, ext] of existingMap) {
+    if (!incomingMap.has(id)) {
+      result.push(ext);
+      kept += 1;
+    }
+  }
+
+  return { merged: result, counters: { created, updated, kept, removed: 0 } };
+}
+
+function dedupById<T extends { id: string }>(arr: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const item of arr) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+function normalizeAtleta(a: Atleta): Atleta {
+  const now = new Date().toISOString();
+  return {
+    ...a,
+    id: a.id || crypto.randomUUID(),
+    createdAt: a.createdAt || now,
+    updatedAt: a.updatedAt || now,
+    nome: (a.nome || '').trim().toLowerCase(),
+    equipe: (a.equipe || '').trim().toLowerCase(),
+    deletedAt: a.deletedAt ?? null,
+  };
+}
+
+function normalizeArbitro(a: Arbitro): Arbitro {
+  const now = new Date().toISOString();
+  return {
+    ...a,
+    id: a.id || crypto.randomUUID(),
+    createdAt: a.createdAt || now,
+    updatedAt: a.updatedAt || now,
+    nome: (a.nome || '').trim().toLowerCase(),
+    equipe: (a.equipe || '').trim().toLowerCase(),
+    chaveIds: a.chaveIds ?? [],
+    deletedAt: a.deletedAt ?? null,
+  };
+}
+
+function normalizeArea(a: AreaLuta): AreaLuta {
+  const now = new Date().toISOString();
+  return {
+    ...a,
+    id: a.id || crypto.randomUUID(),
+    createdAt: a.createdAt || now,
+    updatedAt: a.updatedAt || now,
+    nome: (a.nome || '').trim(),
+    arbitroIds: Array.isArray(a.arbitroIds) ? a.arbitroIds.filter(Boolean) : [],
+    deletedAt: a.deletedAt ?? null,
+  };
 }
 
 export function registerTournamentHandlers(): void {
@@ -94,82 +244,98 @@ export function registerTournamentHandlers(): void {
     }
   });
 
-  ipcMain.handle('import-tournament', (_event, data: Torneio): { success: boolean; exists?: boolean } => {
-    ensureDirs();
-    if (!data.data) {
-      throw new Error('Estrutura inválida');
-    }
-    const atletas = data.atletas ?? [];
-    const atletasDedup: Atleta[] = [];
-    for (const a of atletas) {
-      const nomeLower = a.nome.trim().toLowerCase();
-      const exists = atletasDedup.some(
-        ex =>
-          (a.id && ex.id === a.id) ||
-          (ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento)
-      );
-      if (!exists) {
-        atletasDedup.push({
-          ...a,
-          id: a.id || crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          nome: nomeLower,
-          equipe: (a.equipe || '').trim().toLowerCase(),
-          deletedAt: null,
-        });
+  ipcMain.handle(
+    'import-tournament',
+    (
+      _event,
+      data: Torneio
+    ): { success: true; merged: boolean; created: number; updated: number; kept: number; removed: number } => {
+      ensureDirs();
+      if (!data.id || !data.data) {
+        throw new Error('Estrutura inválida');
       }
-    }
-    const torneio: Torneio = {
-      ...data,
-      id: data.id || crypto.randomUUID(),
-      atletas: atletasDedup,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    const dest = getTorneioPath(torneio.id);
-    if (fs.existsSync(dest)) {
-      return { success: false, exists: true };
-    }
-    fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), 'utf-8');
-    return { success: true };
-  });
 
-  ipcMain.handle('import-tournament-overwrite', (_event, data: Torneio): void => {
-    ensureDirs();
-    if (!data.id || !data.data) {
-      throw new Error('Estrutura inválida');
-    }
-    const atletas = data.atletas ?? [];
-    const atletasDedup: Atleta[] = [];
-    for (const a of atletas) {
-      const nomeLower = a.nome.trim().toLowerCase();
-      const exists = atletasDedup.some(
-        ex =>
-          (a.id && ex.id === a.id) ||
-          (ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento)
-      );
-      if (!exists) {
-        atletasDedup.push({
-          ...a,
-          id: a.id || crypto.randomUUID(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          nome: nomeLower,
-          equipe: (a.equipe || '').trim().toLowerCase(),
-          deletedAt: null,
-        });
+      const dest = getTorneioPath(data.id);
+      const now = new Date().toISOString();
+
+      const existing = fs.existsSync(dest)
+        ? (JSON.parse(fs.readFileSync(dest, 'utf-8')) as Torneio)
+        : null;
+
+      if (!existing) {
+        const torneio: Torneio = {
+          ...data,
+          createdAt: data.createdAt || now,
+          updatedAt: data.updatedAt || now,
+          atletas: dedupById((data.atletas ?? []).map(a => normalizeAtleta(a))),
+          arbitros: dedupById((data.arbitros ?? []).map(a => normalizeArbitro(a))),
+          areas: dedupById((data.areas ?? []).map(a => normalizeArea(a))),
+          chaves: dedupById(data.chaves ?? []),
+          lutasCasadas: dedupById(data.lutasCasadas ?? []),
+        };
+        fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), 'utf-8');
+        return { success: true, merged: false, created: 0, updated: 0, kept: 0, removed: 0 };
       }
+
+      const incomingAtletas = (data.atletas ?? []).map(a => normalizeAtleta(a));
+      const incomingArbitros = (data.arbitros ?? []).map(a => normalizeArbitro(a));
+      const incomingAreas = (data.areas ?? []).map(a => normalizeArea(a));
+      const incomingChaves = data.chaves ?? [];
+      const incomingLutasCasadas = data.lutasCasadas ?? [];
+
+      const incomingIsMoreRecent = data.updatedAt > existing.updatedAt;
+
+      const atletasMerge = mergeById<Atleta>(existing.atletas ?? [], incomingAtletas);
+      const arbitrosMerge = mergeById<Arbitro>(existing.arbitros ?? [], incomingArbitros);
+      const areasMerge = mergeById<AreaLuta>(existing.areas ?? [], incomingAreas);
+      const chavesMerge = mergeByIdForceWinner<Chave>(existing.chaves ?? [], incomingChaves, incomingIsMoreRecent);
+      const lutasCasadasMerge = mergeByIdForceWinner<LutaCasada>(existing.lutasCasadas ?? [], incomingLutasCasadas, incomingIsMoreRecent);
+
+      const counters: MergeCounters = {
+        created:
+          atletasMerge.counters.created +
+          arbitrosMerge.counters.created +
+          areasMerge.counters.created +
+          chavesMerge.counters.created +
+          lutasCasadasMerge.counters.created,
+        updated:
+          atletasMerge.counters.updated +
+          arbitrosMerge.counters.updated +
+          areasMerge.counters.updated +
+          chavesMerge.counters.updated +
+          lutasCasadasMerge.counters.updated,
+        kept:
+          atletasMerge.counters.kept +
+          arbitrosMerge.counters.kept +
+          areasMerge.counters.kept +
+          chavesMerge.counters.kept +
+          lutasCasadasMerge.counters.kept,
+        removed:
+          atletasMerge.counters.removed +
+          arbitrosMerge.counters.removed +
+          areasMerge.counters.removed +
+          chavesMerge.counters.removed +
+          lutasCasadasMerge.counters.removed,
+      };
+
+      const merged: Torneio = {
+        id: existing.id,
+        nome: incomingIsMoreRecent ? data.nome : existing.nome,
+        data: incomingIsMoreRecent ? data.data : existing.data,
+        createdAt: existing.createdAt,
+        updatedAt: data.updatedAt > existing.updatedAt ? data.updatedAt : existing.updatedAt,
+        startedAt: existing.startedAt ?? data.startedAt,
+        atletas: atletasMerge.merged,
+        arbitros: arbitrosMerge.merged,
+        areas: areasMerge.merged,
+        chaves: chavesMerge.merged,
+        lutasCasadas: lutasCasadasMerge.merged,
+      };
+
+      fs.writeFileSync(dest, JSON.stringify(merged, null, 2), 'utf-8');
+      return { success: true, merged: true, ...counters };
     }
-    const torneio: Torneio = {
-      ...data,
-      atletas: atletasDedup,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    const dest = getTorneioPath(torneio.id);
-    fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), 'utf-8');
-  });
+  );
 
   ipcMain.handle('update-tournament', (_event, data: Torneio): Torneio => {
     ensureDirs();

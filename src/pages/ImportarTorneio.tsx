@@ -1,5 +1,4 @@
-import { Title, Text, Button, Stack, Group, Paper, Modal } from '@mantine/core';
-import { useDisclosure } from '@mantine/hooks';
+import { Title, Text, Button, Stack, Group, Paper } from '@mantine/core';
 import { IconFileUpload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
@@ -7,13 +6,20 @@ import { useRef, useState } from 'react';
 import type { Torneio } from '../types/tournament';
 import { PageLayout } from '../components/PageLayout';
 
+type ImportTournamentResult = {
+  success: true;
+  merged: boolean;
+  created: number;
+  updated: number;
+  kept: number;
+  removed: number;
+};
+
 export function ImportarTorneio() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<Torneio | null>(null);
-  const [overwriteData, setOverwriteData] = useState<Torneio | null>(null);
-  const [opened, { open, close }] = useDisclosure(false);
 
   const resetFile = () => {
     setSelectedFile(null);
@@ -68,40 +74,28 @@ export function ImportarTorneio() {
     if (!parsedData) return;
 
     try {
-      const result = await window.electronAPI.importTournament(parsedData);
+      const result: ImportTournamentResult = await window.electronAPI.importTournament(parsedData);
 
-      if (result.exists) {
-        setOverwriteData(parsedData);
-        open();
-        return;
+      if (!result.merged) {
+        notifications.show({
+          title: 'Sucesso',
+          message: 'Torneio importado com sucesso!',
+          color: 'green',
+        });
+      } else {
+        notifications.show({
+          title: 'Sucesso',
+          message: `Torneio mesclado: ${result.created} adicionado(s), ${result.updated} atualizado(s), ${result.kept} mantido(s).`,
+          color: 'green',
+        });
+        if (result.removed > 0) {
+          notifications.show({
+            title: 'Atenção',
+            message: `${result.removed} item(ns) marcados como deletados (delete recente prevaleceu).`,
+            color: 'yellow',
+          });
+        }
       }
-
-      notifications.show({
-        title: 'Sucesso',
-        message: 'Torneio importado com sucesso!',
-        color: 'green',
-      });
-      navigate('/admin/listar-torneios');
-    } catch {
-      notifications.show({
-        title: 'Erro',
-        message: 'Erro ao importar o torneio.',
-        color: 'red',
-      });
-    }
-  };
-
-  const handleOverwrite = async () => {
-    if (!overwriteData) return;
-
-    try {
-      await window.electronAPI.importTournamentOverwrite(overwriteData);
-      close();
-      notifications.show({
-        title: 'Sucesso',
-        message: 'Torneio importado com sucesso!',
-        color: 'green',
-      });
       navigate('/admin/listar-torneios');
     } catch {
       notifications.show({
@@ -158,16 +152,6 @@ export function ImportarTorneio() {
           )}
         </Group>
       </Stack>
-
-      <Modal opened={opened} onClose={close} title="Sobrescrever Torneio" centered size="clamp(320px, 90vw, 480px)">
-        <Text size="sm" mb="md">
-          Já existe um torneio com este ID. Deseja sobrescrever o arquivo existente?
-        </Text>
-        <Group justify="flex-end">
-          <Button variant="outline" onClick={close}>Cancelar</Button>
-          <Button color="red" onClick={handleOverwrite}>Sobrescrever</Button>
-        </Group>
-      </Modal>
     </PageLayout>
   );
 }
