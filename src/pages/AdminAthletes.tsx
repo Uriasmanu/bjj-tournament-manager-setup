@@ -45,7 +45,8 @@ function formatDeletedAt(iso: string | null | undefined): string {
 }
 
 export function AdminAthletes() {
-  const [athletes, setAthletes] = useState<Atleta[]>([]);
+  const [activeAthletes, setActiveAthletes] = useState<Atleta[]>([]);
+  const [deletedAthletes, setDeletedAthletes] = useState<Atleta[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [selectedAthlete, setSelectedAthlete] = useState<Atleta | null>(null);
@@ -60,14 +61,20 @@ export function AdminAthletes() {
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
   const [permanentOpened, { open: openPermanent, close: closePermanent }] = useDisclosure(false);
 
-  const loadList = async () => {
-    setLoading(true);
+  const athletes = useMemo(
+    () => (showDeleted ? deletedAthletes : activeAthletes),
+    [showDeleted, activeAthletes, deletedAthletes]
+  );
+
+  const loadAll = async () => {
     setError(false);
     try {
-      const list = showDeleted
-        ? await window.electronAPI.loadDeletedAthletes()
-        : await window.electronAPI.loadAthletes();
-      setAthletes(list.sort((a, b) => a.nome.localeCompare(b.nome)));
+      const [active, deleted] = await Promise.all([
+        window.electronAPI.loadAthletes(),
+        window.electronAPI.loadDeletedAthletes(),
+      ]);
+      setActiveAthletes(active.sort((a, b) => a.nome.localeCompare(b.nome)));
+      setDeletedAthletes(deleted.sort((a, b) => a.nome.localeCompare(b.nome)));
       setSelectedIds([]);
     } catch {
       setError(true);
@@ -101,9 +108,8 @@ export function AdminAthletes() {
   }, [athletes]);
 
   useEffect(() => {
-    loadList();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showDeleted]);
+    loadAll();
+  }, []);
 
   const handleNew = () => {
     setSelectedAthlete(null);
@@ -122,9 +128,10 @@ export function AdminAthletes() {
 
   const handleRestore = async (athlete: Atleta) => {
     try {
-      await window.electronAPI.restoreAthlete(athlete.id);
+      const activeList = await window.electronAPI.restoreAthlete(athlete.id);
+      setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
+      setDeletedAthletes(prev => prev.filter(a => a.id !== athlete.id));
       notifications.show({ title: 'Sucesso', message: 'Atleta restaurado com sucesso!', color: 'green' });
-      await loadList();
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao restaurar o atleta.', color: 'red' });
     }
@@ -136,7 +143,7 @@ export function AdminAthletes() {
   };
 
   const handleSave = async (athlete: Atleta): Promise<boolean> => {
-    const duplicate = athletes.some(
+    const duplicate = activeAthletes.some(
       (a) =>
         a.id !== athlete.id &&
         a.nome.trim().toLowerCase() === athlete.nome.trim().toLowerCase() &&
@@ -148,13 +155,14 @@ export function AdminAthletes() {
     }
     try {
       if (selectedAthlete) {
-        await window.electronAPI.updateAthlete(athlete);
+        const activeList = await window.electronAPI.updateAthlete(athlete);
+        setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
         notifications.show({ title: 'Sucesso', message: 'Atleta atualizado com sucesso!', color: 'green' });
       } else {
-        await window.electronAPI.saveAthlete(athlete);
+        const activeList = await window.electronAPI.saveAthlete(athlete);
+        setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
         notifications.show({ title: 'Sucesso', message: 'Atleta cadastrado com sucesso!', color: 'green' });
       }
-      await loadList();
       return true;
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao salvar o atleta.', color: 'red' });
@@ -165,11 +173,16 @@ export function AdminAthletes() {
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
     try {
-      await window.electronAPI.deleteAthlete(deleteTarget.id);
+      const activeList = await window.electronAPI.deleteAthlete(deleteTarget.id);
+      setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
+      const now = new Date().toISOString();
+      setDeletedAthletes(prev => [
+        ...prev,
+        { ...deleteTarget, deletedAt: now, updatedAt: now },
+      ].sort((a, b) => a.nome.localeCompare(b.nome)));
       closeDelete();
       setDeleteTarget(null);
       notifications.show({ title: 'Sucesso', message: 'Atleta movido para os deletados.', color: 'green' });
-      await loadList();
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao excluir o atleta.', color: 'red' });
     }
@@ -178,11 +191,12 @@ export function AdminAthletes() {
   const handlePermanentConfirm = async () => {
     if (!permanentTarget) return;
     try {
-      await window.electronAPI.permanentlyDeleteAthlete(permanentTarget.id);
+      const activeList = await window.electronAPI.permanentlyDeleteAthlete(permanentTarget.id);
+      setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
+      setDeletedAthletes(prev => prev.filter(a => a.id !== permanentTarget.id));
       closePermanent();
       setPermanentTarget(null);
       notifications.show({ title: 'Sucesso', message: 'Atleta excluído permanentemente.', color: 'green' });
-      await loadList();
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao excluir permanentemente.', color: 'red' });
     }
@@ -191,11 +205,13 @@ export function AdminAthletes() {
   const handleBulkPermanent = async () => {
     if (selectedIds.length === 0) return;
     try {
-      await window.electronAPI.permanentlyDeleteAthletes(selectedIds);
+      const activeList = await window.electronAPI.permanentlyDeleteAthletes(selectedIds);
+      setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
+      const idSet = new Set(selectedIds);
+      setDeletedAthletes(prev => prev.filter(a => !idSet.has(a.id)));
       setBulkPermanentOpen(false);
       setSelectedIds([]);
       notifications.show({ title: 'Sucesso', message: `${selectedIds.length} atleta(s) excluído(s) permanentemente.`, color: 'green' });
-      await loadList();
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao excluir permanentemente.', color: 'red' });
     }
@@ -216,7 +232,7 @@ export function AdminAthletes() {
       if (result.imported === 0 && result.skipped === 0) return;
       const msg = `${result.imported} atleta(s) importado(s)${result.skipped > 0 ? `, ${result.skipped} ignorado(s) (já existentes)` : ''}.`;
       notifications.show({ title: 'Sucesso', message: msg, color: 'green' });
-      await loadList();
+      await loadAll();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao importar atletas.';
       notifications.show({ title: 'Erro ao importar', message: msg, color: 'red', autoClose: false });
@@ -252,7 +268,7 @@ export function AdminAthletes() {
       <Center py="xl" style={{ minHeight: '100vh' }}>
         <Stack align="center" gap="md">
           <Text c="red">Erro ao carregar atletas.</Text>
-          <Button onClick={loadList}>Tentar novamente</Button>
+          <Button onClick={loadAll}>Tentar novamente</Button>
         </Stack>
       </Center>
     );
@@ -266,137 +282,121 @@ export function AdminAthletes() {
           <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
             <div>
               <Text fw={800} size="xl" style={{ color: '#1b325f' }}>
-                {showDeleted ? 'Atletas Deletados' : 'Lista Oficial de Atletas'}
+                Lista Oficial de Atletas
               </Text>
               <Text size="sm" c="dimmed" mt={2}>
-                {showDeleted
-                  ? 'Restaurar ou excluir permanentemente atletas deletados.'
-                  : 'Gerencie inscrições, importe dados e controle os atletas.'}
+                Gerencie inscrições, importe dados e controle os atletas.
               </Text>
             </div>
             <Group gap="sm">
-              <Switch
-                checked={showDeleted}
-                onChange={(e) => setShowDeleted(e.currentTarget.checked)}
-                label="Mostrar apenas os deletados"
-                size="md"
-                color="red"
-                styles={{ label: { fontWeight: 600 } }}
-              />
-              {!showDeleted && (
-                <>
-                  <Button
-                    variant="default"
-                    leftSection={<IconFileUpload size={16} />}
-                    onClick={handleImport}
-                    styles={{ root: { borderRadius: 12 } }}
-                  >
-                    Importar
-                  </Button>
-                  <Button
-                    variant="default"
-                    leftSection={<IconFileCode size={16} />}
-                    onClick={handleExport}
-                    styles={{ root: { borderRadius: 12 } }}
-                  >
-                    Exportar JSON
-                  </Button>
-                  <Button
-                    leftSection={<IconPlus size={16} />}
-                    onClick={handleNew}
-                    styles={{
-                      root: {
-                        backgroundColor: '#1b325f',
-                        borderRadius: 12,
-                        '&:hover': { backgroundColor: '#3a89c9' },
-                      },
-                    }}
-                  >
-                    Cadastrar Atleta
-                  </Button>
-                </>
-              )}
+              <Button
+                variant="default"
+                leftSection={<IconFileUpload size={16} />}
+                onClick={handleImport}
+                styles={{ root: { borderRadius: 12 } }}
+              >
+                Importar
+              </Button>
+              <Button
+                variant="default"
+                leftSection={<IconFileCode size={16} />}
+                onClick={handleExport}
+                styles={{ root: { borderRadius: 12 } }}
+              >
+                Exportar JSON
+              </Button>
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={handleNew}
+                styles={{
+                  root: {
+                    backgroundColor: '#1b325f',
+                    borderRadius: 12,
+                    '&:hover': { backgroundColor: '#3a89c9' },
+                  },
+                }}
+              >
+                Cadastrar Atleta
+              </Button>
             </Group>
           </div>
 
-          {!showDeleted && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 3fr', gap: 24 }}>
+            <div
+              style={{
+                background: '#fff',
+                border: '1px solid rgba(0,0,0,0.06)',
+                borderRadius: 16,
+                padding: 24,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div>
+                <Text size="xs" fw={700} tt="uppercase" style={{ color: 'rgba(27,50,95,0.5)', letterSpacing: 1 }}>
+                  Inscritos
+                </Text>
+                <Text fw={900} size="2.5rem" style={{ color: '#1b325f', lineHeight: 1.1, marginTop: 4 }}>
+                  {athletes.length}
+                </Text>
+                <Text size="xs" fw={600} style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                  <IconUsers size={12} /> Prontos para combate
+                </Text>
+              </div>
               <div
                 style={{
-                  background: '#fff',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  borderRadius: 16,
-                  padding: 24,
+                  width: 56,
+                  height: 56,
+                  borderRadius: '50%',
+                  background: '#e9f2f9',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  justifyContent: 'center',
                 }}
               >
-                <div>
-                  <Text size="xs" fw={700} tt="uppercase" style={{ color: 'rgba(27,50,95,0.5)', letterSpacing: 1 }}>
-                    Inscritos
-                  </Text>
-                  <Text fw={900} size="2.5rem" style={{ color: '#1b325f', lineHeight: 1.1, marginTop: 4 }}>
-                    {athletes.length}
-                  </Text>
-                  <Text size="xs" fw={600} style={{ color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
-                    <IconUsers size={12} /> Prontos para combate
-                  </Text>
-                </div>
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: '50%',
-                    background: '#e9f2f9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <IconUsers size={24} color="#1b325f" />
-                </div>
-              </div>
-
-              <div
-                style={{
-                  background: '#fff',
-                  border: '1px solid rgba(0,0,0,0.06)',
-                  borderRadius: 16,
-                  padding: 24,
-                }}
-              >
-                <Text fw={700} size="sm" style={{ color: '#1b325f', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <IconTrophy size={16} /> Graduações (Faixas)
-                </Text>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-                  {faixaOrder.map((faixa) => {
-                    const count = faixaCounts[faixa] || 0;
-                    return (
-                      <div
-                        key={faixa}
-                        style={{
-                          padding: 8,
-                          border: `1px solid ${count > 0 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.04)'}`,
-                          borderRadius: 12,
-                          textAlign: 'center',
-                          opacity: count > 0 ? 1 : 0.4,
-                          background: count > 0 ? '#f8fafd' : 'transparent',
-                        }}
-                      >
-                        <Text size="xs" fw={600} style={{ color: 'rgba(27,50,95,0.5)' }}>
-                          {faixaLabels[faixa].toUpperCase()}
-                        </Text>
-                        <Text fw={900} size="lg" style={{ color: '#1b325f', marginTop: 2 }}>
-                          {count}
-                        </Text>
-                      </div>
-                    );
-                  })}
-                </div>
+                <IconUsers size={24} color="#1b325f" />
               </div>
             </div>
-          )}
+
+            <div
+              style={{
+                background: '#fff',
+                border: '1px solid rgba(0,0,0,0.06)',
+                borderRadius: 16,
+                padding: 24,
+              }}
+            >
+              <Text fw={700} size="sm" style={{ color: '#1b325f', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IconTrophy size={16} /> Graduações (Faixas)
+              </Text>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+                {faixaOrder.map((faixa) => {
+                  const count = faixaCounts[faixa] || 0;
+                  return (
+                    <div
+                      key={faixa}
+                      style={{
+                        padding: 8,
+                        border: `1px solid ${count > 0 ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.04)'}`,
+                        borderRadius: 12,
+                        textAlign: 'center',
+                        opacity: count > 0 ? 1 : 0.4,
+                        background: count > 0 ? '#f8fafd' : 'transparent',
+                      }}
+                    >
+                      <Text size="xs" fw={600} style={{ color: 'rgba(27,50,95,0.5)' }}>
+                        {faixaLabels[faixa].toUpperCase()}
+                      </Text>
+                      <Text fw={900} size="lg" style={{ color: '#1b325f', marginTop: 2 }}>
+                        {count}
+                      </Text>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Search + Filter */}
@@ -430,6 +430,13 @@ export function AdminAthletes() {
               style={{ width: 180 }}
             />
           )}
+          <Switch
+            checked={showDeleted}
+            onChange={(e) => setShowDeleted(e.currentTarget.checked)}
+            label="Mostrar apenas os deletados"
+            size="md"
+            styles={{ label: { fontWeight: 600 } }}
+          />
         </div>
 
         {/* Table */}
