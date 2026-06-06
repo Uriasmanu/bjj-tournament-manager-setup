@@ -13,12 +13,14 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Em area de luta e arbitro tem que manter o cabeçalho quando troca a visualização para os deletados
----
-
-
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
+
+### [corrigido] Em area de luta e arbitro tem que manter o cabeçalho quando troca a visualização para os deletados
+**Comportamento atual:** os botões `Importar`, `Exportar JSON` e `Cadastrar` de `AdminAreas` e os botões `Exportar`, `Importar` e `Cadastrar` de `AdminArbitros` estavam envoltos por `{!showDeleted && (...)}`, fazendo com que somissem ao ativar o `Switch` `Mostrar apenas os deletados`. O `Switch` também usava `color="red"`, divergindo do padrão de `AdminAthletes` (azul padrão do tema).
+**Comportamento esperado:** o cabeçalho (botões de ação + barra de busca) deve permanecer visível em ambos os estados do toggle, alinhando com a tela `AdminAthletes`. O `Switch` deve usar a cor padrão do tema.
+**Escopo:** `src/pages/AdminAreas.tsx` (cabeçalho) e `src/pages/AdminArbitros.tsx` (cabeçalho).
+**Correção aplicada:** removido o wrapper `{!showDeleted && (...)}` em torno dos botões de ação nos dois arquivos; removida a prop `color="red"` do `Switch`. Botões passam a renderizar incondicionalmente, assim como em `AdminAthletes.tsx:291-322`. Spec detalhada em `spec/cabecalho-persistente-area-arbitro.md`. Sem alterações em handlers, IPC, tipos ou persistência. Validado com `npx tsc --noEmit` (sem erros) e `npm run lint` (sem novos erros — 3 erros pré-existentes em `PageLayout.tsx` e `PlacarBracket.tsx` permanecem inalterados).
 
 ## Feature
 

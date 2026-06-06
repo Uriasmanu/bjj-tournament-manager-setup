@@ -259,24 +259,19 @@ export function AdminArbitros() {
             onChange={(e) => setShowDeleted(e.currentTarget.checked)}
             label="Mostrar apenas os deletados"
             size="md"
-            color="red"
             styles={{ label: { fontWeight: 600 } }}
           />
         </Group>
         <Group>
-          {!showDeleted && (
-            <>
-              <Button variant="outline" leftSection={<IconDownload size={16} />} onClick={handleExport}>
-                Exportar
-              </Button>
-              <Button variant="outline" leftSection={<IconFileUpload size={16} />} onClick={handleImport}>
-                Importar
-              </Button>
-              <Button leftSection={<IconPlus size={16} />} onClick={handleNew}>
-                Cadastrar
-              </Button>
-            </>
-          )}
+          <Button variant="outline" leftSection={<IconDownload size={16} />} onClick={handleExport}>
+            Exportar
+          </Button>
+          <Button variant="outline" leftSection={<IconFileUpload size={16} />} onClick={handleImport}>
+            Importar
+          </Button>
+          <Button leftSection={<IconPlus size={16} />} onClick={handleNew}>
+            Cadastrar
+          </Button>
         </Group>
         <Group>
           <TextInput

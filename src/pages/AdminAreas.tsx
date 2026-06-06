@@ -255,36 +255,31 @@ export function AdminAreas() {
             onChange={(e) => setShowDeleted(e.currentTarget.checked)}
             label="Mostrar apenas os deletados"
             size="md"
-            color="red"
             styles={{ label: { fontWeight: 600 } }}
           />
         </Group>
         <Group>
-          {!showDeleted && (
-            <>
-              <Button
-                variant="default"
-                leftSection={<IconFileUpload size={16} />}
-                onClick={handleImport}
-                styles={{ root: { borderRadius: 12 } }}
-                aria-label="Importar áreas de luta"
-              >
-                Importar
-              </Button>
-              <Button
-                variant="default"
-                leftSection={<IconFileCode size={16} />}
-                onClick={handleExport}
-                styles={{ root: { borderRadius: 12 } }}
-                aria-label="Exportar áreas de luta em JSON"
-              >
-                Exportar JSON
-              </Button>
-              <Button leftSection={<IconPlus size={16} />} onClick={handleNew}>
-                Cadastrar
-              </Button>
-            </>
-          )}
+          <Button
+            variant="default"
+            leftSection={<IconFileUpload size={16} />}
+            onClick={handleImport}
+            styles={{ root: { borderRadius: 12 } }}
+            aria-label="Importar áreas de luta"
+          >
+            Importar
+          </Button>
+          <Button
+            variant="default"
+            leftSection={<IconFileCode size={16} />}
+            onClick={handleExport}
+            styles={{ root: { borderRadius: 12 } }}
+            aria-label="Exportar áreas de luta em JSON"
+          >
+            Exportar JSON
+          </Button>
+          <Button leftSection={<IconPlus size={16} />} onClick={handleNew}>
+            Cadastrar
+          </Button>
         </Group>
         <Group>
           <TextInput
