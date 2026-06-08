@@ -13,7 +13,6 @@ import {
   SimpleGrid,
   Button,
   Divider,
-  Collapse,
   UnstyledButton,
   TextInput,
   ActionIcon,
@@ -723,9 +722,9 @@ export function Resultados() {
                             </Group>
                           </Group>
                         </UnstyledButton>
-                        <Collapse in={isExpanded}>
+                        {isExpanded && (
                           <Stack gap="xs" id={`chave-body-${chave.id}`}>
-                            {isExpanded && <Divider />}
+                            <Divider />
                             {chave.lutas
                               .slice()
                               .sort((a, b) => a.ordem - b.ordem)
@@ -762,7 +761,7 @@ export function Resultados() {
                                 );
                               })}
                           </Stack>
-                        </Collapse>
+                        )}
                       </Stack>
                     </Card>
                   );
