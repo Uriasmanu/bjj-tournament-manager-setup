@@ -413,10 +413,8 @@ export function Resultados() {
       });
     });
     return list.slice().sort((a, b) => {
-      const aEncerrado = getChaveStatus(a).label === 'ENCERRADO';
-      const bEncerrado = getChaveStatus(b).label === 'ENCERRADO';
-      if (aEncerrado !== bEncerrado) return aEncerrado ? -1 : 1;
-      return 0;
+      const order: Record<string, number> = { 'ENCERRADO': 0, 'EM ANDAMENTO': 1, 'PENDENTE': 2 };
+      return order[getChaveStatus(a).label] - order[getChaveStatus(b).label];
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaves, buscaChaves, atletas]);

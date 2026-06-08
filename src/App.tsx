@@ -28,33 +28,37 @@ import { Resultados } from './pages/Resultados';
 import { AdminLutasCasadas } from './pages/AdminLutasCasadas';
 import { ActivationScreen } from './components/ActivationScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { TournamentModeProvider } from './utils/TournamentModeContext';
+import { AreaGuard } from './components/AreaGuard';
 
 function MainApp() {
   return (
     <HashRouter>
       <ErrorBoundary>
+        <TournamentModeProvider>
         <Routes>
           <Route path="/" element={<MenuInicial />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
-          <Route path="/admin/criar-torneio" element={<CriarTorneio />} />
-          <Route path="/admin/importar-torneio" element={<ImportarTorneio />} />
-          <Route path="/admin/listar-torneios" element={<ListarTorneios />} />
-          <Route path="/admin/atletas" element={<AthletesMenu />} />
-          <Route path="/admin/atletas/lista" element={<AdminAthletes />} />
-          <Route path="/admin/arbitros" element={<ArbitrosMenu />} />
-          <Route path="/admin/arbitros/lista" element={<AdminArbitros />} />
-          <Route path="/admin/equipes" element={<Equipes />} />
-          <Route path="/admin/categorias/chaves" element={<GerenciarChaves />} />
-          <Route path="/admin/areas" element={<AreasMenu />} />
-          <Route path="/admin/areas/lista" element={<AdminAreas />} />
           <Route path="/admin/placar" element={<PlacarMenu />} />
           <Route path="/admin/placar/chaves/:areaId" element={<PlacarChaves />} />
           <Route path="/admin/placar/chave/:areaId/:chaveId" element={<PlacarBracket />} />
           <Route path="/admin/placar/luta/:areaId/:chaveId/:lutaId" element={<PlacarLuta />} />
           <Route path="/admin/placar/luta-casada/:areaId/:lutaCasadaId" element={<PlacarLutaCasada />} />
           <Route path="/admin/resultados" element={<Resultados />} />
-          <Route path="/admin/lutas-casadas" element={<AdminLutasCasadas />} />
+          <Route path="/admin/criar-torneio" element={<AreaGuard><CriarTorneio /></AreaGuard>} />
+          <Route path="/admin/importar-torneio" element={<AreaGuard><ImportarTorneio /></AreaGuard>} />
+          <Route path="/admin/listar-torneios" element={<AreaGuard><ListarTorneios /></AreaGuard>} />
+          <Route path="/admin/atletas" element={<AreaGuard><AthletesMenu /></AreaGuard>} />
+          <Route path="/admin/atletas/lista" element={<AreaGuard><AdminAthletes /></AreaGuard>} />
+          <Route path="/admin/arbitros" element={<AreaGuard><ArbitrosMenu /></AreaGuard>} />
+          <Route path="/admin/arbitros/lista" element={<AreaGuard><AdminArbitros /></AreaGuard>} />
+          <Route path="/admin/equipes" element={<AreaGuard><Equipes /></AreaGuard>} />
+          <Route path="/admin/categorias/chaves" element={<AreaGuard><GerenciarChaves /></AreaGuard>} />
+          <Route path="/admin/areas" element={<AreaGuard><AreasMenu /></AreaGuard>} />
+          <Route path="/admin/areas/lista" element={<AreaGuard><AdminAreas /></AreaGuard>} />
+          <Route path="/admin/lutas-casadas" element={<AreaGuard><AdminLutasCasadas /></AreaGuard>} />
         </Routes>
+        </TournamentModeProvider>
       </ErrorBoundary>
     </HashRouter>
   )

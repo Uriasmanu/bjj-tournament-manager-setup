@@ -56,35 +56,6 @@ function mergeById(existing, incoming) {
   }
   return { merged: result, counters: { created, updated, kept, removed } };
 }
-function mergeByIdForceWinner(existing, incoming, incomingWins) {
-  const existingMap = /* @__PURE__ */ new Map();
-  for (const item of existing) existingMap.set(item.id, item);
-  const incomingMap = /* @__PURE__ */ new Map();
-  for (const item of incoming) incomingMap.set(item.id, item);
-  const result = [];
-  let created = 0;
-  let updated = 0;
-  for (const inc of incomingMap.values()) {
-    const ext = existingMap.get(inc.id);
-    if (!ext) {
-      result.push(inc);
-      created += 1;
-    } else if (incomingWins) {
-      result.push(inc);
-      updated += 1;
-    } else {
-      result.push(ext);
-    }
-  }
-  let kept = 0;
-  for (const [id, ext] of existingMap) {
-    if (!incomingMap.has(id)) {
-      result.push(ext);
-      kept += 1;
-    }
-  }
-  return { merged: result, counters: { created, updated, kept, removed: 0 } };
-}
 function dedupById(arr) {
   const seen = /* @__PURE__ */ new Set();
   const result = [];
@@ -155,10 +126,10 @@ function registerTournamentHandlers() {
       return JSON.parse(content);
     });
   });
-  ipcMain.handle("start-tournament", (_event, id) => {
+  ipcMain.handle("start-tournament", (_event, payload) => {
     ensureDirs();
-    fs.writeFileSync(ATIVO_FILE, JSON.stringify({ id }), "utf-8");
-    const filePath = getTorneioPath$5(id);
+    fs.writeFileSync(ATIVO_FILE, JSON.stringify({ id: payload.id, mode: payload.mode }), "utf-8");
+    const filePath = getTorneioPath$5(payload.id);
     if (fs.existsSync(filePath)) {
       const torneio = JSON.parse(fs.readFileSync(filePath, "utf-8"));
       torneio.startedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -167,6 +138,16 @@ function registerTournamentHandlers() {
       return torneio;
     }
     throw new Error("Torneio não encontrado");
+  });
+  ipcMain.handle("get-tournament-mode", () => {
+    ensureDirs();
+    if (!fs.existsSync(ATIVO_FILE)) return null;
+    try {
+      const data = JSON.parse(fs.readFileSync(ATIVO_FILE, "utf-8"));
+      return data.mode ?? "admin";
+    } catch {
+      return null;
+    }
   });
   ipcMain.handle("get-active-tournament", () => {
     ensureDirs();
@@ -224,8 +205,8 @@ function registerTournamentHandlers() {
       const atletasMerge = mergeById(existing.atletas ?? [], incomingAtletas);
       const arbitrosMerge = mergeById(existing.arbitros ?? [], incomingArbitros);
       const areasMerge = mergeById(existing.areas ?? [], incomingAreas);
-      const chavesMerge = mergeByIdForceWinner(existing.chaves ?? [], incomingChaves, incomingIsMoreRecent);
-      const lutasCasadasMerge = mergeByIdForceWinner(existing.lutasCasadas ?? [], incomingLutasCasadas, incomingIsMoreRecent);
+      const chavesMerge = mergeById(existing.chaves ?? [], incomingChaves);
+      const lutasCasadasMerge = mergeById(existing.lutasCasadas ?? [], incomingLutasCasadas);
       const counters = {
         created: atletasMerge.counters.created + arbitrosMerge.counters.created + areasMerge.counters.created + chavesMerge.counters.created + lutasCasadasMerge.counters.created,
         updated: atletasMerge.counters.updated + arbitrosMerge.counters.updated + areasMerge.counters.updated + chavesMerge.counters.updated + lutasCasadasMerge.counters.updated,
@@ -1119,7 +1100,7 @@ function aplicarSeedSorting16(atletas) {
 }
 const TBD = "tbd";
 function criarLuta(ordem, rodada, atletaAId, atletaBId) {
-  return { id: crypto.randomUUID(), ordem, rodada, atletaAId, atletaBId, status: "pending", vencedorId: null };
+  return { id: crypto.randomUUID(), ordem, rodada, atletaAId, atletaBId, status: "pending", vencedorId: null, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
 }
 function gerarLutasDois(posicoes) {
   return [criarLuta(1, 1, posicoes[0].id, posicoes[1].id)];
@@ -1520,7 +1501,8 @@ function gerarChave(categoriaId, atletas) {
     totalAtletas: posicoes.length,
     totalLutas: lutas.length,
     totalRodadas: getTotalRodadas(posicoes.length),
-    status: "gerada"
+    status: "gerada",
+    updatedAt: (/* @__PURE__ */ new Date()).toISOString()
   };
 }
 function autoAtribuirArbitros(torneio) {
@@ -1679,6 +1661,7 @@ function randomizarChaveHandler(torneioId, data) {
     chave.posicoesAtletas = atletas.map((a) => a.id);
   }
   chave.lutas = gerarLutas(atletas);
+  chave.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   chaves[index] = chave;
   torneio.chaves = chaves;
   for (const a of torneio.atletas ?? []) {
@@ -1712,6 +1695,7 @@ function atribuirArbitroHandler(torneioId, data) {
     }
   }
   chave.arbitroId = data.arbitroId;
+  chave.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   chaves[chaveIndex] = chave;
   torneio.chaves = chaves;
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -1732,13 +1716,20 @@ function importChavesFromFile(torneioId, filePath) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de chaves.");
   }
   const torneio = loadTorneio$1(torneioId);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
   const chaves = incoming.map((c) => {
     if (!c.categoriaId || !Array.isArray(c.lutas)) {
       throw new Error("Estrutura de chave inválida no arquivo.");
     }
+    const lutas = c.lutas.map((l) => ({
+      ...l,
+      updatedAt: l.updatedAt ?? now
+    }));
     return {
       ...c,
-      id: c.id || crypto.randomUUID()
+      id: c.id || crypto.randomUUID(),
+      lutas,
+      updatedAt: c.updatedAt ?? now
     };
   });
   torneio.chaves = chaves;
@@ -1783,7 +1774,8 @@ function normalizeLuta(luta) {
     desclassificadoId: luta.desclassificadoId ?? void 0,
     desempateArbitro: luta.desempateArbitro ?? void 0,
     horarioInicio: luta.horarioInicio ?? void 0,
-    horarioTermino: luta.horarioTermino ?? void 0
+    horarioTermino: luta.horarioTermino ?? void 0,
+    updatedAt: luta.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
   };
 }
 function normalizeChave(chave) {
@@ -1797,7 +1789,8 @@ function normalizeChave(chave) {
     totalAtletas: chave.totalAtletas ?? 0,
     totalLutas: chave.totalLutas ?? 0,
     totalRodadas: chave.totalRodadas ?? (lutas.length > 0 ? Math.max(...lutas.map((l) => l.rodada)) : 1),
-    status: chave.status ?? "gerada"
+    status: chave.status ?? "gerada",
+    updatedAt: chave.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
   };
 }
 function loadChavesPorAreaHandler(torneioId, areaId) {
@@ -1815,12 +1808,14 @@ function clearWinnerFromLaterRounds(chave, rodada, atletaId) {
       l.atletaAId = "tbd";
       l.vencedorId = null;
       if (l.status === "completed" || l.status === "wo") l.status = "pending";
+      l.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
       clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
     }
     if (l.atletaBId === atletaId) {
       l.atletaBId = "tbd";
       l.vencedorId = null;
       if (l.status === "completed" || l.status === "wo") l.status = "pending";
+      l.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
       clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
     }
   }
@@ -2220,6 +2215,7 @@ function registrarResultadoHandler(torneioId, data) {
   luta.desempateArbitro = data.desempateArbitro ?? false;
   luta.horarioInicio = data.horarioInicio ?? luta.horarioInicio;
   luta.horarioTermino = data.horarioTermino ?? luta.horarioTermino;
+  luta.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   if (data.desclassificacao && luta.vencedorId) {
     luta.desclassificadoId = luta.atletaAId === luta.vencedorId ? luta.atletaBId : luta.atletaAId;
   } else {
@@ -2282,9 +2278,14 @@ function registrarResultadoHandler(torneioId, data) {
   } else {
     advanceWinnerInChave(chave, luta);
   }
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  for (const l of chave.lutas) {
+    l.updatedAt = now;
+  }
+  chave.updatedAt = now;
   chaves[chaveIndex] = chave;
   torneio.chaves = chaves;
-  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  torneio.updatedAt = now;
   saveTorneio$1(torneio);
   return chave;
 }

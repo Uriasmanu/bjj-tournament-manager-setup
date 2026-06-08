@@ -87,45 +87,6 @@ function mergeById<T extends MergeableItem>(
   return { merged: result, counters: { created, updated, kept, removed } };
 }
 
-function mergeByIdForceWinner<T extends { id: string }>(
-  existing: T[],
-  incoming: T[],
-  incomingWins: boolean
-): { merged: T[]; counters: MergeCounters } {
-  const existingMap = new Map<string, T>();
-  for (const item of existing) existingMap.set(item.id, item);
-
-  const incomingMap = new Map<string, T>();
-  for (const item of incoming) incomingMap.set(item.id, item);
-
-  const result: T[] = [];
-  let created = 0;
-  let updated = 0;
-
-  for (const inc of incomingMap.values()) {
-    const ext = existingMap.get(inc.id);
-    if (!ext) {
-      result.push(inc);
-      created += 1;
-    } else if (incomingWins) {
-      result.push(inc);
-      updated += 1;
-    } else {
-      result.push(ext);
-    }
-  }
-
-  let kept = 0;
-  for (const [id, ext] of existingMap) {
-    if (!incomingMap.has(id)) {
-      result.push(ext);
-      kept += 1;
-    }
-  }
-
-  return { merged: result, counters: { created, updated, kept, removed: 0 } };
-}
-
 function dedupById<T extends { id: string }>(arr: T[]): T[] {
   const seen = new Set<string>();
   const result: T[] = [];
@@ -202,10 +163,10 @@ export function registerTournamentHandlers(): void {
     });
   });
 
-  ipcMain.handle('start-tournament', (_event, id: string): Torneio => {
+  ipcMain.handle('start-tournament', (_event, payload: { id: string; mode: 'admin' | 'area' }): Torneio => {
     ensureDirs();
-    fs.writeFileSync(ATIVO_FILE, JSON.stringify({ id }), 'utf-8');
-    const filePath = getTorneioPath(id);
+    fs.writeFileSync(ATIVO_FILE, JSON.stringify({ id: payload.id, mode: payload.mode }), 'utf-8');
+    const filePath = getTorneioPath(payload.id);
     if (fs.existsSync(filePath)) {
       const torneio = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Torneio;
       torneio.startedAt = new Date().toISOString();
@@ -214,6 +175,17 @@ export function registerTournamentHandlers(): void {
       return torneio;
     }
     throw new Error('Torneio não encontrado');
+  });
+
+  ipcMain.handle('get-tournament-mode', (): 'admin' | 'area' | null => {
+    ensureDirs();
+    if (!fs.existsSync(ATIVO_FILE)) return null;
+    try {
+      const data = JSON.parse(fs.readFileSync(ATIVO_FILE, 'utf-8'));
+      return data.mode ?? 'admin';
+    } catch {
+      return null;
+    }
   });
 
   ipcMain.handle('get-active-tournament', (): Torneio | null => {
@@ -288,8 +260,8 @@ export function registerTournamentHandlers(): void {
       const atletasMerge = mergeById<Atleta>(existing.atletas ?? [], incomingAtletas);
       const arbitrosMerge = mergeById<Arbitro>(existing.arbitros ?? [], incomingArbitros);
       const areasMerge = mergeById<AreaLuta>(existing.areas ?? [], incomingAreas);
-      const chavesMerge = mergeByIdForceWinner<Chave>(existing.chaves ?? [], incomingChaves, incomingIsMoreRecent);
-      const lutasCasadasMerge = mergeByIdForceWinner<LutaCasada>(existing.lutasCasadas ?? [], incomingLutasCasadas, incomingIsMoreRecent);
+      const chavesMerge = mergeById<Chave>(existing.chaves ?? [], incomingChaves);
+      const lutasCasadasMerge = mergeById<LutaCasada>(existing.lutasCasadas ?? [], incomingLutasCasadas);
 
       const counters: MergeCounters = {
         created:

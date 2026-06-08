@@ -101,7 +101,7 @@ function aplicarSeedSorting16(atletas: Atleta[]): Atleta[] {
 const TBD = 'tbd';
 
 function criarLuta(ordem: number, rodada: number, atletaAId: string, atletaBId: string): Luta {
-  return { id: crypto.randomUUID(), ordem, rodada, atletaAId, atletaBId, status: 'pending', vencedorId: null };
+  return { id: crypto.randomUUID(), ordem, rodada, atletaAId, atletaBId, status: 'pending', vencedorId: null, updatedAt: new Date().toISOString() };
 }
 
 function gerarLutasDois(posicoes: Atleta[]): Luta[] {
@@ -637,6 +637,7 @@ function gerarChave(categoriaId: string, atletas: Atleta[]): Chave {
     totalLutas: lutas.length,
     totalRodadas: getTotalRodadas(posicoes.length),
     status: 'gerada',
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -839,6 +840,7 @@ function randomizarChaveHandler(torneioId: string, data: { chaveId: string }): C
     chave.posicoesAtletas = atletas.map(a => a.id);
   }
   chave.lutas = gerarLutas(atletas);
+  chave.updatedAt = new Date().toISOString();
 
   chaves[index] = chave;
   torneio.chaves = chaves;
@@ -885,6 +887,7 @@ function atribuirArbitroHandler(
   }
 
   chave.arbitroId = data.arbitroId;
+  chave.updatedAt = new Date().toISOString();
   chaves[chaveIndex] = chave;
   torneio.chaves = chaves;
   torneio.updatedAt = new Date().toISOString();
@@ -910,13 +913,20 @@ function importChavesFromFile(torneioId: string, filePath: string): { imported: 
   }
 
   const torneio = loadTorneio(torneioId);
+  const now = new Date().toISOString();
   const chaves: Chave[] = (incoming as Record<string, unknown>[]).map((c) => {
     if (!c.categoriaId || !Array.isArray(c.lutas)) {
       throw new Error('Estrutura de chave inválida no arquivo.');
     }
+    const lutas = (c.lutas as Record<string, unknown>[]).map(l => ({
+      ...l,
+      updatedAt: (l.updatedAt as string) ?? now,
+    }));
     return {
       ...c,
       id: (c.id as string) || crypto.randomUUID(),
+      lutas,
+      updatedAt: (c.updatedAt as string) ?? now,
     } as Chave;
   });
   torneio.chaves = chaves;
@@ -970,6 +980,7 @@ function normalizeLuta(luta: Record<string, unknown>): Luta {
     desempateArbitro: (luta.desempateArbitro as boolean) ?? undefined,
     horarioInicio: (luta.horarioInicio as string | undefined) ?? undefined,
     horarioTermino: (luta.horarioTermino as string | undefined) ?? undefined,
+    updatedAt: (luta.updatedAt as string) ?? new Date().toISOString(),
   };
 }
 
@@ -985,6 +996,7 @@ function normalizeChave(chave: Record<string, unknown>): Chave {
     totalLutas: (chave.totalLutas as number) ?? 0,
     totalRodadas: (chave.totalRodadas as number) ?? (lutas.length > 0 ? Math.max(...lutas.map(l => l.rodada)) : 1),
     status: (chave.status as Chave['status']) ?? 'gerada',
+    updatedAt: (chave.updatedAt as string) ?? new Date().toISOString(),
   };
 }
 
@@ -1006,12 +1018,14 @@ function clearWinnerFromLaterRounds(chave: Chave, rodada: number, atletaId: stri
       l.atletaAId = 'tbd';
       l.vencedorId = null;
       if (l.status === 'completed' || l.status === 'wo') l.status = 'pending';
+      l.updatedAt = new Date().toISOString();
       clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
     }
     if (l.atletaBId === atletaId) {
       l.atletaBId = 'tbd';
       l.vencedorId = null;
       if (l.status === 'completed' || l.status === 'wo') l.status = 'pending';
+      l.updatedAt = new Date().toISOString();
       clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
     }
   }
@@ -1482,6 +1496,7 @@ function registrarResultadoHandler(
   luta.desempateArbitro = data.desempateArbitro ?? false;
   luta.horarioInicio = data.horarioInicio ?? luta.horarioInicio;
   luta.horarioTermino = data.horarioTermino ?? luta.horarioTermino;
+  luta.updatedAt = new Date().toISOString();
 
   // Compute which athlete was disqualified (the one who is NOT the winner)
   if (data.desclassificacao && luta.vencedorId) {
@@ -1551,9 +1566,14 @@ function registrarResultadoHandler(
     advanceWinnerInChave(chave, luta);
   }
 
+  const now = new Date().toISOString();
+  for (const l of chave.lutas) {
+    l.updatedAt = now;
+  }
+  chave.updatedAt = now;
   chaves[chaveIndex] = chave;
   torneio.chaves = chaves;
-  torneio.updatedAt = new Date().toISOString();
+  torneio.updatedAt = now;
   saveTorneio(torneio);
 
   return chave;

@@ -3,7 +3,8 @@ const electron = require("electron");
 electron.contextBridge.exposeInMainWorld("electronAPI", {
   createTournament: (data) => electron.ipcRenderer.invoke("create-tournament", data),
   listTournaments: () => electron.ipcRenderer.invoke("list-tournaments"),
-  startTournament: (id) => electron.ipcRenderer.invoke("start-tournament", id),
+  startTournament: (id, mode) => electron.ipcRenderer.invoke("start-tournament", { id, mode }),
+  getTournamentMode: () => electron.ipcRenderer.invoke("get-tournament-mode"),
   exportTournament: (id) => electron.ipcRenderer.invoke("export-tournament", id),
   importTournament: (data) => electron.ipcRenderer.invoke("import-tournament", data),
   getActiveTournament: () => electron.ipcRenderer.invoke("get-active-tournament"),

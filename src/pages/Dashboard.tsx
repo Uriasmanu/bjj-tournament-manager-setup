@@ -12,6 +12,7 @@ import {
 } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import type { Torneio } from '../types/tournament';
+import { useTournamentMode } from '../utils/TournamentModeContext';
 
 interface NavItem {
   label: string;
@@ -55,12 +56,16 @@ const dashboardCards: DashboardCard[] = [
   { label: 'Placar', description: 'Acompanhamento de lutas e controle de pontos/penalidades ativo.', icon: IconStopwatch, route: '/admin/placar', status: 'implemented', iconBg: '#f26c4f', iconColor: '#f26c4f', footerLabel: 'Ao Vivo', badge: { label: 'Ao Vivo', color: '#f26c4f' } },
 ];
 
-function SidebarNav({ activeRoute, onNavigate }: { activeRoute: string; onNavigate: (r: string) => void }) {
+const AREA_ALLOWED_ROUTES = new Set(['/admin/dashboard', '/admin/resultados', '/admin/placar']);
+
+function SidebarNav({ activeRoute, onNavigate, isAreaMode }: { activeRoute: string; onNavigate: (r: string) => void; isAreaMode?: boolean }) {
   const sectionLabels: Record<string, string> = {
     painel: 'Painel',
     gestao: 'Gestão e Dados',
     combate: 'Combate e Placar',
   };
+
+  const visibleItems = isAreaMode ? navItems.filter(i => AREA_ALLOWED_ROUTES.has(i.route)) : navItems;
 
   return (
     <Box
@@ -103,7 +108,7 @@ function SidebarNav({ activeRoute, onNavigate }: { activeRoute: string; onNaviga
           <Text size="xs" fw={600} tt="uppercase" lts="1px" px="sm" mb="xs" style={{ color: '#9cc4e4' }}>
             {sectionLabels[sectionKey]}
           </Text>
-          {navItems
+          {visibleItems
             .filter((item) => item.section === sectionKey)
             .map((item) => {
               const isActive = activeRoute === item.route;
@@ -192,8 +197,12 @@ function ActivationStatus({ info }: { info: ActivationInfo }) {
   );
 }
 
+const AREA_CARD_LABELS = new Set(['Resultados', 'Placar']);
+
 export function Dashboard() {
   const navigate = useNavigate();
+  const { mode } = useTournamentMode();
+  const isAreaMode = mode === 'area';
   const [torneio, setTorneio] = useState<Torneio | null>(null);
   const [loading, setLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -251,7 +260,7 @@ export function Dashboard() {
         visibleFrom="lg"
         style={{ display: 'flex' }}
       >
-        <SidebarNav activeRoute="/admin/dashboard" onNavigate={handleNavigate} />
+        <SidebarNav activeRoute="/admin/dashboard" onNavigate={handleNavigate} isAreaMode={isAreaMode} />
       </Box>
 
       {/* Mobile sidebar overlay */}
@@ -269,7 +278,7 @@ export function Dashboard() {
             style={{ width: 260, height: '100%' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <SidebarNav activeRoute="/admin/dashboard" onNavigate={(r) => { setSidebarOpen(false); navigate(r); }} />
+            <SidebarNav activeRoute="/admin/dashboard" onNavigate={(r) => { setSidebarOpen(false); navigate(r); }} isAreaMode={isAreaMode} />
           </Box>
         </Box>
       )}
@@ -434,7 +443,7 @@ export function Dashboard() {
 
           {/* Cards grid */}
           <Grid>
-            {dashboardCards.map((card) => {
+            {dashboardCards.filter(c => !isAreaMode || AREA_CARD_LABELS.has(c.label)).map((card) => {
               const isImplemented = card.status === 'implemented';
               const isResultados = card.label === 'Resultados';
               const isPlacar = card.label === 'Placar';

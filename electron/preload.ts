@@ -9,8 +9,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('create-tournament', data),
   listTournaments: () =>
     ipcRenderer.invoke('list-tournaments'),
-  startTournament: (id: string) =>
-    ipcRenderer.invoke('start-tournament', id),
+  startTournament: (id: string, mode: 'admin' | 'area') =>
+    ipcRenderer.invoke('start-tournament', { id, mode }),
+  getTournamentMode: () =>
+    ipcRenderer.invoke('get-tournament-mode'),
   exportTournament: (id: string) =>
     ipcRenderer.invoke('export-tournament', id),
   importTournament: (data: Torneio) =>

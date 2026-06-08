@@ -22,7 +22,8 @@ declare global {
 interface ElectronAPI {
   createTournament: (data: CreateTorneioInput) => Promise<Torneio>;
   listTournaments: () => Promise<Torneio[]>;
-  startTournament: (id: string) => Promise<Torneio>;
+  startTournament: (id: string, mode: 'admin' | 'area') => Promise<Torneio>;
+  getTournamentMode: () => Promise<'admin' | 'area' | null>;
   exportTournament: (id: string) => Promise<void>;
   importTournament: (data: Torneio) => Promise<{ success: true; merged: boolean; created: number; updated: number; kept: number; removed: number }>;
   getActiveTournament: () => Promise<Torneio | null>;

@@ -90,7 +90,7 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
   - Itens com `id` presente em um único lado são preservados.
   - **Delete recente vence:** como `delete*`/`restore*` setam `updatedAt = new Date().toISOString()` junto com `deletedAt`, basta comparar `updatedAt`. Se o item vencedor tem `deletedAt != null`, o item permanece (ou passa a estar) deletado no resultado.
   - **Top-level do torneio:** `nome` e `data` seguem o lado com `updatedAt` mais recente. O `updatedAt` do torneio mergeado é `max(existing.updatedAt, incoming.updatedAt)`. O `createdAt` é preservado do existing. O `startedAt`, se já existir no existing, é mantido (evento único); caso contrário, é copiado do incoming.
-  - **Sub-arrays sem `updatedAt` próprio:** `chaves` e `lutasCasadas` não possuem `updatedAt` por item. Para esses, o vencedor é decidido pelo `updatedAt` do torneio pai (incoming vence se for mais recente, existing vence caso contrário).
+   - **Todos os sub-arrays têm `updatedAt` próprio:** `chaves` e `lutasCasadas` também possuem `updatedAt` por item. A mesclagem usa `mergeById` (last-write-wins por item) para todos os sub-arrays — `atletas`, `arbitros`, `areas`, `chaves` e `lutasCasadas` — de forma consistente. Chaves não possuem `deletedAt` (não têm soft-delete), portanto o contador `removed` para chaves é sempre zero.
 - **Preservação de identidade na importação:** o backend preserva `id`, `createdAt`, `updatedAt`, `deletedAt`, `emChave` e demais campos dos sub-itens. Apenas `nome` e `equipe` de atletas/árbitros são normalizados (`trim().toLowerCase()`). Itens sem `id` recebem `crypto.randomUUID()`. Itens sem `createdAt`/`updatedAt` recebem o `now` da importação.
 - **Auto-fix retroativo:** JSONs legados sem o campo `deletedAt` em atletas/árbitros/áreas continuam funcionando (o auto-fix dos handlers `load*` preenche `deletedAt: null` ao carregar). O merge trata `deletedAt` ausente como `null` na comparação.
 - **Remoção do caminho destrutivo:** o handler `import-tournament-overwrite` foi removido. Não há mais modal de "Sobrescrever Torneio" na UI. Se o usuário precisar descartar o torneio local e reimportar do zero, ele usa `delete-tournament` e depois importa o JSON novamente.
@@ -117,8 +117,15 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 
 ### 3.5. Inicialização de Torneio (Iniciar)
 
-- Define o torneio como ativo escrevendo seu `id` em `{userData}/data/torneio-ativo.json`.
-- Após iniciar, redireciona para o Dashboard Administrativo (`/admin/dashboard`).
+- Ao clicar em "Iniciar" (`IconPlayerPlay`) na listagem de torneios, um modal é exibido com duas opções: **Administrador** e **Área de Luta**.
+- **Modo Administrador:** inicia o torneio no modo `admin`, escreve `{ id, mode: "admin" }` em `{userData}/data/torneio-ativo.json`, e redireciona para o Dashboard (`/admin/dashboard`) com acesso total a todas as funções administrativas.
+- **Modo Área de Luta:** inicia o torneio no modo `area`, escreve `{ id, mode: "area" }` em `{userData}/data/torneio-ativo.json`, e redireciona diretamente para o PlacarMenu (`/admin/placar`).
+- **Navegação restrita (modo área):** o operador de área só pode acessar:
+  - Menu Inicial (`/`)
+  - Dashboard (`/admin/dashboard`) — versão reduzida com apenas cards "Resultados" e "Placar"
+  - Placar (`/admin/placar` e sub-rotas `/admin/placar/chaves/:areaId`, `/admin/placar/chave/:areaId/:chaveId`, `/admin/placar/luta/:areaId/:chaveId/:lutaId`, `/admin/placar/luta-casada/:areaId/:lutaCasadaId`)
+- **Rotas bloqueadas (modo área):** qualquer tentativa de navegar para `/admin/atletas`, `/admin/arbitros`, `/admin/areas`, `/admin/categorias/chaves`, `/admin/equipes`, `/admin/lutas-casadas`, `/admin/criar-torneio`, `/admin/importar-torneio`, `/admin/listar-torneios` redireciona automaticamente para `/admin/placar`.
+- **Persistência do modo:** o modo escolhido é armazenado em `torneio-ativo.json` e consultado via IPC `get-tournament-mode`. O modo é preservado entre reinicializações do app.
 - **Busca na listagem:** campo de busca textual que filtra os torneios por nome ou data em tempo real. Exibe mensagem "Nenhum torneio encontrado para a busca {termo}" quando não há resultados.
 - Apenas um torneio pode estar ativo por vez (iniciar um novo substitui o anterior no arquivo).
 - Registra o timestamp `startedAt` no JSON do torneio no momento do Play (`new Date().toISOString()`).
@@ -346,8 +353,9 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
   - Quando `desclassificacao=false` ou `undefined`, `desclassificadoId` é limpo (`undefined`).
 - **Mapeamento de status:** `data.status === 'wo'` → luta salva com `status='wo'`; qualquer outro valor → `status='completed'`.
 - **Deep-clone:** O handler `registrarResultadoHandler` faz uma cópia profunda do bracket antes de modificá-lo (`JSON.parse(JSON.stringify(...))`), garantindo isolamento de mutação.
-- **Normalização retroativa (`normalizeLuta`):** Ao carregar chaves, toda luta recebe defaults: `ordem=0`, `rodada=1`, `atletaAId=''`, `atletaBId=''`, `status='pending'`, `vencedorId=null`, `finalizacao=undefined`, `desclassificacao=undefined`, `desclassificadoId=undefined`, `placarA=undefined`, `placarB=undefined`, `desempateArbitro=undefined`.
-- **Normalização retroativa (`normalizeChave`):** Ao carregar, defaults: `categoriaId=''`, `arbitroId=null`, `totalRodadas` computado do maior `luta.rodada`.
+- **Normalização retroativa (`normalizeLuta`):** Ao carregar chaves, toda luta recebe defaults: `ordem=0`, `rodada=1`, `atletaAId=''`, `atletaBId=''`, `status='pending'`, `vencedorId=null`, `finalizacao=undefined`, `desclassificacao=undefined`, `desclassificadoId=undefined`, `placarA=undefined`, `placarB=undefined`, `desempateArbitro=undefined`, `updatedAt` gerado com `new Date().toISOString()` se ausente (legado).
+- **Normalização retroativa (`normalizeChave`):** Ao carregar, defaults: `categoriaId=''`, `arbitroId=null`, `totalRodadas` computado do maior `luta.rodada`, `updatedAt` gerado com `new Date().toISOString()` se ausente (legado).
+- **`updatedAt` em Luta e Chave:** Ambos os campos são obrigatórios no tipo `Luta` e `Chave`. São populados no momento da criação (`criarLuta`, `gerarChave`), no registro de resultado (`registrarResultadoHandler` — todas as lutas da chave e a própria chave recebem `updatedAt = now`), na randomização (`randomizarChaveHandler`), na atribuição de árbitro (`atribuirArbitroHandler`), na limpeza de rodadas futuras (`clearWinnerFromLaterRounds`) e na importação (`importChavesFromFile`).
 
 ### 3.12. Importação de Chaves
 
@@ -355,7 +363,8 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 - **Validação de estrutura:** O arquivo deve ser um array. Objetos, strings ou números são rejeitados com `"Arquivo inválido: o conteúdo deve ser um array de chaves."`. Cada item do array deve possuir `categoriaId` e `lutas` (array); caso contrário, retorna `"Estrutura de chave inválida no arquivo."`.
 - **Normalização automática:**
   - `id`: preservado do arquivo se presente; gerado (`crypto.randomUUID()`) se ausente.
-  - Demais campos (`posicoesAtletas`, `arbitroId`, `totalAtletas`, `totalLutas`, `status`) são preservados do arquivo.
+  - Demais campos (`posicoesAtletas`, `arbitroId`, `totalAtletas`, `totalLutas`, `status`, `updatedAt`) são preservados do arquivo.
+  - `lutas[].updatedAt`: preservado de cada luta se presente; gerado com `new Date().toISOString()` se ausente.
 - A lista de chaves substitui completamente a lista existente no torneio (não há mesclagem).
 - Atualiza o `updatedAt` do torneio após a importação.
 - Disparada via botão "Importar Chaves" na tela de Gerenciamento de Chaves.
@@ -632,7 +641,7 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Fluxo de navegação:** `Dashboard → Placar → PlacarMenu` (seleção de área) → `PlacarChaves` (lista de chaves da área) → `PlacarBracket` (bracket + lutas iniciáveis) → `PlacarLuta` (placar funcional).
 - **Tela de seleção de área (`/admin/placar`):** `PlacarMenu` exibe `Select` com as áreas de luta cadastradas. Se houver chaves com atividade recente (lutas com `horarioInicio` ou `horarioTermino`), a área com a atividade mais recente vem pré-selecionada automaticamente. Caso contrário, o Select inicia vazio. Botão "Acessar" navega para `/admin/placar/chaves/:areaId`.
 - **Tela de chaves da área (`/admin/placar/chaves/:areaId`):** `PlacarChaves` lista as chaves alocadas na área como cards em pilha vertical (Stack). Cards são ordenados: encerradas por último, depois por timestamp de atividade mais recente (horário de início/término das lutas). Exibe faixa, peso, quantidade de atletas e árbitro responsável. Suporta busca textual por título da chave. Cada card exibe badge de status no canto superior direito:
-  - **"ENCERRADO"** (amarelo gold): quando a luta da última rodada da chave possui vencedor definido (chave finalizada com campeão).
+  - **"ENCERRADO"** (amarelo gold): quando a luta da última rodada da chave possui vencedor definido (chave finalizada com campeão). Cards de chaves encerradas são renderizados com `opacity: 0.5` (visual opaco) mas permanecem clicáveis — o usuário pode navegar para visualizar o bracket e resultados finais.
   - **"EM ANDAMENTO"** (ciano): quando a chave possui pelo menos uma luta finalizada pelo operador (`status: 'completed'`) mas a última rodada ainda não possui vencedor. Lutas com `status: 'wo'` (BYEs auto-resolvidos na geração) não são consideradas.
   - Sem badge: quando nenhuma luta da chave foi iniciada.
   - Badge de contagem de lutas usa cor azul (padrão visual `#1565C0`).
@@ -648,7 +657,7 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
   - Alerta visual de "Desclassificação" ao atingir 4 punições.
   - Botão "Finalizar Luta" → modal com tipo (Pontos, Finalização, DQ, Desempate) e vencedor. Ao abrir o modal, o cronômetro é pausado automaticamente se estiver em andamento. Todas as opções de resultado estão sempre habilitadas (sem restrição por estado da luta). O modal não exibe detalhes de implementação (flags do JSON). Ao clicar em "Confirmar", um segundo modal centralizado de confirmação aparece (com texto dinâmico por tipo e botão "Confirmar desclassificação" para DQ). Somente após essa segunda confirmação o resultado é persistido e o vencedor é propagado para a próxima rodada.
   - Botão "Voltar sem finalizar" → retorna para o `PlacarBracket` da chave (rota `/admin/placar/chave/:areaId/:chaveId`).
-- **Persistência:** Após a segunda confirmação, a `Luta` recebe `vencedorId`, `status` (`completed` ou `wo` — `wo` para DQ), `placarA`, `placarB`, `finalizacao`, `desclassificacao`, `desclassificadoId`, `desempateArbitro`. O vencedor é propagado para a próxima rodada (slot `tbd`) pela função `advanceWinnerInChave` (ver seção 3.11.1). O sistema não implementa regra automática de dupla desclassificação — o operador sempre declara um vencedor.
+- **Persistência:** Após a segunda confirmação, a `Luta` recebe `vencedorId`, `status` (`completed` ou `wo` — `wo` para DQ), `placarA`, `placarB`, `finalizacao`, `desclassificacao`, `desclassificadoId`, `desempateArbitro`, `updatedAt` (timestamp ISO 8601). O vencedor é propagado para a próxima rodada (slot `tbd`) pela função `advanceWinnerInChave` (ver seção 3.11.1). Todas as lutas da chave e a própria chave também têm seu `updatedAt` atualizado para o momento do resultado. O sistema não implementa regra automática de dupla desclassificação — o operador sempre declara um vencedor.
 - **`desclassificadoId`:** Quando o resultado é do tipo DQ, o campo `desclassificadoId` é preenchido com o ID do atleta desclassificado (o perdedor, que não é o `vencedorId`). Quando o resultado não é DQ, `desclassificadoId` fica `undefined`.
 - **Validação de pontos:** Quando o tipo de resultado é "Pontos", antes da segunda confirmação o sistema valida se o atleta selecionado como vencedor realmente possui mais pontos totais no placar. Em caso de empate nos pontos, o critério de desempate é `vantagens`. Se a validação falhar, um modal de aviso vermelho é exibido com a mensagem "Tem certeza que este é o campeão?" e opções "Voltar" (retorna ao modal anterior) e "Confirmar mesmo assim" (prossegue com o registro). Para tipos de resultado diferentes de "Pontos" (finalização, DQ, desempate), a validação não é acionada.
 - **Normalização retroativa:** Chaves legadas sem `placarA`/`placarB` carregam sem erro; `normalizeLuta` adiciona defaults.
@@ -980,7 +989,7 @@ O torneio ativo é definido por `{userData}/data/torneio-ativo.json` que armazen
 | `start-tournament` | Renderer → Main | Define torneio como ativo e registra `startedAt` |
 | `get-active-tournament` | Renderer → Main → Renderer | Retorna torneio ativo ou `null` |
 | `export-tournament` | Renderer → Main | Abre diálogo "Salvar como" e copia JSON |
-| `import-tournament` | Renderer → Main | Importa JSON com merge por `updatedAt` (last-write-wins por sub-array: `atletas`/`arbitros`/`areas` por item; `chaves`/`lutasCasadas` por torneio). Retorna `{ success, merged, created, updated, kept, removed }` |
+| `import-tournament` | Renderer → Main | Importa JSON com merge por `updatedAt` (last-write-wins por item em todos os sub-arrays: `atletas`, `arbitros`, `areas`, `chaves`, `lutasCasadas`). Retorna `{ success, merged, created, updated, kept, removed }` |
 | `read-file` | Renderer → Main → Renderer | Lê conteúdo de arquivo do disco |
 | `update-tournament` | Renderer → Main | Atualiza dados do torneio |
 | `delete-tournament` | Renderer → Main | Remove arquivo JSON do torneio (+ `torneio-ativo.json` se for o ativo) |

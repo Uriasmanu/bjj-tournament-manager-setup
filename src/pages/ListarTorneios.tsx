@@ -1,6 +1,6 @@
 import { Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal, Checkbox, TextInput } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlayerPlay, IconDownload, IconTrash, IconSearch } from '@tabler/icons-react';
+import { IconPlayerPlay, IconDownload, IconTrash, IconSearch, IconUserShield, IconDeviceGamepad } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useMemo } from 'react';
@@ -18,6 +18,8 @@ export function ListarTorneios() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [opened, { open, close }] = useDisclosure(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [startTarget, setStartTarget] = useState<Torneio | null>(null);
+  const [startModalOpen, setStartModalOpen] = useState(false);
 
   const loadTorneios = async () => {
     setLoading(true);
@@ -37,16 +39,23 @@ export function ListarTorneios() {
     loadTorneios();
   }, []);
 
-  const handleStart = async (torneio: Torneio) => {
+  const handleStartClick = (torneio: Torneio) => {
+    setStartTarget(torneio);
+    setStartModalOpen(true);
+  };
+
+  const handleStartConfirm = async (mode: 'admin' | 'area') => {
+    if (!startTarget) return;
+    setStartModalOpen(false);
     try {
-      await window.electronAPI.startTournament(torneio.id);
-      const nome = torneio.nome || `Torneio ${torneio.data}`;
+      await window.electronAPI.startTournament(startTarget.id, mode);
+      const nome = startTarget.nome || `Torneio ${startTarget.data}`;
       notifications.show({
         title: 'Sucesso',
         message: `Torneio '${nome}' iniciado com sucesso!`,
         color: 'green',
       });
-      navigate('/admin/dashboard');
+      navigate(mode === 'admin' ? '/admin/dashboard' : '/admin/placar');
     } catch {
       notifications.show({
         title: 'Erro',
@@ -230,7 +239,7 @@ export function ListarTorneios() {
                       <ActionIcon
                         variant="light"
                         color="blue"
-                        onClick={() => handleStart(t)}
+                        onClick={() => handleStartClick(t)}
                         aria-label={`Iniciar ${t.nome || formatDate(t.data)}`}
                       >
                         <IconPlayerPlay size={18} />
@@ -297,6 +306,40 @@ export function ListarTorneios() {
           <Button variant="outline" onClick={() => setBulkDeleteOpen(false)}>Cancelar</Button>
           <Button color="red" onClick={handleBulkDelete}>Excluir {selectedIds.length}</Button>
         </Group>
+      </Modal>
+
+      <Modal
+        opened={startModalOpen}
+        onClose={() => setStartModalOpen(false)}
+        title={`Iniciar ${startTarget?.nome || (startTarget ? `Torneio ${formatDate(startTarget.data)}` : '')}`}
+        centered
+        size="sm"
+      >
+        <Text size="sm" mb="lg">
+          Selecione o modo de acesso:
+        </Text>
+        <Stack gap="md">
+          <Button
+            variant="light"
+            color="blue"
+            size="lg"
+            fullWidth
+            leftSection={<IconUserShield size={20} />}
+            onClick={() => handleStartConfirm('admin')}
+          >
+            Administrador
+          </Button>
+          <Button
+            variant="light"
+            color="teal"
+            size="lg"
+            fullWidth
+            leftSection={<IconDeviceGamepad size={20} />}
+            onClick={() => handleStartConfirm('area')}
+          >
+            Área de Luta
+          </Button>
+        </Stack>
       </Modal>
     </PageLayout>
   );

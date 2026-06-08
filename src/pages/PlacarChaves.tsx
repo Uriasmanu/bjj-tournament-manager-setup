@@ -191,14 +191,14 @@ export function PlacarChaves() {
                   padding="md"
                   radius="md"
                   role="button"
-                  tabIndex={isEncerrado ? -1 : 0}
+                  tabIndex={0}
                   style={{
-                    cursor: isEncerrado ? 'default' : 'pointer',
+                    cursor: 'pointer',
                     position: 'relative',
                     opacity: isEncerrado ? 0.5 : 1,
                     transition: 'opacity 0.2s',
                   }}
-                  onClick={isEncerrado ? undefined : () => navigate(`/admin/placar/chave/${areaId}/${chave.id}`)}
+                  onClick={() => navigate(`/admin/placar/chave/${areaId}/${chave.id}`)}
                 >
                   {isEncerrado && (
                     <Badge size="sm" color="yellow" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
