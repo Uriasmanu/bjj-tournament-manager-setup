@@ -8,7 +8,7 @@ import {
   IconChartPie, IconUser, IconUsersGroup,
   IconHierarchy2, IconSquareRounded, IconGavel,
   IconStopwatch, IconMedal, IconTrophyFilled,
-  IconLock,
+  IconLock, IconArrowsCross,
 } from '@tabler/icons-react';
 import dayjs from 'dayjs';
 import type { Torneio } from '../types/tournament';
@@ -22,13 +22,14 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Dashboard', icon: <IconChartPie size={18} />, route: '/admin/dashboard', section: 'painel' },
+  { label: 'Resultados', icon: <IconMedal size={18} />, route: '/admin/resultados', section: 'gestao' },
   { label: 'Atletas', icon: <IconUser size={18} />, route: '/admin/atletas', section: 'gestao' },
   { label: 'Equipes', icon: <IconUsersGroup size={18} />, route: '/admin/equipes', section: 'gestao' },
-  { label: 'Geração de Chaves', icon: <IconHierarchy2 size={18} />, route: '/admin/categorias/chaves', section: 'gestao' },
-  { label: 'Áreas de Luta', icon: <IconSquareRounded size={18} />, route: '/admin/areas', section: 'gestao' },
   { label: 'Árbitros', icon: <IconGavel size={18} />, route: '/admin/arbitros', section: 'gestao' },
+  { label: 'Áreas de Luta', icon: <IconSquareRounded size={18} />, route: '/admin/areas', section: 'gestao' },
+  { label: 'Lutas Casadas', icon: <IconArrowsCross size={18} />, route: '/admin/lutas-casadas', section: 'gestao' },
+  { label: 'Geração de Chaves', icon: <IconHierarchy2 size={18} />, route: '/admin/categorias/chaves', section: 'gestao' },
   { label: 'Placar', icon: <IconStopwatch size={18} />, route: '/admin/placar', section: 'combate' },
-  { label: 'Resultados', icon: <IconMedal size={18} />, route: '/admin/resultados', section: 'combate' },
 ];
 
 interface DashboardCard {
@@ -44,13 +45,14 @@ interface DashboardCard {
 }
 
 const dashboardCards: DashboardCard[] = [
+  { label: 'Resultados', description: 'Quadro Geral de Medalhas por equipes, campeões de categorias e distribuição de pódios do torneio em tempo real.', icon: IconMedal, route: '/admin/resultados', status: 'implemented', iconBg: '#f26c4f', iconColor: '#f26c4f', footerLabel: 'Classificação' },
   { label: 'Atletas', description: 'Cadastro, regularização médica, pesagem e gerenciamento de atletas.', icon: IconUser, route: '/admin/atletas', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Inscritos' },
   { label: 'Equipes', description: 'Resumo, estatísticas, filiações de equipes e academias participantes.', icon: IconUsersGroup, route: '/admin/equipes', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Academias' },
-  { label: 'Geração de Chaves', description: 'Criação, sorteio e visualização dinâmica de chaves por categoria de peso.', icon: IconHierarchy2, route: '/admin/categorias/chaves', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Categorias' },
-  { label: 'Áreas de Luta', description: 'Status dos tatames, filas de espera de lutas e andamento em tempo real.', icon: IconSquareRounded, route: '/admin/areas', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Áreas Ativas' },
   { label: 'Árbitros', description: 'Cadastro, controle de escala por tatame e histórico de atuações.', icon: IconGavel, route: '/admin/arbitros', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Árbitros Escalados' },
+  { label: 'Áreas de Luta', description: 'Status dos tatames, filas de espera de lutas e andamento em tempo real.', icon: IconSquareRounded, route: '/admin/areas', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Áreas Ativas' },
+  { label: 'Lutas Casadas', description: 'Listagem e gerenciamento de lutas casadas — visualize e exclua quando necessário.', icon: IconArrowsCross, route: '/admin/lutas-casadas', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Lutas' },
+  { label: 'Geração de Chaves', description: 'Criação, sorteio e visualização dinâmica de chaves por categoria de peso.', icon: IconHierarchy2, route: '/admin/categorias/chaves', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Categorias' },
   { label: 'Placar', description: 'Acompanhamento de lutas e controle de pontos/penalidades ativo.', icon: IconStopwatch, route: '/admin/placar', status: 'implemented', iconBg: '#f26c4f', iconColor: '#f26c4f', footerLabel: 'Ao Vivo', badge: { label: 'Ao Vivo', color: '#f26c4f' } },
-  { label: 'Resultados', description: 'Quadro Geral de Medalhas por equipes, campeões de categorias e distribuição de pódios do torneio em tempo real.', icon: IconMedal, route: '/admin/resultados', status: 'implemented', iconBg: '#f26c4f', iconColor: '#f26c4f', footerLabel: 'Classificação' },
 ];
 
 function SidebarNav({ activeRoute, onNavigate }: { activeRoute: string; onNavigate: (r: string) => void }) {

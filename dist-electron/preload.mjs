@@ -53,6 +53,7 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   exportAreas: () => electron.ipcRenderer.invoke("export-areas"),
   loadChavesPorArea: (areaId) => electron.ipcRenderer.invoke("load-chaves-por-area", areaId),
   registrarResultado: (data) => electron.ipcRenderer.invoke("registrar-resultado", data),
+  loadLutasCasadas: () => electron.ipcRenderer.invoke("load-lutas-casadas"),
   loadLutasCasadasPorArea: (areaId) => electron.ipcRenderer.invoke("load-lutas-casadas-por-area", areaId),
   saveLutaCasada: (data) => electron.ipcRenderer.invoke("save-luta-casada", data),
   updateLutaCasada: (data) => electron.ipcRenderer.invoke("update-luta-casada", data),

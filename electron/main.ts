@@ -6,7 +6,7 @@ import { loadAthletes, loadDeletedAthletes, saveAthlete, updateAthlete, deleteAt
 import { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, restoreArbitro, permanentlyDeleteArbitro, permanentlyDeleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
 import { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas } from './areas'
 import { registerBracketHandlers } from './brackets'
-import { loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada } from './lutasCasadas'
+import { loadLutasCasadas, loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada } from './lutasCasadas'
 import { checkActivation, validatePassword, activateLicense, getActivationInfo } from './activation'
 import type { AreaLuta } from '../src/types/area'
 import type { Atleta } from '../src/types/athlete'
@@ -305,6 +305,12 @@ function registerActivationHandlers(): void {
 }
 
 function registerLutasCasadasHandlers(): void {
+  ipcMain.handle('load-lutas-casadas', (): LutaCasada[] => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadLutasCasadas(torneioId)
+  })
+
   ipcMain.handle('load-lutas-casadas-por-area', (_event, areaId: string): LutaCasada[] => {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')

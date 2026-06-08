@@ -53,6 +53,15 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 ## 3. Regras de Negócio
 
+### 3.0. Bloqueio de Atribuição de Itens Soft-Deleted
+
+Itens com `deletedAt != null` (soft-deleted) são considerados **inativos** e não podem ser atribuídos a outros itens do sistema:
+
+- **Atletas soft-deleted** não são incluídos na geração de chaves — nem na geração em massa (`gerarTodasChavesHandler`) nem na geração individual (`gerar-chave`). Backend filtra `deletedAt == null` ao carregar atletas dos handlers. Frontend já utiliza `loadAthletes()` que filtra.
+- **Árbitros soft-deleted** não são atribuídos a chaves — nem na atribuição automática (`autoAtribuirArbitros`) nem na manual (`atribuirArbitroHandler`). Backend filtra/valida em ambos os fluxos.
+- **Árbitros soft-deleted** não podem ser vinculados a áreas de luta — `checkRefereeNotInUse` valida que todos os `arbitroIds` referenciam árbitros ativos antes de salvar/atualizar uma área.
+
+Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitro`/`restoreArea`) voltam a ser elegíveis automaticamente.
 ### 3.1. Torneio
 
 - **Entidade raiz do sistema:** Para acessar qualquer funcionalidade administrativa (atletas, chaves, categorias), é necessário primeiro **iniciar um torneio** (defini-lo como ativo).

@@ -25,6 +25,7 @@ import { PlacarBracket } from './pages/PlacarBracket';
 import { PlacarLuta } from './pages/PlacarLuta';
 import { PlacarLutaCasada } from './pages/PlacarLutaCasada';
 import { Resultados } from './pages/Resultados';
+import { AdminLutasCasadas } from './pages/AdminLutasCasadas';
 import { ActivationScreen } from './components/ActivationScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -52,6 +53,7 @@ function MainApp() {
           <Route path="/admin/placar/luta/:areaId/:chaveId/:lutaId" element={<PlacarLuta />} />
           <Route path="/admin/placar/luta-casada/:areaId/:lutaCasadaId" element={<PlacarLutaCasada />} />
           <Route path="/admin/resultados" element={<Resultados />} />
+          <Route path="/admin/lutas-casadas" element={<AdminLutasCasadas />} />
         </Routes>
       </ErrorBoundary>
     </HashRouter>

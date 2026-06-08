@@ -430,6 +430,7 @@ export function AdminAreas() {
         onClose={closeForm}
         onSave={handleSave}
         area={selectedArea}
+        areas={areas}
       />
 
       <Modal

@@ -121,4 +121,4 @@ function deleteLutaCasada(torneioId: string, lutaCasadaId: string): void {
   saveTorneio(torneio)
 }
 
-export { loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada }
+export { loadLutasCasadas, loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada }

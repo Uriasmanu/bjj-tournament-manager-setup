@@ -57,6 +57,15 @@ function loadAreas(torneioId: string): AreaLuta[] {
 function checkRefereeNotInUse(torneioId: string, arbitroIds: string[], excludeAreaId?: string): void {
   const ids = arbitroIds ?? []
   if (ids.length === 0) return
+
+  const torneio = loadTorneio(torneioId)
+  const arbitrosAtivos = (torneio.arbitros ?? []).filter((a: { deletedAt?: string | null }) => a.deletedAt == null)
+  const idsAtivos = new Set(arbitrosAtivos.map(r => r.id))
+  const invalidos = ids.filter(id => id && !idsAtivos.has(id))
+  if (invalidos.length > 0) {
+    throw new Error('Um ou mais árbitros não existem ou estão deletados.')
+  }
+
   const areas = loadAreas(torneioId)
   const assigned = new Set<string>()
   for (const area of areas) {

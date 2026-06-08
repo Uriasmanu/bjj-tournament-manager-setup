@@ -13,12 +13,62 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+### [aberto] em lutas casadas tem que ter a opção de selecionar varios e a mesma logica de soft delete que tem em atleta
+
+### [corrigido] Troque a posicao de resultado — ele deve ser o primeiro no dashboard
+**Comportamento atual:** Resultados era o último card no dashboard (após Placar).
+**Comportamento esperado:** Resultados deve ser o primeiro card, mantendo o mesmo formato visual.
+**Correção:** movido "Resultados" para a primeira posição em `dashboardCards` e `navItems` em `src/pages/Dashboard.tsx`.
+**Arquivos:** `src/pages/Dashboard.tsx`.
+**Data:** jun/2026.
+### [corrigido] Lutas casadas precisa de um menu no dashboard com listagem e exclusao
+**Comportamento atual:** não havia entrada no dashboard nem página dedicada para listar/excluir lutas casadas.
+**Comportamento esperado:** card no dashboard, item na sidebar e página com listagem de todas as lutas casadas com opção de excluir.
+**Correção:**
+- Adicionado IPC `load-lutas-casadas` (retorna todas, sem filtro de área)
+- Criada página `src/pages/AdminLutasCasadas.tsx` com tabela e modal de exclusão
+- Rota `/admin/lutas-casadas` registrada em `App.tsx`
+- Card "Lutas Casadas" e navItem adicionados ao Dashboard
+**Arquivos:** `electron/lutasCasadas.ts`, `electron/main.ts`, `electron/preload.ts`, `src/types/electron.d.ts`, `src/pages/AdminLutasCasadas.tsx`, `src/App.tsx`, `src/pages/Dashboard.tsx`.
+**Data:** jun/2026.
+
+### [corrigido] Arbitros que ja estao em areas devem ficar ocultos no select de arbitro para area
+**Comportamento atual:** o MultiSelect de árbitros no formulário de área exibia todos os árbitros ativos, inclusive os já alocados em outras áreas.
+**Comportamento esperado:** árbitros já atribuídos a outras áreas devem ficar ocultos no seletor, exceto o da área sendo editada.
+**Correção:** adicionado prop `areas` ao `AreaForm` para identificar árbitros já em uso; `arbitroOptions` agora filtra (`usedArbitroIds`) antes de exibir.
+**Arquivos:** `src/components/AreaForm.tsx`, `src/pages/AdminAreas.tsx`, `src/pages/AreasMenu.tsx`.
+**Data:** jun/2026.
+
+### [corrigido] A ordem no dashboard deve ser atleta, equipe, arbitro, area, chave e placar
+**Comportamento atual:** a ordem dos cards no dashboard era: Atletas, Equipes, Geração de Chaves, Áreas de Luta, Árbitros, Placar.
+**Comportamento esperado:** ordem correta: Atletas, Equipes, Árbitros, Áreas de Luta, Geração de Chaves, Placar.
+**Correção:** reordenados os arrays `dashboardCards` e `navItems` em `src/pages/Dashboard.tsx` para a sequência solicitada.
+**Arquivos:** `src/pages/Dashboard.tsx`.
+**Data:** jun/2026.
+
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
+### [corrigido] Tem que ter a opção de selecionar varios atletas para soft deletar
+**Comportamento atual:** checkboxes e seleção múltipla só existiam na view de deletados. Select de faixa sumia ao alternar para "Mostrar apenas os deletados". Botão de ação em lote ficava abaixo da tabela.
+**Comportamento esperado:** checkboxes de seleção em ambos os modos, com "Excluir Selecionados" (soft-delete em lote) para ativos e "Excluir Permanentemente" para deletados. Botão no topo.
+**Correção:**
+- Checkboxes (cabeçalho + por linha) agora renderizados em ambos os modos
+- Adicionado `handleBulkDelete` chamando IPC `delete-athletes` (soft-delete em lote)
+- Botão de ação em lote movido para o topo (entre filtros e tabela): "Excluir Selecionados" na view normal, "Excluir Permanentemente" na view deletados
+- Adicionado modal de confirmação para exclusão em lote (bulk soft-delete)
+- Select de faixa agora sempre visível (removida condicional `{!showDeleted}`)
+- Filtro de faixa funciona em ambos os modos (removida guarda `!showDeleted`)
+**Arquivos:** `src/pages/AdminAthletes.tsx`.
+**Data:** jun/2026.
+
 
 ## Feature
-O que tiver soft delete não pode ser atribuido, atletas não são colocados em chave, arbitros não são atribuidos chaves e area, area não é atribuido arbitro
+### [implementado] Bloqueio de atribuição de itens soft-deleted
+**O que é:** atletas, árbitros e áreas com `deletedAt != null` não podem ser atribuídos: atletas não entram em chaves, árbitros não são atribuídos a chaves/áreas, áreas não recebem árbitros deletados.
+**Onde foi implementado:** `electron/brackets.ts` (5 pontos de filtro/validação) e `electron/areas.ts` (`checkRefereeNotInUse` valida árbitros ativos).
+**Spec detalhada:** `spec/bloqueio-atribuicao-soft-deleted.md`.
+**Data:** jun/2026.
 
 # Guia de Spec para Implementação de Features
 

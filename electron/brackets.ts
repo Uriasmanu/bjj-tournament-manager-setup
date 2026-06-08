@@ -3,6 +3,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import type { Atleta } from '../src/types/athlete';
+import type { Arbitro } from '../src/types/referee';
 import type { Chave, Luta } from '../src/types/bracket';
 import type { Torneio } from '../src/types/tournament';
 import { getActiveTournamentId } from './tournament';
@@ -641,7 +642,7 @@ function gerarChave(categoriaId: string, atletas: Atleta[]): Chave {
 
 function autoAtribuirArbitros(torneio: Torneio): void {
   const chaves = torneio.chaves ?? [];
-  const arbitros = torneio.arbitros ?? [];
+  const arbitros = (torneio.arbitros ?? []).filter((r: Arbitro) => r.deletedAt == null);
   if (chaves.length === 0 || arbitros.length === 0) return;
 
   for (const r of arbitros) {
@@ -711,7 +712,7 @@ interface GerarTodasResult {
 
 function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16): GerarTodasResult {
   const torneio = loadTorneio(torneioId);
-  const atletas = torneio.atletas ?? [];
+  const atletas = (torneio.atletas ?? []).filter((a: Atleta) => a.deletedAt == null);
 
   torneio.chaves = [];
 
@@ -877,6 +878,7 @@ function atribuirArbitroHandler(
   if (data.arbitroId) {
     const newArbitro = (torneio.arbitros ?? []).find(r => r.id === data.arbitroId);
     if (!newArbitro) throw new Error('Árbitro não encontrado no torneio.');
+    if (newArbitro.deletedAt != null) throw new Error('Árbitro deletado não pode ser atribuído a uma chave.');
     if (!newArbitro.chaveIds.includes(data.chaveId)) {
       newArbitro.chaveIds.push(data.chaveId);
     }
@@ -1569,7 +1571,7 @@ export function registerBracketHandlers(): void {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error('Nenhum torneio ativo');
     const torneio = loadTorneio(torneioId);
-    const atletas = (torneio.atletas ?? []).filter(a => a.categoria === data.categoriaId);
+    const atletas = (torneio.atletas ?? []).filter((a: Atleta) => a.deletedAt == null && a.categoria === data.categoriaId);
 
     if (atletas.length < 2 || atletas.length > 16) {
       throw new Error('A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.');

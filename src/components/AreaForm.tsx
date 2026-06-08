@@ -9,9 +9,10 @@ interface AreaFormProps {
   onClose: () => void;
   onSave: (area: AreaLuta) => Promise<boolean>;
   area?: AreaLuta | null;
+  areas?: AreaLuta[];
 }
 
-export function AreaForm({ opened, onClose, onSave, area }: AreaFormProps) {
+export function AreaForm({ opened, onClose, onSave, area, areas = [] }: AreaFormProps) {
   const [arbitros, setArbitros] = useState<Arbitro[]>([]);
 
   useEffect(() => {
@@ -52,10 +53,18 @@ export function AreaForm({ opened, onClose, onSave, area }: AreaFormProps) {
     if (saved) onClose();
   };
 
-  const arbitroOptions = arbitros.map((a) => ({
-    value: a.id,
-    label: a.nome.charAt(0).toUpperCase() + a.nome.slice(1),
-  }));
+  const usedArbitroIds = new Set(
+    areas
+      .filter(a => a.id !== area?.id)
+      .flatMap(a => a.arbitroIds ?? [])
+  );
+
+  const arbitroOptions = arbitros
+    .filter(a => !usedArbitroIds.has(a.id))
+    .map((a) => ({
+      value: a.id,
+      label: a.nome.charAt(0).toUpperCase() + a.nome.slice(1),
+    }));
 
   return (
     <Modal

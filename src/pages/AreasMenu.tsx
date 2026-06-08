@@ -199,7 +199,7 @@ export function AreasMenu() {
         </Group>
       </Stack>
 
-      <AreaForm opened={formOpened} onClose={closeForm} onSave={handleSave} area={null} />
+      <AreaForm opened={formOpened} onClose={closeForm} onSave={handleSave} area={null} areas={areas} />
     </PageLayout>
   );
 }

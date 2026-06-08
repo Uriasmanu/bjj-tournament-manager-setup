@@ -84,6 +84,7 @@ interface ElectronAPI {
     horarioInicio?: string;
     horarioTermino?: string;
   }) => Promise<Chave>;
+  loadLutasCasadas: () => Promise<LutaCasada[]>;
   loadLutasCasadasPorArea: (areaId: string) => Promise<LutaCasada[]>;
   saveLutaCasada: (data: Omit<LutaCasada, 'id' | 'tag' | 'createdAt' | 'updatedAt'>) => Promise<LutaCasada>;
   updateLutaCasada: (data: LutaCasada) => Promise<LutaCasada>;

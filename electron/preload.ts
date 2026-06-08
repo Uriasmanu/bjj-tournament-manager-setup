@@ -118,6 +118,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     desclassificacao?: boolean;
     desempateArbitro?: boolean;
   }) => ipcRenderer.invoke('registrar-resultado', data),
+  loadLutasCasadas: () =>
+    ipcRenderer.invoke('load-lutas-casadas'),
   loadLutasCasadasPorArea: (areaId: string) =>
     ipcRenderer.invoke('load-lutas-casadas-por-area', areaId),
   saveLutaCasada: (data: Omit<LutaCasada, 'id' | 'tag' | 'createdAt' | 'updatedAt'>) =>

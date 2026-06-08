@@ -56,6 +56,7 @@ export function AdminAthletes() {
   const [permanentTarget, setPermanentTarget] = useState<Atleta | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkPermanentOpen, setBulkPermanentOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
@@ -93,7 +94,7 @@ export function AdminAthletes() {
         (categoriaLabels[a.categoria] || a.categoria).toLowerCase().includes(q)
       );
     }
-    if (beltFilter && !showDeleted) {
+    if (beltFilter) {
       result = result.filter(a => a.faixa === beltFilter);
     }
     return result;
@@ -214,6 +215,25 @@ export function AdminAthletes() {
       notifications.show({ title: 'Sucesso', message: `${selectedIds.length} atleta(s) excluído(s) permanentemente.`, color: 'green' });
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao excluir permanentemente.', color: 'red' });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    try {
+      const activeList = await window.electronAPI.deleteAthletes(selectedIds);
+      setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
+      const now = new Date().toISOString();
+      const moved = activeAthletes.filter(a => selectedIds.includes(a.id));
+      setDeletedAthletes(prev => [
+        ...prev,
+        ...moved.map(a => ({ ...a, deletedAt: now, updatedAt: now })),
+      ].sort((a, b) => a.nome.localeCompare(b.nome)));
+      setBulkDeleteOpen(false);
+      setSelectedIds([]);
+      notifications.show({ title: 'Sucesso', message: `${selectedIds.length} atleta(s) movido(s) para os deletados.`, color: 'green' });
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao excluir atletas.', color: 'red' });
     }
   };
 
@@ -420,16 +440,14 @@ export function AdminAthletes() {
             onChange={(e) => setSearchQuery(e.currentTarget.value)}
             style={{ flex: 1, minWidth: 280 }}
           />
-          {!showDeleted && (
-            <Select
-              placeholder="Todas as Faixas"
-              data={faixaOrder.map((f) => ({ value: f, label: faixaLabels[f] }))}
-              value={beltFilter}
-              onChange={(v) => setBeltFilter(v || '')}
-              clearable
-              style={{ width: 180 }}
-            />
-          )}
+          <Select
+            placeholder="Todas as Faixas"
+            data={faixaOrder.map((f) => ({ value: f, label: faixaLabels[f] }))}
+            value={beltFilter}
+            onChange={(v) => setBeltFilter(v || '')}
+            clearable
+            style={{ width: 180 }}
+          />
           <Switch
             checked={showDeleted}
             onChange={(e) => setShowDeleted(e.currentTarget.checked)}
@@ -438,6 +456,31 @@ export function AdminAthletes() {
             styles={{ label: { fontWeight: 600 } }}
           />
         </div>
+
+        {/* Bulk actions - top */}
+        {selectedIds.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            {showDeleted ? (
+              <Button
+                color="red"
+                leftSection={<IconTrash size={16} />}
+                onClick={() => setBulkPermanentOpen(true)}
+                styles={{ root: { borderRadius: 12 } }}
+              >
+                Excluir Permanentemente ({selectedIds.length})
+              </Button>
+            ) : (
+              <Button
+                color="red"
+                leftSection={<IconTrash size={16} />}
+                onClick={() => setBulkDeleteOpen(true)}
+                styles={{ root: { borderRadius: 12 } }}
+              >
+                Excluir Selecionados ({selectedIds.length})
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* Table */}
         {athletes.length === 0 ? (
@@ -476,16 +519,14 @@ export function AdminAthletes() {
               <Table horizontalSpacing="clamp(8px, 1.5vw, 24px)">
                 <Table.Thead>
                   <Table.Tr style={{ background: '#f8fafd' }}>
-                    {showDeleted && (
-                      <Table.Th style={{ width: 40 }}>
-                        <Checkbox
-                          checked={allSelected}
-                          indeterminate={selectedIds.length > 0 && !allSelected}
-                          onChange={toggleAll}
-                          aria-label="Selecionar todos"
-                        />
-                      </Table.Th>
-                    )}
+                    <Table.Th style={{ width: 40 }}>
+                      <Checkbox
+                        checked={allSelected}
+                        indeterminate={selectedIds.length > 0 && !allSelected}
+                        onChange={toggleAll}
+                        aria-label="Selecionar todos"
+                      />
+                    </Table.Th>
                     <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Nome</Table.Th>
                     <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Equipe</Table.Th>
                     <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Faixa</Table.Th>
@@ -505,15 +546,13 @@ export function AdminAthletes() {
                       onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.02)'; }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
                     >
-                      {showDeleted && (
-                        <Table.Td>
-                          <Checkbox
-                            checked={selectedIds.includes(a.id)}
-                            onChange={() => toggleSelect(a.id)}
-                            aria-label={`Selecionar ${a.nome}`}
-                          />
-                        </Table.Td>
-                      )}
+                      <Table.Td>
+                        <Checkbox
+                          checked={selectedIds.includes(a.id)}
+                          onChange={() => toggleSelect(a.id)}
+                          aria-label={`Selecionar ${a.nome}`}
+                        />
+                      </Table.Td>
                       <Table.Td>
                         <Text fw={700} size="sm" style={{ color: '#1b325f' }}>{a.nome}</Text>
                       </Table.Td>
@@ -595,18 +634,6 @@ export function AdminAthletes() {
           </div>
         )}
 
-        {showDeleted && selectedIds.length > 0 && (
-          <Group justify="flex-end" mt="md">
-            <Button
-              color="red"
-              leftSection={<IconTrash size={16} />}
-              onClick={() => setBulkPermanentOpen(true)}
-              styles={{ root: { borderRadius: 12 } }}
-            >
-              Excluir Selecionados ({selectedIds.length})
-            </Button>
-          </Group>
-        )}
       </div>
 
       <AthleteForm
@@ -678,6 +705,25 @@ export function AdminAthletes() {
           <Button variant="outline" onClick={() => setBulkPermanentOpen(false)} styles={{ root: { borderRadius: 12 } }}>Cancelar</Button>
           <Button color="red" onClick={handleBulkPermanent} styles={{ root: { borderRadius: 12 } }}>
             Excluir {selectedIds.length} Permanentemente
+          </Button>
+        </Group>
+      </Modal>
+
+      <Modal
+        opened={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        title="Excluir Atletas"
+        centered
+        size="sm"
+      >
+        <Text size="sm" mb="md">
+          Os {selectedIds.length} atleta(s) selecionado(s) serão movidos para os deletados.
+          {showDeleted ? '' : ' Você poderá restaurá-los na aba "Mostrar apenas os deletados".'}
+        </Text>
+        <Group justify="flex-end">
+          <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} styles={{ root: { borderRadius: 12 } }}>Cancelar</Button>
+          <Button color="red" onClick={handleBulkDelete} styles={{ root: { borderRadius: 12 } }}>
+            Excluir {selectedIds.length}
           </Button>
         </Group>
       </Modal>

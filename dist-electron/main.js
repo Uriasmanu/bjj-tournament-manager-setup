@@ -839,6 +839,13 @@ function loadAreas(torneioId) {
 function checkRefereeNotInUse(torneioId, arbitroIds, excludeAreaId) {
   const ids = arbitroIds ?? [];
   if (ids.length === 0) return;
+  const torneio = loadTorneio$2(torneioId);
+  const arbitrosAtivos = (torneio.arbitros ?? []).filter((a) => a.deletedAt == null);
+  const idsAtivos = new Set(arbitrosAtivos.map((r) => r.id));
+  const invalidos = ids.filter((id) => id && !idsAtivos.has(id));
+  if (invalidos.length > 0) {
+    throw new Error("Um ou mais árbitros não existem ou estão deletados.");
+  }
   const areas = loadAreas(torneioId);
   const assigned = /* @__PURE__ */ new Set();
   for (const area of areas) {
@@ -1518,7 +1525,7 @@ function gerarChave(categoriaId, atletas) {
 }
 function autoAtribuirArbitros(torneio) {
   const chaves = torneio.chaves ?? [];
-  const arbitros = torneio.arbitros ?? [];
+  const arbitros = (torneio.arbitros ?? []).filter((r) => r.deletedAt == null);
   if (chaves.length === 0 || arbitros.length === 0) return;
   for (const r of arbitros) {
     r.chaveIds = [];
@@ -1567,7 +1574,7 @@ function splitGrupo(grupo, maxPorChave) {
 }
 function gerarTodasChavesHandler(torneioId, maxPorChave = 16) {
   const torneio = loadTorneio$1(torneioId);
-  const atletas = torneio.atletas ?? [];
+  const atletas = (torneio.atletas ?? []).filter((a) => a.deletedAt == null);
   torneio.chaves = [];
   const atletasIgnorados = [];
   const grupos = /* @__PURE__ */ new Map();
@@ -1699,6 +1706,7 @@ function atribuirArbitroHandler(torneioId, data) {
   if (data.arbitroId) {
     const newArbitro = (torneio.arbitros ?? []).find((r) => r.id === data.arbitroId);
     if (!newArbitro) throw new Error("Árbitro não encontrado no torneio.");
+    if (newArbitro.deletedAt != null) throw new Error("Árbitro deletado não pode ser atribuído a uma chave.");
     if (!newArbitro.chaveIds.includes(data.chaveId)) {
       newArbitro.chaveIds.push(data.chaveId);
     }
@@ -2291,7 +2299,7 @@ function registerBracketHandlers() {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     const torneio = loadTorneio$1(torneioId);
-    const atletas = (torneio.atletas ?? []).filter((a) => a.categoria === data.categoriaId);
+    const atletas = (torneio.atletas ?? []).filter((a) => a.deletedAt == null && a.categoria === data.categoriaId);
     if (atletas.length < 2 || atletas.length > 16) {
       throw new Error("A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.");
     }
@@ -2769,6 +2777,11 @@ function registerActivationHandlers() {
   });
 }
 function registerLutasCasadasHandlers() {
+  ipcMain.handle("load-lutas-casadas", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadLutasCasadas(torneioId);
+  });
   ipcMain.handle("load-lutas-casadas-por-area", (_event, areaId) => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
