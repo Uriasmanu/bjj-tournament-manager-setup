@@ -13,130 +13,15 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [corrigido] Chaves encerradas: aplicar opacidade e remover clique
-**Comportamento atual:** todos os cards de chave em `PlacarChaves.tsx` tinham a mesma aparência (opacidade 1) e eram clicáveis independentemente do status.
-**Comportamento esperado:** chaves encerradas devem ter opacidade reduzida (0.5) e não serem clicáveis (cursor default, sem `onClick`). Chaves pendentes/em andamento mantêm aparência normal e são clicáveis.
-**Correção:** extraído `isEncerrado`/`isEmAndamento` para o escopo do card; aplicado `opacity: isEncerrado ? 0.5 : 1`, `cursor: isEncerrado ? 'default' : 'pointer'` e `onClick` condicional em `PlacarChaves.tsx`.
-**Arquivos:** `src/pages/PlacarChaves.tsx`.
+### [aberto] Eu tenho 2 import de tornei, o Torneio_2026_06_07 é quando o torneio foi configurado e o Torneio_2026_06_07_ é quando foi usado na are de luta, quando importei o Torneio_2026_06_07_ em cima do Torneio_2026_06_07 o comportamento correto seria as inforções alteradas em Torneio_2026_06_07_ realizar o update em Torneio_2026_06_07, mas isso não aconteceu, as informações das lutas que aconteceram em Torneio_2026_06_07_ se perderam, só prevaleceu a informação da luta casada.
 
-### [corrigido] No placar da luta tem que mostrar a cor da faixa dos atletas que estão lutando
-**Comportamento atual:** `AtletaPanel` em `PlacarLuta.tsx` exibia apenas nome e equipe do atleta, sem mostrar a faixa.
-**Comportamento esperado:** o placar da luta deve exibir a faixa (cor/belt) de cada atleta, abaixo do nome.
-**Correção:** adicionado `FAIXA_LABEL` (mapeamento de faixas para exibição), incluído `faixa` no retorno de `getAtletaInfo` e como prop de `AtletaPanel`, renderizado o texto da faixa entre nome e equipe.
-**Arquivos:** `src/pages/PlacarLuta.tsx`.
-### [corrigido] Quando o modal de finalizar luta é aberto o tempo tem que parar, caso não tenha sido pausado
-**Comportamento atual:** ao abrir o modal de finalização, o cronômetro continuava rodando se estivesse em andamento.
-**Comportamento esperado:** o cronômetro deve ser pausado automaticamente ao abrir o modal de finalizar luta.
-**Correção:** adicionado `setRodando(false)` no início de `handleAbrirFinalizar` em ambos os placares.
-**Arquivos:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`.
-### [corrigido] em Selecione a área de luta, sempre fica selecionada a ultima area que teve atualização
-**Comportamento atual:** o Select de área no PlacarMenu não pré-selecionava nenhuma área (sempre começava vazio), forçando o usuário a lembrar e selecionar manualmente a área onde estava trabalhando.
-**Comportamento esperado:** se houver chaves com lutas em andamento ou finalizadas em alguma área, a área com a atividade mais recente (baseada em `horarioInicio`/`horarioTermino` das lutas) deve vir pré-selecionada. Caso contrário, o Select inicia vazio.
-**Correção:** `PlacarMenu.tsx` agora carrega todas as chaves via `loadChaves`, percorre as lutas em busca do timestamp mais recente (`horarioTermino` ou `horarioInicio`), mapeia a chave para sua área (via `arbitroId` ↔ `arbitroIds`) e pré-seleciona a área correspondente.
-**Arquivos:** `src/pages/PlacarMenu.tsx`.
-### [corrigido] Troque a visualização dos cards da chave, tanto em placar, quanto na lista de chave, para um a baixo do outro, ao inves de um ao lado do outro
-**Comportamento atual:** os cards de chave em `PlacarChaves.tsx` e `GerenciarChaves.tsx` usavam `SimpleGrid` com `cols={{ base: 1, sm: 2, md: 3 }}`, exibindo cards lado a lado.
-**Comportamento esperado:** os cards devem ficar um abaixo do outro (empilhados verticalmente) para facilitar a leitura em dispositivos móveis e evitar compressão horizontal.
-**Correção:** substituído `SimpleGrid` por `Stack` em ambos os arquivos para exibição vertical dos cards de chave.
-**Arquivos:** `src/pages/PlacarChaves.tsx`, `src/pages/GerenciarChaves.tsx`.
-### [corrigido] Em placar, na parte de selecionar a chave, a que tem a atualização mais recente aparece no topo da lista, e as encerradas ao final
-**Comportamento atual:** as chaves em `PlacarChaves.tsx` eram exibidas na ordem original do banco (geralmente ordem de criação), sem considerar atividade recente ou status de encerramento.
-**Comportamento esperado:** chaves encerradas devem ficar no final da lista; chaves não encerradas devem ser ordenadas pela atividade mais recente (horário de início/término das lutas) primeiro.
-**Correção:** adicionado `sortedChaves` useMemo que ordena: encerradas por último, depois por timestamp decrescente (`horarioTermino`/`horarioInicio`).
-**Arquivos:** `src/pages/PlacarChaves.tsx`.
-### [corrigido] em resultados, as chaves encerradas vão para o topo da lista
-**Comportamento atual:** no painel "Chaves" de Resultados, as chaves eram exibidas na ordem original, sem priorizar as encerradas.
-**Comportamento esperado:** chaves encerradas (`getChaveStatus` retornando "ENCERRADO") devem aparecer primeiro na lista.
-**Correção:** adicionado `.sort()` em `chavesFiltradas` que coloca chaves com status "ENCERRADO" antes das demais.
-**Arquivos:** `src/pages/Resultados.tsx`.
-### [corrigido] Em resultados, lutas com BYE estão sendo consideradas em andamento, olhe para a logica em placar e corrija resultados
-**Comportamento atual:** `getChaveStatus` em Resultados.tsx considerava `l.status === 'wo'` como "EM ANDAMENTO", mas BYE lutas também têm `status: 'wo'` (auto-resolvidas na geração), fazendo chaves sem nenhuma luta real iniciada aparecerem como "EM ANDAMENTO".
-**Comportamento esperado:** Apenas lutas com `status === 'completed'` (lutas reais finalizadas) devem marcar a chave como "EM ANDAMENTO". BYE lutas não contam — mesma lógica de `PlacarChaves.tsx`.
-**Correção:** removido `|| l.status === 'wo'` da condição `isEmAndamento` em `Resultados.tsx:59`.
 
-### [corrigido] em lutas casadas tem que ter a opção de selecionar varios e toda a logica de soft delete que tem em atleta
-**Comportamento atual:** AdminLutasCasadas.tsx não possuía checkboxes, seleção múltipla ou soft delete — apenas exclusão individual e permanente. LutaCasada type não tinha campo `deletedAt`.
-**Comportamento esperado:** Checkboxes (selecionar todos + por linha), soft delete em lote com toggle "Mostrar apenas os deletados", restore, exclusão permanente individual e em lote — mesmo padrão de AdminAthletes.
-**Correção:**
-- Adicionado `deletedAt` ao type `LutaCasada`
-- `electron/lutasCasadas.ts`: `loadLutasCasadas` filtra `deletedAt == null`; novas funções `loadDeletedLutasCasadas`, `deleteLutasCasadas` (bulk soft), `permanentlyDeleteLutaCasada`, `permanentlyDeleteLutasCasadas`, `restoreLutaCasada`, `restoreLutasCasadas`
-- IPC handlers registrados em `electron/main.ts` para todos os novos canais
-- IPC exposto em `electron/preload.ts` e tipado em `src/types/electron.d.ts`
-- `AdminLutasCasadas.tsx` reescrito com: toggle showDeleted, checkboxes, bulk soft-delete no topo, bulk permanent-delete no topo, restore por linha, exclusão permanente por linha, modais de confirmação
-
-### [corrigido] Troque a posicao de resultado — ele deve ser o primeiro no dashboard
-**Comportamento atual:** Resultados era o último card no dashboard (após Placar).
-**Comportamento esperado:** Resultados deve ser o primeiro card, mantendo o mesmo formato visual.
-**Correção:** movido "Resultados" para a primeira posição em `dashboardCards` e `navItems` em `src/pages/Dashboard.tsx`.
-**Arquivos:** `src/pages/Dashboard.tsx`.
-**Data:** jun/2026.
-### [corrigido] Lutas casadas precisa de um menu no dashboard com listagem e exclusao
-**Comportamento atual:** não havia entrada no dashboard nem página dedicada para listar/excluir lutas casadas.
-**Comportamento esperado:** card no dashboard, item na sidebar e página com listagem de todas as lutas casadas com opção de excluir.
-**Correção:**
-- Adicionado IPC `load-lutas-casadas` (retorna todas, sem filtro de área)
-- Criada página `src/pages/AdminLutasCasadas.tsx` com tabela e modal de exclusão
-- Rota `/admin/lutas-casadas` registrada em `App.tsx`
-- Card "Lutas Casadas" e navItem adicionados ao Dashboard
-**Arquivos:** `electron/lutasCasadas.ts`, `electron/main.ts`, `electron/preload.ts`, `src/types/electron.d.ts`, `src/pages/AdminLutasCasadas.tsx`, `src/App.tsx`, `src/pages/Dashboard.tsx`.
-**Data:** jun/2026.
-
-### [corrigido] Arbitros que ja estao em areas devem ficar ocultos no select de arbitro para area
-**Comportamento atual:** o MultiSelect de árbitros no formulário de área exibia todos os árbitros ativos, inclusive os já alocados em outras áreas.
-**Comportamento esperado:** árbitros já atribuídos a outras áreas devem ficar ocultos no seletor, exceto o da área sendo editada.
-**Correção:** adicionado prop `areas` ao `AreaForm` para identificar árbitros já em uso; `arbitroOptions` agora filtra (`usedArbitroIds`) antes de exibir.
-**Arquivos:** `src/components/AreaForm.tsx`, `src/pages/AdminAreas.tsx`, `src/pages/AreasMenu.tsx`.
-**Data:** jun/2026.
-
-### [corrigido] A ordem no dashboard deve ser atleta, equipe, arbitro, area, chave e placar
-**Comportamento atual:** a ordem dos cards no dashboard era: Atletas, Equipes, Geração de Chaves, Áreas de Luta, Árbitros, Placar.
-**Comportamento esperado:** ordem correta: Atletas, Equipes, Árbitros, Áreas de Luta, Geração de Chaves, Placar.
-**Correção:** reordenados os arrays `dashboardCards` e `navItems` em `src/pages/Dashboard.tsx` para a sequência solicitada.
-**Arquivos:** `src/pages/Dashboard.tsx`.
-**Data:** jun/2026.
 
 ## Histórico de Correções
 <!-- ZONA DA IA: a IA preenche após cada ciclo. -->
 
-### [corrigido] Tem que ter a opção de selecionar varios atletas para soft deletar
-**Comportamento atual:** checkboxes e seleção múltipla só existiam na view de deletados. Select de faixa sumia ao alternar para "Mostrar apenas os deletados". Botão de ação em lote ficava abaixo da tabela.
-**Comportamento esperado:** checkboxes de seleção em ambos os modos, com "Excluir Selecionados" (soft-delete em lote) para ativos e "Excluir Permanentemente" para deletados. Botão no topo.
-**Correção:**
-- Checkboxes (cabeçalho + por linha) agora renderizados em ambos os modos
-- Adicionado `handleBulkDelete` chamando IPC `delete-athletes` (soft-delete em lote)
-- Botão de ação em lote movido para o topo (entre filtros e tabela): "Excluir Selecionados" na view normal, "Excluir Permanentemente" na view deletados
-- Adicionado modal de confirmação para exclusão em lote (bulk soft-delete)
-- Select de faixa agora sempre visível (removida condicional `{!showDeleted}`)
-- Filtro de faixa funciona em ambos os modos (removida guarda `!showDeleted`)
-**Arquivos:** `src/pages/AdminAthletes.tsx`.
-**Data:** jun/2026.
-
-### [corrigido] Seleção múltipla e soft-delete em lote para Lutas Casadas
-**Comportamento atual:** AdminLutasCasadas.tsx não possuía checkboxes, seleção múltipla ou soft delete — apenas exclusão individual e permanente. LutaCasada type não tinha campo `deletedAt`.
-**Comportamento esperado:** Checkboxes (selecionar todos + por linha), soft delete em lote com toggle "Mostrar apenas os deletados", restore, exclusão permanente individual e em lote — mesmo padrão de AdminAthletes.
-**Correção:**
-- Adicionado `deletedAt` ao type `LutaCasada`
-- Adicionadas funções em `electron/lutasCasadas.ts`: `loadDeletedLutasCasadas`, `deleteLutasCasadas` (bulk soft), `permanentlyDeleteLutaCasada`, `permanentlyDeleteLutasCasadas`, `restoreLutaCasada`, `restoreLutasCasadas`
-- IPC handlers registrados em `electron/main.ts` para todos os novos canais
-- IPC exposto em `electron/preload.ts` e tipado em `src/types/electron.d.ts`
-- AdminLutasCasadas.tsx reescrito com: toggle showDeleted, checkboxes (cabeçalho + por linha), bulk soft-delete no topo, bulk permanent-delete no topo, restore por linha, exclusão permanente por linha, modais de confirmação
-**Arquivos:** `src/types/lutaCasada.ts`, `electron/lutasCasadas.ts`, `electron/main.ts`, `electron/preload.ts`, `src/types/electron.d.ts`, `src/pages/AdminLutasCasadas.tsx`.
-**Data:** jun/2026.
-
-### [corrigido] BYE lutas consideradas "em andamento" em Resultados
-**Comportamento atual:** `getChaveStatus` em Resultados.tsx considerava `l.status === 'wo'` como "EM ANDAMENTO", mas BYE lutas também têm `status: 'wo'` (auto-resolvidas na geração), fazendo chaves sem nenhuma luta real iniciada aparecerem como "EM ANDAMENTO".
-**Comportamento esperado:** Apenas lutas com `status === 'completed'` (lutas reais finalizadas) devem marcar a chave como "EM ANDAMENTO" — mesma lógica de `PlacarChaves.tsx`.
-**Correção:** removido `|| l.status === 'wo'` da condição `isEmAndamento` em `Resultados.tsx:59`.
-**Arquivos:** `src/pages/Resultados.tsx`.
-**Data:** jun/2026.
-
 
 ## Feature
-### [implementado] Bloqueio de atribuição de itens soft-deleted
-**O que é:** atletas, árbitros e áreas com `deletedAt != null` não podem ser atribuídos: atletas não entram em chaves, árbitros não são atribuídos a chaves/áreas, áreas não recebem árbitros deletados.
-**Onde foi implementado:** `electron/brackets.ts` (5 pontos de filtro/validação) e `electron/areas.ts` (`checkRefereeNotInUse` valida árbitros ativos).
-**Spec detalhada:** `spec/bloqueio-atribuicao-soft-deleted.md`.
-**Data:** jun/2026.
 
 # Guia de Spec para Implementação de Features
 
