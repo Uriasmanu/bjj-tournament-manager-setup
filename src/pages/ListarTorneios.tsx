@@ -7,6 +7,7 @@ import { useEffect, useState, useMemo } from 'react';
 import dayjs from 'dayjs';
 import type { Torneio } from '../types/tournament';
 import { PageLayout } from '../components/PageLayout';
+import { useTournamentMode } from '../utils/TournamentModeContext';
 
 export function ListarTorneios() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export function ListarTorneios() {
   const [searchQuery, setSearchQuery] = useState('');
   const [startTarget, setStartTarget] = useState<Torneio | null>(null);
   const [startModalOpen, setStartModalOpen] = useState(false);
+  const { refresh } = useTournamentMode();
 
   const loadTorneios = async () => {
     setLoading(true);
@@ -49,6 +51,7 @@ export function ListarTorneios() {
     setStartModalOpen(false);
     try {
       await window.electronAPI.startTournament(startTarget.id, mode);
+      await refresh();
       const nome = startTarget.nome || `Torneio ${startTarget.data}`;
       notifications.show({
         title: 'Sucesso',

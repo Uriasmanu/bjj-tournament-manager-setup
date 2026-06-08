@@ -13,8 +13,32 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+## Histórico de Correções
 
+### [2026-06-08] Corrigido: Dashboard exibia cards restritos após iniciar torneio no modo administrador
+**Problema:** `TournamentModeContext` carregava o `mode` uma única vez no mount do Provider e nunca recarregava. Ao iniciar um torneio (Play → modal → selecionar modo), o `startTournament` atualizava `torneio-ativo.json`, mas o contexto permanecia com o valor antigo. O Dashboard, ao usar `useTournamentMode()`, recebia o mode desatualizado e filtrava cards incorretamente.
 
+**Correção aplicada:**
+- `src/pages/ListarTorneios.tsx`: `handleStartConfirm` agora chama `await refresh()` do `useTournamentMode()` imediatamente após `startTournament` bem-sucedido, antes de navegar
+
+**RF/CA/Passos afetados:** Nenhum.
+
+### [2026-06-08] Corrigido: Fluxo de navegação — central de torneios bloqueado pelo AreaGuard no modo área
+
+### [2026-06-08] Corrigido: Fluxo de navegação — central de torneios bloqueado pelo AreaGuard no modo área
+**Problema:** `ListarTorneios` estava envolvido por `<AreaGuard>` em `App.tsx`, impedindo que usuários do modo área acessassem a lista de torneios. Além disso, o back do `PlacarMenu` no modo área voltava para o Menu Inicial (`/`) em vez de "central de torneios" (`ListarTorneios`).
+
+**Correção aplicada:**
+- `src/App.tsx`: removido `<AreaGuard>` da rota `/admin/listar-torneios` — agora acessível em ambos os modos
+- `src/pages/PlacarMenu.tsx`: backRoute no modo área alterado de `'/'` para `'/admin/listar-torneios'`
+
+**Fluxo final (imutável):**
+1. Tela inicial → "Listar Torneios" → `/admin/listar-torneios` (ambos os modos)
+2. Play no torneio → modal Admin/Área
+3. Admin → Dashboard; Área → PlacarMenu
+4. Back do PlacarMenu (área) → Central de Torneios (`ListarTorneios`)
+
+**RF/CA/Passos afetados:** Nenhum.
 
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->

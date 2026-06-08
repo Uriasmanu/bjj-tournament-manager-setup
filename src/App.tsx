@@ -47,7 +47,7 @@ function MainApp() {
           <Route path="/admin/resultados" element={<Resultados />} />
           <Route path="/admin/criar-torneio" element={<AreaGuard><CriarTorneio /></AreaGuard>} />
           <Route path="/admin/importar-torneio" element={<AreaGuard><ImportarTorneio /></AreaGuard>} />
-          <Route path="/admin/listar-torneios" element={<AreaGuard><ListarTorneios /></AreaGuard>} />
+          <Route path="/admin/listar-torneios" element={<ListarTorneios />} />
           <Route path="/admin/atletas" element={<AreaGuard><AthletesMenu /></AreaGuard>} />
           <Route path="/admin/atletas/lista" element={<AreaGuard><AdminAthletes /></AreaGuard>} />
           <Route path="/admin/arbitros" element={<AreaGuard><ArbitrosMenu /></AreaGuard>} />

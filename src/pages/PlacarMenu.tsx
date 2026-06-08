@@ -51,7 +51,7 @@ export function PlacarMenu() {
   }
 
   return (
-    <PageLayout title="Placar" backRoute={mode === 'area' ? '/' : '/admin/dashboard'}>
+    <PageLayout title="Placar" backRoute={mode === 'area' ? '/admin/listar-torneios' : '/admin/dashboard'}>
       <Stack gap="lg" align="center">
         <IconScoreboard size={48} />
 

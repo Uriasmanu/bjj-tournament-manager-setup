@@ -10,47 +10,6 @@ O objetivo é fornecer uma solução centralizada para organizadores, árbitros 
 
 ---
 
-## 2. Status da Implementação
-
-### 2.1. Implementado (MVP)
-
-| Módulo | Status | Observação |
-|---|---|---|
-| Menu Inicial | ✅ Completo | Tela com 3 cartões (Criar, Importar, Listar) + teclas 1/2/3 |
-| Criar Torneio | ✅ Completo | Formulário com nome (opcional), data (futura), validação, IPC |
-| Importar Torneio | ✅ Completo | Upload JSON, validação de estrutura, merge por `updatedAt` (last-write-wins: se o `id` já existe, atletas/árbitros/áreas são mesclados por item; chaves/lutas casadas pelo `updatedAt` do torneio; delete recente vence). Retorna contadores do merge. |
-| Listar Torneios | ✅ Completo | Tabela com Iniciar/Exportar/Excluir; registro de startedAt no Play |
-| Gerenciamento de Torneios (IPC) | ✅ Completo | CRUD completo no main process (`electron/tournament.ts`) |
-| Tema Oceano & Coral | ✅ Completo | Paleta principal: marinho (#1b325f), azul acento (#3a89c9), azul claro (#9cc4e4), bg claro (#e9f2f9), coral (#f26c4f), amarelo royal (#ffbc11). Fonte Inter, componentes responsivos com `clamp()`. |
-| Cadastro de Atletas | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação em tempo real, tabela, duplicata, normalização de texto, IPC. Atletas armazenados por torneio (dentro do JSON do torneio). Campos `genero` e `categoria` IBJJF obrigatórios no formulário e importação. |
-| Importação em Massa de Atletas | ✅ Completo | Diálogo nativo, validação fail-fast, deduplicação por ID e nome+ano, mesclagem com lista existente. Validação de `genero` e `categoria` como obrigatórios, com verificação contra lista de categorias IBJJF. |
-| Dashboard Administrativo | ✅ Completo | Tela com sidebar marinho, header stats (Atletas, Equipes), hero banner sólido, cards em grid responsivo com badges e link "Acessar →" |
-| Resumo de Equipes | ✅ Completo | Tela que consulta a lista de atletas e exibe nome das equipes com contagem de atletas por equipe |
-| Cadastro de Árbitros | ✅ Completo | Menu com 3 cartões (Cadastrar, Listar, Importar); CRUD com modal controlado, validação, duplicata por nome. Faixas permitidas: roxa, marrom, preta. Importação/exportação JSON. Campo de busca por nome, equipe e faixa. |
-| Busca em Atletas | ✅ Completo | Campo de busca na tela de listagem que filtra por nome, equipe e categoria |
-| Busca em Árbitros | ✅ Completo | Campo de busca na tela de listagem que filtra por nome, equipe e faixa |
-| Busca em Equipes | ✅ Completo | Campo de busca na tela de equipes que filtra por nome da equipe |
-| Busca em Chaves | ✅ Completo | Campo de busca na tela de chaves que filtra por título (faixa, peso, atletas) |
-| Busca em Torneios | ✅ Completo | Campo de busca na tela de listagem de torneios que filtra por nome e data |
-| Correção chaveIds | ✅ Completo | Ao regenerar chaves, `chaveIds` dos árbitros é limpo antes da reatribuição automática, eliminando acúmulo de IDs antigos |
-| Tela de Ativação | ✅ Completo | Componente que bloqueia o acesso até ativação; senha SHA-256, token HMAC por hardware |
-| Error Boundary | ✅ Completo | Componente classe que captura erros de renderização e exibe fallback com "Tentar novamente" |
-| PageLayout | ✅ Completo | Layout padrão com Container, Paper, título e botão de voltar |
-| Áreas de Luta | ✅ Completo | CRUD com nome + múltiplos árbitros por área. Validação de unicidade de árbitro entre áreas. Migração retroativa de dados legados. Menu com Cadastrar/Listar, tabela com busca, exclusão individual/em lote. Importar/Exportar JSON no header (mesmo padrão de Atletas). Nome opcional: se vazio, sistema gera automaticamente `Área N` (próximo número disponível, preenche gaps). |
-| Placar (Scoreboard) | ✅ Completo | Fluxo `PlacarMenu → PlacarChaves → PlacarBracket → PlacarLuta` (seleção de área, lista de chaves da área, bracket com lutas iniciáveis, placar funcional com cronômetro, pontos 2/3/4, vantagens, punições, finalização/DQ/desempate, persistência no JSON do torneio). Cores azul anil (Atleta A) e branco (Atleta B). Vencedor propagado para a próxima rodada. Validação de pontos/vantagens ao selecionar vencedor por pontos com modal de aviso. `desclassificadoId` identifica atleta desclassificado. Correção de propagação em chaves de 2, 3 e 4 atletas. |
-| Registro de horário de lutas | ✅ Completo | Cada `Luta` e `LutaCasada` grava `horarioInicio` (1º clique em "Iniciar" do cronômetro) e `horarioTermino`/`dataFinalizacao` (confirmação do resultado no modal final) no formato `DD/MM/YYYY HH:mm:ss` (timezone local). Exibidos em Resultados na info de cada luta. JSONs legados sem os campos continuam funcionando (campos opcionais, exibidos como "—"). |
-
-### 2.2. Não Implementado (Planejado)
-
-| Módulo | Status |
-|---|---|
-| Geração de Chaves | ✅ Completo | Máximo de 16 atletas por chave (subgrupos configuráveis de 2 a 16), chave editável manualmente, shuffle com separação de equipes (Fisher-Yates), import/export JSON. Estruturas: 2, 3, 4, 5, 6-15 (geral) e 16 atletas. Atletas sem oponente exibidos em cartões com opções de remanejamento (subir/descer peso) e indicador de "luta casada". |
-| Áreas de Luta | ✅ Completo | CRUD completo, múltiplos árbitros por área, unicidade de árbitro |
-| Resultados | ❌ Pendente | Tela de consolidação de resultados por categoria (pódios, medalhistas, ranking). |
-| Ranking / Medalhistas | ❌ Pendente |
-
----
-
 ## 3. Regras de Negócio
 
 ### 3.0. Bloqueio de Atribuição de Itens Soft-Deleted
