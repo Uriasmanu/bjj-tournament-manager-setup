@@ -1,200 +1,285 @@
-import { app as D, ipcMain as m, dialog as _, BrowserWindow as se } from "electron";
-import { fileURLToPath as Ee } from "node:url";
-import v from "node:path";
-import h from "node:fs";
-import y from "node:crypto";
-import { execSync as Oe } from "node:child_process";
-const k = v.join(D.getPath("userData"), "data"), U = v.join(k, "torneios"), M = v.join(k, "torneio-ativo.json");
-function F() {
-  h.existsSync(k) || h.mkdirSync(k, { recursive: !0 }), h.existsSync(U) || h.mkdirSync(U, { recursive: !0 });
+import { app, ipcMain, dialog, BrowserWindow } from "electron";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+import fs from "node:fs";
+import crypto from "node:crypto";
+import { execSync } from "node:child_process";
+const DATA_DIR$5 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR$5 = path.join(DATA_DIR$5, "torneios");
+const ATIVO_FILE = path.join(DATA_DIR$5, "torneio-ativo.json");
+function ensureDirs() {
+  if (!fs.existsSync(DATA_DIR$5)) fs.mkdirSync(DATA_DIR$5, { recursive: true });
+  if (!fs.existsSync(TORNEIOS_DIR$5)) fs.mkdirSync(TORNEIOS_DIR$5, { recursive: true });
 }
-function C(e) {
-  return v.join(U, `${e}.json`);
+function getTorneioPath$5(id) {
+  return path.join(TORNEIOS_DIR$5, `${id}.json`);
 }
-function A() {
-  if (!h.existsSync(M)) return null;
+function getActiveTournamentId() {
+  if (!fs.existsSync(ATIVO_FILE)) return null;
   try {
-    const { id: e } = JSON.parse(h.readFileSync(M, "utf-8"));
-    return e;
+    const { id } = JSON.parse(fs.readFileSync(ATIVO_FILE, "utf-8"));
+    return id;
   } catch {
     return null;
   }
 }
-function V(e, n) {
-  const t = /* @__PURE__ */ new Map();
-  for (const s of e) t.set(s.id, s);
-  const o = /* @__PURE__ */ new Map();
-  for (const s of n) o.set(s.id, s);
-  const r = [];
-  let a = 0, i = 0, l = 0;
-  for (const s of o.values()) {
-    const c = t.get(s.id);
-    c ? s.updatedAt > c.updatedAt ? (r.push(s), i += 1, c.deletedAt == null && s.deletedAt != null && (l += 1)) : r.push(c) : (r.push(s), a += 1);
+function mergeById(existing, incoming) {
+  const existingMap = /* @__PURE__ */ new Map();
+  for (const item of existing) existingMap.set(item.id, item);
+  const incomingMap = /* @__PURE__ */ new Map();
+  for (const item of incoming) incomingMap.set(item.id, item);
+  const result = [];
+  let created = 0;
+  let updated = 0;
+  let removed = 0;
+  for (const inc of incomingMap.values()) {
+    const ext = existingMap.get(inc.id);
+    if (!ext) {
+      result.push(inc);
+      created += 1;
+    } else if (inc.updatedAt > ext.updatedAt) {
+      result.push(inc);
+      updated += 1;
+      if (ext.deletedAt == null && inc.deletedAt != null) {
+        removed += 1;
+      }
+    } else {
+      result.push(ext);
+    }
   }
-  let d = 0;
-  for (const [s, c] of t)
-    o.has(s) || (r.push(c), d += 1);
-  return { merged: r, counters: { created: a, updated: i, kept: d, removed: l } };
-}
-function oe(e, n, t) {
-  const o = /* @__PURE__ */ new Map();
-  for (const s of e) o.set(s.id, s);
-  const r = /* @__PURE__ */ new Map();
-  for (const s of n) r.set(s.id, s);
-  const a = [];
-  let i = 0, l = 0;
-  for (const s of r.values()) {
-    const c = o.get(s.id);
-    c ? t ? (a.push(s), l += 1) : a.push(c) : (a.push(s), i += 1);
+  let kept = 0;
+  for (const [id, ext] of existingMap) {
+    if (!incomingMap.has(id)) {
+      result.push(ext);
+      kept += 1;
+    }
   }
-  let d = 0;
-  for (const [s, c] of o)
-    r.has(s) || (a.push(c), d += 1);
-  return { merged: a, counters: { created: i, updated: l, kept: d, removed: 0 } };
+  return { merged: result, counters: { created, updated, kept, removed } };
 }
-function q(e) {
-  const n = /* @__PURE__ */ new Set(), t = [];
-  for (const o of e)
-    n.has(o.id) || (n.add(o.id), t.push(o));
-  return t;
+function mergeByIdForceWinner(existing, incoming, incomingWins) {
+  const existingMap = /* @__PURE__ */ new Map();
+  for (const item of existing) existingMap.set(item.id, item);
+  const incomingMap = /* @__PURE__ */ new Map();
+  for (const item of incoming) incomingMap.set(item.id, item);
+  const result = [];
+  let created = 0;
+  let updated = 0;
+  for (const inc of incomingMap.values()) {
+    const ext = existingMap.get(inc.id);
+    if (!ext) {
+      result.push(inc);
+      created += 1;
+    } else if (incomingWins) {
+      result.push(inc);
+      updated += 1;
+    } else {
+      result.push(ext);
+    }
+  }
+  let kept = 0;
+  for (const [id, ext] of existingMap) {
+    if (!incomingMap.has(id)) {
+      result.push(ext);
+      kept += 1;
+    }
+  }
+  return { merged: result, counters: { created, updated, kept, removed: 0 } };
 }
-function re(e) {
-  const n = (/* @__PURE__ */ new Date()).toISOString();
+function dedupById(arr) {
+  const seen = /* @__PURE__ */ new Set();
+  const result = [];
+  for (const item of arr) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      result.push(item);
+    }
+  }
+  return result;
+}
+function normalizeAtleta(a) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
   return {
-    ...e,
-    id: e.id || y.randomUUID(),
-    createdAt: e.createdAt || n,
-    updatedAt: e.updatedAt || n,
-    nome: (e.nome || "").trim().toLowerCase(),
-    equipe: (e.equipe || "").trim().toLowerCase(),
-    deletedAt: e.deletedAt ?? null
+    ...a,
+    id: a.id || crypto.randomUUID(),
+    createdAt: a.createdAt || now,
+    updatedAt: a.updatedAt || now,
+    nome: (a.nome || "").trim().toLowerCase(),
+    equipe: (a.equipe || "").trim().toLowerCase(),
+    deletedAt: a.deletedAt ?? null
   };
 }
-function ae(e) {
-  const n = (/* @__PURE__ */ new Date()).toISOString();
+function normalizeArbitro(a) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
   return {
-    ...e,
-    id: e.id || y.randomUUID(),
-    createdAt: e.createdAt || n,
-    updatedAt: e.updatedAt || n,
-    nome: (e.nome || "").trim().toLowerCase(),
-    equipe: (e.equipe || "").trim().toLowerCase(),
-    chaveIds: e.chaveIds ?? [],
-    deletedAt: e.deletedAt ?? null
+    ...a,
+    id: a.id || crypto.randomUUID(),
+    createdAt: a.createdAt || now,
+    updatedAt: a.updatedAt || now,
+    nome: (a.nome || "").trim().toLowerCase(),
+    equipe: (a.equipe || "").trim().toLowerCase(),
+    chaveIds: a.chaveIds ?? [],
+    deletedAt: a.deletedAt ?? null
   };
 }
-function ie(e) {
-  const n = (/* @__PURE__ */ new Date()).toISOString();
+function normalizeArea$1(a) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
   return {
-    ...e,
-    id: e.id || y.randomUUID(),
-    createdAt: e.createdAt || n,
-    updatedAt: e.updatedAt || n,
-    nome: (e.nome || "").trim(),
-    arbitroIds: Array.isArray(e.arbitroIds) ? e.arbitroIds.filter(Boolean) : [],
-    deletedAt: e.deletedAt ?? null
+    ...a,
+    id: a.id || crypto.randomUUID(),
+    createdAt: a.createdAt || now,
+    updatedAt: a.updatedAt || now,
+    nome: (a.nome || "").trim(),
+    arbitroIds: Array.isArray(a.arbitroIds) ? a.arbitroIds.filter(Boolean) : [],
+    deletedAt: a.deletedAt ?? null
   };
 }
-function Ne() {
-  m.handle("create-tournament", (e, n) => {
-    F();
-    const t = {
-      id: y.randomUUID(),
-      nome: n.nome,
-      data: n.data,
+function registerTournamentHandlers() {
+  ipcMain.handle("create-tournament", (_event, data) => {
+    ensureDirs();
+    const torneio = {
+      id: crypto.randomUUID(),
+      nome: data.nome,
+      data: data.data,
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       atletas: []
     };
-    return h.writeFileSync(C(t.id), JSON.stringify(t, null, 2), "utf-8"), t;
-  }), m.handle("list-tournaments", () => (F(), h.readdirSync(U).filter((n) => n.endsWith(".json")).map((n) => {
-    const t = h.readFileSync(v.join(U, n), "utf-8");
-    return JSON.parse(t);
-  }))), m.handle("start-tournament", (e, n) => {
-    F(), h.writeFileSync(M, JSON.stringify({ id: n }), "utf-8");
-    const t = C(n);
-    if (h.existsSync(t)) {
-      const o = JSON.parse(h.readFileSync(t, "utf-8"));
-      return o.startedAt = (/* @__PURE__ */ new Date()).toISOString(), o.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), h.writeFileSync(t, JSON.stringify(o, null, 2), "utf-8"), o;
+    fs.writeFileSync(getTorneioPath$5(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
+    return torneio;
+  });
+  ipcMain.handle("list-tournaments", () => {
+    ensureDirs();
+    const files = fs.readdirSync(TORNEIOS_DIR$5).filter((f) => f.endsWith(".json"));
+    return files.map((f) => {
+      const content = fs.readFileSync(path.join(TORNEIOS_DIR$5, f), "utf-8");
+      return JSON.parse(content);
+    });
+  });
+  ipcMain.handle("start-tournament", (_event, id) => {
+    ensureDirs();
+    fs.writeFileSync(ATIVO_FILE, JSON.stringify({ id }), "utf-8");
+    const filePath = getTorneioPath$5(id);
+    if (fs.existsSync(filePath)) {
+      const torneio = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      torneio.startedAt = (/* @__PURE__ */ new Date()).toISOString();
+      torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      fs.writeFileSync(filePath, JSON.stringify(torneio, null, 2), "utf-8");
+      return torneio;
     }
     throw new Error("Torneio não encontrado");
-  }), m.handle("get-active-tournament", () => {
-    F();
-    const e = A();
-    if (!e) return null;
-    const n = C(e);
-    return h.existsSync(n) ? JSON.parse(h.readFileSync(n, "utf-8")) : null;
-  }), m.handle("export-tournament", async (e, n) => {
-    F();
-    const t = C(n);
-    if (!h.existsSync(t)) throw new Error("Torneio não encontrado");
-    const o = JSON.parse(h.readFileSync(t, "utf-8")), r = o.nome || `Torneio ${o.data}`, a = await _.showSaveDialog({
+  });
+  ipcMain.handle("get-active-tournament", () => {
+    ensureDirs();
+    const id = getActiveTournamentId();
+    if (!id) return null;
+    const filePath = getTorneioPath$5(id);
+    if (!fs.existsSync(filePath)) return null;
+    return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+  });
+  ipcMain.handle("export-tournament", async (_event, id) => {
+    ensureDirs();
+    const sourcePath = getTorneioPath$5(id);
+    if (!fs.existsSync(sourcePath)) throw new Error("Torneio não encontrado");
+    const torneio = JSON.parse(fs.readFileSync(sourcePath, "utf-8"));
+    const defaultName = torneio.nome || `Torneio ${torneio.data}`;
+    const result = await dialog.showSaveDialog({
       title: "Exportar Torneio",
-      defaultPath: `${r.replace(/[^a-zA-Z0-9]/g, "_")}.json`,
+      defaultPath: `${defaultName.replace(/[^a-zA-Z0-9]/g, "_")}.json`,
       filters: [{ name: "JSON", extensions: ["json"] }]
     });
-    !a.canceled && a.filePath && h.copyFileSync(t, a.filePath);
-  }), m.handle(
-    "import-tournament",
-    (e, n) => {
-      if (F(), !n.id || !n.data)
-        throw new Error("Estrutura inválida");
-      const t = C(n.id), o = (/* @__PURE__ */ new Date()).toISOString(), r = h.existsSync(t) ? JSON.parse(h.readFileSync(t, "utf-8")) : null;
-      if (!r) {
-        const R = {
-          ...n,
-          createdAt: n.createdAt || o,
-          updatedAt: n.updatedAt || o,
-          atletas: q((n.atletas ?? []).map(($) => re($))),
-          arbitros: q((n.arbitros ?? []).map(($) => ae($))),
-          areas: q((n.areas ?? []).map(($) => ie($))),
-          chaves: q(n.chaves ?? []),
-          lutasCasadas: q(n.lutasCasadas ?? [])
-        };
-        return h.writeFileSync(t, JSON.stringify(R, null, 2), "utf-8"), { success: !0, merged: !1, created: 0, updated: 0, kept: 0, removed: 0 };
-      }
-      const a = (n.atletas ?? []).map((R) => re(R)), i = (n.arbitros ?? []).map((R) => ae(R)), l = (n.areas ?? []).map((R) => ie(R)), d = n.chaves ?? [], s = n.lutasCasadas ?? [], c = n.updatedAt > r.updatedAt, I = V(r.atletas ?? [], a), p = V(r.arbitros ?? [], i), w = V(r.areas ?? [], l), g = oe(r.chaves ?? [], d, c), S = oe(r.lutasCasadas ?? [], s, c), b = {
-        created: I.counters.created + p.counters.created + w.counters.created + g.counters.created + S.counters.created,
-        updated: I.counters.updated + p.counters.updated + w.counters.updated + g.counters.updated + S.counters.updated,
-        kept: I.counters.kept + p.counters.kept + w.counters.kept + g.counters.kept + S.counters.kept,
-        removed: I.counters.removed + p.counters.removed + w.counters.removed + g.counters.removed + S.counters.removed
-      }, x = {
-        id: r.id,
-        nome: c ? n.nome : r.nome,
-        data: c ? n.data : r.data,
-        createdAt: r.createdAt,
-        updatedAt: n.updatedAt > r.updatedAt ? n.updatedAt : r.updatedAt,
-        startedAt: r.startedAt ?? n.startedAt,
-        atletas: I.merged,
-        arbitros: p.merged,
-        areas: w.merged,
-        chaves: g.merged,
-        lutasCasadas: S.merged
-      };
-      return h.writeFileSync(t, JSON.stringify(x, null, 2), "utf-8"), { success: !0, merged: !0, ...b };
+    if (!result.canceled && result.filePath) {
+      fs.copyFileSync(sourcePath, result.filePath);
     }
-  ), m.handle("update-tournament", (e, n) => {
-    F();
-    const t = C(n.id);
-    if (!h.existsSync(t)) throw new Error("Torneio não encontrado");
-    const o = {
-      ...n,
+  });
+  ipcMain.handle(
+    "import-tournament",
+    (_event, data) => {
+      ensureDirs();
+      if (!data.id || !data.data) {
+        throw new Error("Estrutura inválida");
+      }
+      const dest = getTorneioPath$5(data.id);
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      const existing = fs.existsSync(dest) ? JSON.parse(fs.readFileSync(dest, "utf-8")) : null;
+      if (!existing) {
+        const torneio = {
+          ...data,
+          createdAt: data.createdAt || now,
+          updatedAt: data.updatedAt || now,
+          atletas: dedupById((data.atletas ?? []).map((a) => normalizeAtleta(a))),
+          arbitros: dedupById((data.arbitros ?? []).map((a) => normalizeArbitro(a))),
+          areas: dedupById((data.areas ?? []).map((a) => normalizeArea$1(a))),
+          chaves: dedupById(data.chaves ?? []),
+          lutasCasadas: dedupById(data.lutasCasadas ?? [])
+        };
+        fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), "utf-8");
+        return { success: true, merged: false, created: 0, updated: 0, kept: 0, removed: 0 };
+      }
+      const incomingAtletas = (data.atletas ?? []).map((a) => normalizeAtleta(a));
+      const incomingArbitros = (data.arbitros ?? []).map((a) => normalizeArbitro(a));
+      const incomingAreas = (data.areas ?? []).map((a) => normalizeArea$1(a));
+      const incomingChaves = data.chaves ?? [];
+      const incomingLutasCasadas = data.lutasCasadas ?? [];
+      const incomingIsMoreRecent = data.updatedAt > existing.updatedAt;
+      const atletasMerge = mergeById(existing.atletas ?? [], incomingAtletas);
+      const arbitrosMerge = mergeById(existing.arbitros ?? [], incomingArbitros);
+      const areasMerge = mergeById(existing.areas ?? [], incomingAreas);
+      const chavesMerge = mergeByIdForceWinner(existing.chaves ?? [], incomingChaves, incomingIsMoreRecent);
+      const lutasCasadasMerge = mergeByIdForceWinner(existing.lutasCasadas ?? [], incomingLutasCasadas, incomingIsMoreRecent);
+      const counters = {
+        created: atletasMerge.counters.created + arbitrosMerge.counters.created + areasMerge.counters.created + chavesMerge.counters.created + lutasCasadasMerge.counters.created,
+        updated: atletasMerge.counters.updated + arbitrosMerge.counters.updated + areasMerge.counters.updated + chavesMerge.counters.updated + lutasCasadasMerge.counters.updated,
+        kept: atletasMerge.counters.kept + arbitrosMerge.counters.kept + areasMerge.counters.kept + chavesMerge.counters.kept + lutasCasadasMerge.counters.kept,
+        removed: atletasMerge.counters.removed + arbitrosMerge.counters.removed + areasMerge.counters.removed + chavesMerge.counters.removed + lutasCasadasMerge.counters.removed
+      };
+      const merged = {
+        id: existing.id,
+        nome: incomingIsMoreRecent ? data.nome : existing.nome,
+        data: incomingIsMoreRecent ? data.data : existing.data,
+        createdAt: existing.createdAt,
+        updatedAt: data.updatedAt > existing.updatedAt ? data.updatedAt : existing.updatedAt,
+        startedAt: existing.startedAt ?? data.startedAt,
+        atletas: atletasMerge.merged,
+        arbitros: arbitrosMerge.merged,
+        areas: areasMerge.merged,
+        chaves: chavesMerge.merged,
+        lutasCasadas: lutasCasadasMerge.merged
+      };
+      fs.writeFileSync(dest, JSON.stringify(merged, null, 2), "utf-8");
+      return { success: true, merged: true, ...counters };
+    }
+  );
+  ipcMain.handle("update-tournament", (_event, data) => {
+    ensureDirs();
+    const filePath = getTorneioPath$5(data.id);
+    if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+    const torneio = {
+      ...data,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
-    return h.writeFileSync(t, JSON.stringify(o, null, 2), "utf-8"), o;
-  }), m.handle("delete-tournament", (e, n) => {
-    F();
-    const t = C(n);
-    if (!h.existsSync(t)) throw new Error("Torneio não encontrado");
-    if (h.unlinkSync(t), h.existsSync(M))
+    fs.writeFileSync(filePath, JSON.stringify(torneio, null, 2), "utf-8");
+    return torneio;
+  });
+  ipcMain.handle("delete-tournament", (_event, id) => {
+    ensureDirs();
+    const filePath = getTorneioPath$5(id);
+    if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+    fs.unlinkSync(filePath);
+    if (fs.existsSync(ATIVO_FILE)) {
       try {
-        const { id: o } = JSON.parse(h.readFileSync(M, "utf-8"));
-        o === n && h.unlinkSync(M);
+        const { id: activeId } = JSON.parse(fs.readFileSync(ATIVO_FILE, "utf-8"));
+        if (activeId === id) {
+          fs.unlinkSync(ATIVO_FILE);
+        }
       } catch {
       }
-  }), m.handle("read-file", async (e, n) => h.readFileSync(n, "utf-8"));
+    }
+  });
+  ipcMain.handle("read-file", async (_event, filePath) => {
+    return fs.readFileSync(filePath, "utf-8");
+  });
 }
-const Be = [
+const CATEGORIAS_PESO = [
   { peso: "galo", nome: "Galo", masculino: 57.5, feminino: 48.5 },
   { peso: "pluma", nome: "Pluma", masculino: 64, feminino: 53.5 },
   { peso: "pena", nome: "Pena", masculino: 70, feminino: 58.5 },
@@ -204,30 +289,34 @@ const Be = [
   { peso: "pesado", nome: "Pesado", masculino: 94.3, feminino: 79.3 },
   { peso: "super-pesado", nome: "Super Pesado", masculino: 97.5, feminino: null },
   { peso: "pesadissimo", nome: "Pesadíssimo", masculino: null, feminino: null }
-], Le = {
+];
+const kidsLabel = {
   "pre-mirim": "Pré-Mirim",
-  mirim: "Mirim",
+  "mirim": "Mirim",
   "infantil-a": "Infantil A",
   "infantil-b": "Infantil B",
   "infanto-juvenil-a": "Infanto-Juvenil A",
   "infanto-juvenil-b": "Infanto-Juvenil B"
-}, _e = {
+};
+const KIDS_PESO_LIMITES = {
   "pre-mirim": { galo: 14.7, pluma: 17.9, pena: 20, leve: 24, medio: 26, "meio-pesado": 29, pesado: 31.2, "super-pesado": 33.2, pesadissimo: null },
-  mirim: { galo: 21, pluma: 24, pena: 27, leve: 30.2, medio: 33.2, "meio-pesado": 36.2, pesado: 39.3, "super-pesado": 42.3, pesadissimo: null },
+  "mirim": { galo: 21, pluma: 24, pena: 27, leve: 30.2, medio: 33.2, "meio-pesado": 36.2, pesado: 39.3, "super-pesado": 42.3, pesadissimo: null },
   "infantil-a": { galo: 27, pluma: 30.2, pena: 33.2, leve: 36.2, medio: 39.3, "meio-pesado": 42.3, pesado: 45.3, "super-pesado": 48.3, pesadissimo: null },
   "infantil-b": { galo: 36.2, pluma: 40.3, pena: 44.3, leve: 48.3, medio: 52.5, "meio-pesado": 56.5, pesado: 60.5, "super-pesado": 65, pesadissimo: null },
   "infanto-juvenil-a": { galo: 40.3, pluma: 44.3, pena: 48.3, leve: 52.5, medio: 56.5, "meio-pesado": 60.5, pesado: 65, "super-pesado": 69.5, pesadissimo: null },
   "infanto-juvenil-b": { galo: 48.3, pluma: 52.5, pena: 56.5, leve: 60.5, medio: 65, "meio-pesado": 69.5, pesado: 74, "super-pesado": 78.5, pesadissimo: null }
 };
-function Pe(e, n, t) {
-  const o = _e[e];
-  if (o)
-    return o[t.peso] ?? null;
-  const r = n === "masculino" ? t.masculino : t.feminino;
-  return t.peso === "pesadissimo" && n === "feminino" ? null : r;
+function getPesoLimite(faixaEtaria, genero, cat) {
+  const kidsLimites = KIDS_PESO_LIMITES[faixaEtaria];
+  if (kidsLimites) {
+    return kidsLimites[cat.peso] ?? null;
+  }
+  const base = genero === "masculino" ? cat.masculino : cat.feminino;
+  if (cat.peso === "pesadissimo" && genero === "feminino") return null;
+  return base;
 }
-function Te() {
-  const e = [
+function gerarCategorias() {
+  const faixasEtarias = [
     "pre-mirim",
     "mirim",
     "infantil-a",
@@ -243,1563 +332,2476 @@ function Te() {
     "master5",
     "master6",
     "master7"
-  ], n = ["masculino", "feminino"], t = [];
-  for (const o of e) {
-    const r = Le[o] || o.charAt(0).toUpperCase() + o.slice(1);
-    for (const a of n) {
-      const i = a === "masculino" ? "Masculino" : "Feminino";
-      for (const l of Be) {
-        const d = Pe(o, a, l);
-        d !== void 0 && t.push({
-          id: `${o}-${a}-${l.peso}`,
-          nome: `${r} ${i} ${l.nome}`,
-          faixaEtaria: o,
-          genero: a,
-          peso: l.peso,
-          pesoMaximoKg: d
+  ];
+  const generos = ["masculino", "feminino"];
+  const result = [];
+  for (const fe of faixasEtarias) {
+    const feLabel = kidsLabel[fe] || fe.charAt(0).toUpperCase() + fe.slice(1);
+    for (const gen of generos) {
+      const genLabel = gen === "masculino" ? "Masculino" : "Feminino";
+      for (const cat of CATEGORIAS_PESO) {
+        const pesoLimite = getPesoLimite(fe, gen, cat);
+        if (pesoLimite === void 0) continue;
+        result.push({
+          id: `${fe}-${gen}-${cat.peso}`,
+          nome: `${feLabel} ${genLabel} ${cat.nome}`,
+          faixaEtaria: fe,
+          genero: gen,
+          peso: cat.peso,
+          pesoMaximoKg: pesoLimite
         });
       }
     }
   }
-  return t;
+  return result;
 }
-const le = Te(), Fe = {};
-for (const e of le)
-  Fe[e.id] = e.nome;
-const je = v.join(D.getPath("userData"), "data"), Re = v.join(je, "torneios");
-function ce(e) {
-  return v.join(Re, `${e}.json`);
+const CATEGORIAS_IBJJF = gerarCategorias();
+const categoriaLabels = {};
+for (const c of CATEGORIAS_IBJJF) {
+  categoriaLabels[c.id] = c.nome;
 }
-function O(e) {
-  const n = ce(e);
-  if (!h.existsSync(n)) throw new Error("Torneio não encontrado");
-  return JSON.parse(h.readFileSync(n, "utf-8"));
+const DATA_DIR$4 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR$4 = path.join(DATA_DIR$4, "torneios");
+function getTorneioPath$4(torneioId) {
+  return path.join(TORNEIOS_DIR$4, `${torneioId}.json`);
 }
-function P(e) {
-  h.writeFileSync(ce(e.id), JSON.stringify(e, null, 2), "utf-8");
+function loadTorneio$4(torneioId) {
+  const filePath = getTorneioPath$4(torneioId);
+  if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
-function ue(e) {
-  const n = O(e), t = n.atletas ?? [];
-  let o = !1;
-  for (const r of t)
-    r.id || (r.id = y.randomUUID(), o = !0), r.createdAt || (r.createdAt = (/* @__PURE__ */ new Date()).toISOString(), o = !0), r.updatedAt || (r.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), o = !0), r.deletedAt === void 0 && (r.deletedAt = null, o = !0);
-  return o && (n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(n)), t.filter((r) => r.deletedAt == null);
+function saveTorneio$4(torneio) {
+  fs.writeFileSync(getTorneioPath$4(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
 }
-function Ce(e, n) {
-  const t = O(e), o = t.atletas ?? [], r = (/* @__PURE__ */ new Date()).toISOString(), a = {
-    ...n,
-    id: n.id || y.randomUUID(),
-    createdAt: n.createdAt || r,
-    updatedAt: r,
+function loadAthletes(torneioId) {
+  const torneio = loadTorneio$4(torneioId);
+  const list = torneio.atletas ?? [];
+  let modified = false;
+  for (const a of list) {
+    if (!a.id) {
+      a.id = crypto.randomUUID();
+      modified = true;
+    }
+    if (!a.createdAt) {
+      a.createdAt = (/* @__PURE__ */ new Date()).toISOString();
+      modified = true;
+    }
+    if (!a.updatedAt) {
+      a.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+      modified = true;
+    }
+    if (a.deletedAt === void 0) {
+      a.deletedAt = null;
+      modified = true;
+    }
+  }
+  if (modified) {
+    torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    saveTorneio$4(torneio);
+  }
+  return list.filter((a) => a.deletedAt == null);
+}
+function saveAthlete(torneioId, athlete) {
+  const torneio = loadTorneio$4(torneioId);
+  const list = torneio.atletas ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const data = {
+    ...athlete,
+    id: athlete.id || crypto.randomUUID(),
+    createdAt: athlete.createdAt || now,
+    updatedAt: now,
     deletedAt: null
   };
-  return o.push(a), t.atletas = o, t.updatedAt = r, P(t), o.filter((i) => i.deletedAt == null);
+  list.push(data);
+  torneio.atletas = list;
+  torneio.updatedAt = now;
+  saveTorneio$4(torneio);
+  return list.filter((a) => a.deletedAt == null);
 }
-function Me(e, n) {
-  const t = O(e), o = t.atletas ?? [], r = o.findIndex((i) => i.id === n.id);
-  if (r === -1) throw new Error("Atleta não encontrado");
-  const a = o[r];
-  return o[r] = {
-    ...n,
-    createdAt: a.createdAt,
-    deletedAt: a.deletedAt ?? null,
+function updateAthlete(torneioId, updated) {
+  const torneio = loadTorneio$4(torneioId);
+  const list = torneio.atletas ?? [];
+  const index = list.findIndex((a) => a.id === updated.id);
+  if (index === -1) throw new Error("Atleta não encontrado");
+  const previous = list[index];
+  list[index] = {
+    ...updated,
+    createdAt: previous.createdAt,
+    deletedAt: previous.deletedAt ?? null,
     updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-  }, t.atletas = o, t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(t), o.filter((i) => i.deletedAt == null);
+  };
+  torneio.atletas = list;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$4(torneio);
+  return list.filter((a) => a.deletedAt == null);
 }
-function Je(e, n) {
-  const t = O(e), o = t.atletas ?? [], r = (/* @__PURE__ */ new Date()).toISOString(), a = o.findIndex((i) => i.id === n);
-  if (a === -1) throw new Error("Atleta não encontrado");
-  return o[a] = {
-    ...o[a],
-    deletedAt: r,
-    updatedAt: r
-  }, t.atletas = o, t.updatedAt = r, P(t), o.filter((i) => i.deletedAt == null);
+function deleteAthlete(torneioId, id) {
+  const torneio = loadTorneio$4(torneioId);
+  const list = torneio.atletas ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const index = list.findIndex((a) => a.id === id);
+  if (index === -1) throw new Error("Atleta não encontrado");
+  list[index] = {
+    ...list[index],
+    deletedAt: now,
+    updatedAt: now
+  };
+  torneio.atletas = list;
+  torneio.updatedAt = now;
+  saveTorneio$4(torneio);
+  return list.filter((a) => a.deletedAt == null);
 }
-function $e(e, n) {
-  const t = O(e), o = new Set(n), r = t.atletas ?? [], a = (/* @__PURE__ */ new Date()).toISOString();
-  for (let i = 0; i < r.length; i += 1)
-    o.has(r[i].id) && (r[i] = {
-      ...r[i],
-      deletedAt: a,
-      updatedAt: a
-    });
-  return t.atletas = r, t.updatedAt = a, P(t), r.filter((i) => i.deletedAt == null);
+function deleteAthletes(torneioId, ids) {
+  const torneio = loadTorneio$4(torneioId);
+  const idSet = new Set(ids);
+  const list = torneio.atletas ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  for (let i = 0; i < list.length; i += 1) {
+    if (idSet.has(list[i].id)) {
+      list[i] = {
+        ...list[i],
+        deletedAt: now,
+        updatedAt: now
+      };
+    }
+  }
+  torneio.atletas = list;
+  torneio.updatedAt = now;
+  saveTorneio$4(torneio);
+  return list.filter((a) => a.deletedAt == null);
 }
-function qe(e, n) {
-  const t = O(e), o = t.atletas ?? [], r = (/* @__PURE__ */ new Date()).toISOString(), a = o.findIndex((i) => i.id === n);
-  if (a === -1) throw new Error("Atleta não encontrado");
-  return o[a] = {
-    ...o[a],
+function restoreAthlete(torneioId, id) {
+  const torneio = loadTorneio$4(torneioId);
+  const list = torneio.atletas ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const index = list.findIndex((a) => a.id === id);
+  if (index === -1) throw new Error("Atleta não encontrado");
+  list[index] = {
+    ...list[index],
     deletedAt: null,
-    updatedAt: r
-  }, t.atletas = o, t.updatedAt = r, P(t), o.filter((i) => i.deletedAt == null);
+    updatedAt: now
+  };
+  torneio.atletas = list;
+  torneio.updatedAt = now;
+  saveTorneio$4(torneio);
+  return list.filter((a) => a.deletedAt == null);
 }
-function Ue(e) {
-  return (O(e).atletas ?? []).filter((o) => o.deletedAt != null);
+function loadDeletedAthletes(torneioId) {
+  const torneio = loadTorneio$4(torneioId);
+  const list = torneio.atletas ?? [];
+  return list.filter((a) => a.deletedAt != null);
 }
-function ze(e, n) {
-  const t = O(e), o = t.atletas ?? [], r = o.findIndex((a) => a.id === n);
-  if (r === -1) throw new Error("Atleta não encontrado");
-  return o.splice(r, 1), t.atletas = o, t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(t), o.filter((a) => a.deletedAt == null);
+function permanentlyDeleteAthlete(torneioId, id) {
+  const torneio = loadTorneio$4(torneioId);
+  const list = torneio.atletas ?? [];
+  const index = list.findIndex((a) => a.id === id);
+  if (index === -1) throw new Error("Atleta não encontrado");
+  list.splice(index, 1);
+  torneio.atletas = list;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$4(torneio);
+  return list.filter((a) => a.deletedAt == null);
 }
-function ke(e, n) {
-  const t = O(e), o = new Set(n), r = t.atletas ?? [];
-  return t.atletas = r.filter((a) => !o.has(a.id)), t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(t), t.atletas.filter((a) => a.deletedAt == null);
+function permanentlyDeleteAthletes(torneioId, ids) {
+  const torneio = loadTorneio$4(torneioId);
+  const idSet = new Set(ids);
+  const list = torneio.atletas ?? [];
+  torneio.atletas = list.filter((a) => !idSet.has(a.id));
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$4(torneio);
+  return torneio.atletas.filter((a) => a.deletedAt == null);
 }
-function We(e, n) {
-  const t = h.readFileSync(n, "utf-8"), o = JSON.parse(t);
-  if (!Array.isArray(o))
+function importAthletesFromFile(torneioId, filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const incoming = JSON.parse(raw);
+  if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de atletas.");
-  const r = new Set(le.map((s) => s.id));
-  for (const s of o) {
-    if (!s.nome || !s.equipe || !s.faixa || !s.anoNascimento || !s.pesoKg || !s.genero || !s.categoria)
-      throw new Error(`Atleta inválido no arquivo: "${s.nome || "sem nome"}" — campos obrigatórios ausentes (categoria, genero).`);
-    if (!r.has(s.categoria))
-      throw new Error(`Atleta inválido no arquivo: "${s.nome}" — categoria "${s.categoria}" não reconhecida.`);
   }
-  const a = O(e), i = a.atletas ?? [];
-  let l = 0, d = 0;
-  for (const s of o) {
-    const c = s.nome.trim().toLowerCase(), I = s.equipe.trim().toLowerCase();
-    i.some(
-      (w) => s.id && w.id === s.id || w.nome.trim().toLowerCase() === c && w.anoNascimento === s.anoNascimento
-    ) ? d++ : (s.nome = c, s.equipe = I, i.push({
-      ...s,
-      id: s.id || y.randomUUID(),
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      deletedAt: null
-    }), l++);
+  const categoriasValidas = new Set(CATEGORIAS_IBJJF.map((c) => c.id));
+  for (const a of incoming) {
+    if (!a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg || !a.genero || !a.categoria) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome || "sem nome"}" — campos obrigatórios ausentes (categoria, genero).`);
+    }
+    if (!categoriasValidas.has(a.categoria)) {
+      throw new Error(`Atleta inválido no arquivo: "${a.nome}" — categoria "${a.categoria}" não reconhecida.`);
+    }
   }
-  return a.atletas = i, a.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), P(a), { imported: l, skipped: d };
+  const torneio = loadTorneio$4(torneioId);
+  const current = torneio.atletas ?? [];
+  let imported = 0;
+  let skipped = 0;
+  for (const a of incoming) {
+    const nomeLower = a.nome.trim().toLowerCase();
+    const equipeLower = a.equipe.trim().toLowerCase();
+    const exists = current.some(
+      (ex) => a.id && ex.id === a.id || ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento
+    );
+    if (!exists) {
+      a.nome = nomeLower;
+      a.equipe = equipeLower;
+      current.push({
+        ...a,
+        id: a.id || crypto.randomUUID(),
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        deletedAt: null
+      });
+      imported++;
+    } else {
+      skipped++;
+    }
+  }
+  torneio.atletas = current;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$4(torneio);
+  return { imported, skipped };
 }
-async function He() {
-  const e = await _.showOpenDialog({
+async function openAthleteFileDialog() {
+  const result = await dialog.showOpenDialog({
     properties: ["openFile"],
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  return e.canceled || e.filePaths.length === 0 ? null : e.filePaths[0];
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
 }
-async function Ve(e) {
-  const n = ue(e), t = await _.showSaveDialog({
+async function exportAthletes(torneioId) {
+  const list = loadAthletes(torneioId);
+  const result = await dialog.showSaveDialog({
     title: "Exportar Atletas",
     defaultPath: "atletas.json",
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  !t.canceled && t.filePath && h.writeFileSync(t.filePath, JSON.stringify(n, null, 2), "utf-8");
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(list, null, 2), "utf-8");
+  }
 }
-const Ge = v.join(D.getPath("userData"), "data"), Ke = v.join(Ge, "torneios");
-function fe(e) {
-  return v.join(Ke, `${e}.json`);
+const DATA_DIR$3 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR$3 = path.join(DATA_DIR$3, "torneios");
+function getTorneioPath$3(torneioId) {
+  return path.join(TORNEIOS_DIR$3, `${torneioId}.json`);
 }
-function N(e) {
-  const n = fe(e);
-  if (!h.existsSync(n)) throw new Error("Torneio não encontrado");
-  return JSON.parse(h.readFileSync(n, "utf-8"));
+function loadTorneio$3(torneioId) {
+  const filePath = getTorneioPath$3(torneioId);
+  if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
-function T(e) {
-  h.writeFileSync(fe(e.id), JSON.stringify(e, null, 2), "utf-8");
+function saveTorneio$3(torneio) {
+  fs.writeFileSync(getTorneioPath$3(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
 }
-function me(e) {
-  const n = N(e), t = n.arbitros ?? [];
-  let o = !1;
-  for (const r of t)
-    r.deletedAt === void 0 && (r.deletedAt = null, o = !0);
-  return o && (n.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(n)), t.filter((r) => r.deletedAt == null);
+function loadArbitros(torneioId) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.arbitros ?? [];
+  let modified = false;
+  for (const a of list) {
+    if (a.deletedAt === void 0) {
+      a.deletedAt = null;
+      modified = true;
+    }
+  }
+  if (modified) {
+    torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    saveTorneio$3(torneio);
+  }
+  return list.filter((a) => a.deletedAt == null);
 }
-function Ye(e, n) {
-  const t = N(e), o = t.arbitros ?? [], r = (/* @__PURE__ */ new Date()).toISOString(), a = {
-    id: y.randomUUID(),
-    nome: n.nome.trim().toLowerCase(),
-    equipe: (n.equipe ?? "").trim().toLowerCase(),
-    faixa: n.faixa,
-    chaveIds: n.chaveIds ?? [],
-    createdAt: r,
-    updatedAt: r,
+function saveArbitro(torneioId, data) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.arbitros ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const arbitro = {
+    id: crypto.randomUUID(),
+    nome: data.nome.trim().toLowerCase(),
+    equipe: (data.equipe ?? "").trim().toLowerCase(),
+    faixa: data.faixa,
+    chaveIds: data.chaveIds ?? [],
+    createdAt: now,
+    updatedAt: now,
     deletedAt: null
   };
-  return o.push(a), t.arbitros = o, t.updatedAt = r, T(t), a;
+  list.push(arbitro);
+  torneio.arbitros = list;
+  torneio.updatedAt = now;
+  saveTorneio$3(torneio);
+  return arbitro;
 }
-function Qe(e, n) {
-  const t = N(e), o = t.arbitros ?? [], r = o.findIndex((l) => l.id === n.id);
-  if (r === -1) throw new Error("Árbitro não encontrado");
-  const a = o[r], i = (/* @__PURE__ */ new Date()).toISOString();
-  return o[r] = {
-    ...n,
-    nome: n.nome.trim().toLowerCase(),
-    createdAt: a.createdAt,
-    deletedAt: a.deletedAt ?? null,
-    updatedAt: i
-  }, t.arbitros = o, t.updatedAt = i, T(t), o[r];
-}
-function Xe(e, n) {
-  const t = N(e), o = t.arbitros ?? [], r = (/* @__PURE__ */ new Date()).toISOString(), a = o.findIndex((d) => d.id === n);
-  if (a === -1) throw new Error("Árbitro não encontrado");
-  o[a] = {
-    ...o[a],
-    deletedAt: r,
-    updatedAt: r
+function updateArbitro(torneioId, data) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.arbitros ?? [];
+  const index = list.findIndex((a) => a.id === data.id);
+  if (index === -1) throw new Error("Árbitro não encontrado");
+  const previous = list[index];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  list[index] = {
+    ...data,
+    nome: data.nome.trim().toLowerCase(),
+    createdAt: previous.createdAt,
+    deletedAt: previous.deletedAt ?? null,
+    updatedAt: now
   };
-  const l = t.chaves;
-  if (l)
-    for (const d of l)
-      d.arbitroId === n && (d.arbitroId = null);
-  t.arbitros = o, t.updatedAt = r, T(t);
+  torneio.arbitros = list;
+  torneio.updatedAt = now;
+  saveTorneio$3(torneio);
+  return list[index];
 }
-function Ze(e, n) {
-  const t = N(e), o = new Set(n), r = t.arbitros ?? [], a = (/* @__PURE__ */ new Date()).toISOString();
-  for (let d = 0; d < r.length; d += 1)
-    o.has(r[d].id) && (r[d] = {
-      ...r[d],
-      deletedAt: a,
-      updatedAt: a
-    });
-  const l = t.chaves;
-  if (l)
-    for (const d of l)
-      d.arbitroId && o.has(d.arbitroId) && (d.arbitroId = null);
-  t.arbitros = r, t.updatedAt = a, T(t);
+function deleteArbitro(torneioId, arbitroId) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.arbitros ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const index = list.findIndex((a) => a.id === arbitroId);
+  if (index === -1) throw new Error("Árbitro não encontrado");
+  list[index] = {
+    ...list[index],
+    deletedAt: now,
+    updatedAt: now
+  };
+  const t = torneio;
+  const chaves = t.chaves;
+  if (chaves) {
+    for (const chave of chaves) {
+      if (chave.arbitroId === arbitroId) {
+        chave.arbitroId = null;
+      }
+    }
+  }
+  torneio.arbitros = list;
+  torneio.updatedAt = now;
+  saveTorneio$3(torneio);
 }
-function et(e, n) {
-  const t = N(e), o = t.arbitros ?? [], r = (/* @__PURE__ */ new Date()).toISOString(), a = o.findIndex((i) => i.id === n);
-  if (a === -1) throw new Error("Árbitro não encontrado");
-  o[a] = {
-    ...o[a],
+function deleteArbitros(torneioId, arbitroIds) {
+  const torneio = loadTorneio$3(torneioId);
+  const idSet = new Set(arbitroIds);
+  const list = torneio.arbitros ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  for (let i = 0; i < list.length; i += 1) {
+    if (idSet.has(list[i].id)) {
+      list[i] = {
+        ...list[i],
+        deletedAt: now,
+        updatedAt: now
+      };
+    }
+  }
+  const t = torneio;
+  const chaves = t.chaves;
+  if (chaves) {
+    for (const chave of chaves) {
+      if (chave.arbitroId && idSet.has(chave.arbitroId)) {
+        chave.arbitroId = null;
+      }
+    }
+  }
+  torneio.arbitros = list;
+  torneio.updatedAt = now;
+  saveTorneio$3(torneio);
+}
+function restoreArbitro(torneioId, arbitroId) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.arbitros ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const index = list.findIndex((a) => a.id === arbitroId);
+  if (index === -1) throw new Error("Árbitro não encontrado");
+  list[index] = {
+    ...list[index],
     deletedAt: null,
-    updatedAt: r
-  }, t.arbitros = o, t.updatedAt = r, T(t);
+    updatedAt: now
+  };
+  torneio.arbitros = list;
+  torneio.updatedAt = now;
+  saveTorneio$3(torneio);
 }
-function tt(e) {
-  return (N(e).arbitros ?? []).filter((o) => o.deletedAt != null);
+function loadDeletedArbitros(torneioId) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.arbitros ?? [];
+  return list.filter((a) => a.deletedAt != null);
 }
-function nt(e, n) {
-  const t = N(e), o = t.arbitros ?? [], r = o.findIndex((a) => a.id === n);
-  if (r === -1) throw new Error("Árbitro não encontrado");
-  o.splice(r, 1), t.arbitros = o, t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(t);
+function permanentlyDeleteArbitro(torneioId, arbitroId) {
+  const torneio = loadTorneio$3(torneioId);
+  const list = torneio.arbitros ?? [];
+  const index = list.findIndex((a) => a.id === arbitroId);
+  if (index === -1) throw new Error("Árbitro não encontrado");
+  list.splice(index, 1);
+  torneio.arbitros = list;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$3(torneio);
 }
-function ot(e, n) {
-  const t = N(e), o = new Set(n), r = t.arbitros ?? [];
-  t.arbitros = r.filter((a) => !o.has(a.id)), t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(t);
+function permanentlyDeleteArbitros(torneioId, arbitroIds) {
+  const torneio = loadTorneio$3(torneioId);
+  const idSet = new Set(arbitroIds);
+  const list = torneio.arbitros ?? [];
+  torneio.arbitros = list.filter((a) => !idSet.has(a.id));
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$3(torneio);
 }
-async function rt() {
-  const e = await _.showOpenDialog({
+async function openArbitroFileDialog() {
+  const result = await dialog.showOpenDialog({
     properties: ["openFile"],
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  return e.canceled || e.filePaths.length === 0 ? null : e.filePaths[0];
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
 }
-function at(e, n) {
-  const t = h.readFileSync(n, "utf-8"), o = JSON.parse(t);
-  if (!Array.isArray(o))
+function importArbitrosFromFile(torneioId, filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const incoming = JSON.parse(raw);
+  if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de árbitros.");
-  const r = /* @__PURE__ */ new Set(["roxa", "marrom", "preta"]);
-  for (const s of o) {
-    const c = s;
-    if (!c.nome || typeof c.nome != "string" || c.nome.trim().length < 2)
-      throw new Error(`Árbitro inválido no arquivo: "${c.nome || "sem nome"}" — nome deve ter ao menos 2 caracteres.`);
-    if (!c.faixa || typeof c.faixa != "string" || !r.has(c.faixa))
-      throw new Error(`Árbitro inválido no arquivo: "${c.nome}" — faixa inválida.`);
-    if (c.equipe !== void 0 && (typeof c.equipe != "string" || c.equipe.trim().length < 2))
-      throw new Error(`Árbitro inválido no arquivo: "${c.nome}" — equipe deve ter ao menos 2 caracteres se informada.`);
   }
-  const a = N(e), i = a.arbitros ?? [];
-  let l = 0, d = 0;
-  for (const s of o) {
-    const c = s, I = c.nome.trim().toLowerCase();
-    i.some((w) => w.nome.trim().toLowerCase() === I) ? d++ : (i.push({
-      ...c,
-      id: c.id || y.randomUUID(),
-      nome: I,
-      equipe: c.equipe && typeof c.equipe == "string" ? c.equipe.trim().toLowerCase() : "",
-      faixa: c.faixa,
-      chaveIds: c.chaveIds ?? [],
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      deletedAt: null
-    }), l++);
+  const faixasValidas = /* @__PURE__ */ new Set(["roxa", "marrom", "preta"]);
+  for (const item of incoming) {
+    const a = item;
+    if (!a.nome || typeof a.nome !== "string" || a.nome.trim().length < 2) {
+      throw new Error(`Árbitro inválido no arquivo: "${a.nome || "sem nome"}" — nome deve ter ao menos 2 caracteres.`);
+    }
+    if (!a.faixa || typeof a.faixa !== "string" || !faixasValidas.has(a.faixa)) {
+      throw new Error(`Árbitro inválido no arquivo: "${a.nome}" — faixa inválida.`);
+    }
+    if (a.equipe !== void 0 && (typeof a.equipe !== "string" || a.equipe.trim().length < 2)) {
+      throw new Error(`Árbitro inválido no arquivo: "${a.nome}" — equipe deve ter ao menos 2 caracteres se informada.`);
+    }
   }
-  return a.arbitros = i, a.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), T(a), { imported: l, skipped: d };
+  const torneio = loadTorneio$3(torneioId);
+  const current = torneio.arbitros ?? [];
+  let imported = 0;
+  let skipped = 0;
+  for (const item of incoming) {
+    const a = item;
+    const nomeLower = a.nome.trim().toLowerCase();
+    const exists = current.some((ex) => ex.nome.trim().toLowerCase() === nomeLower);
+    if (!exists) {
+      current.push({
+        ...a,
+        id: a.id || crypto.randomUUID(),
+        nome: nomeLower,
+        equipe: a.equipe && typeof a.equipe === "string" ? a.equipe.trim().toLowerCase() : "",
+        faixa: a.faixa,
+        chaveIds: a.chaveIds ?? [],
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        deletedAt: null
+      });
+      imported++;
+    } else {
+      skipped++;
+    }
+  }
+  torneio.arbitros = current;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$3(torneio);
+  return { imported, skipped };
 }
-async function it(e) {
-  const n = me(e), t = await _.showSaveDialog({
+async function exportArbitros(torneioId) {
+  const list = loadArbitros(torneioId);
+  const result = await dialog.showSaveDialog({
     title: "Exportar Árbitros",
     defaultPath: "arbitros.json",
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  !t.canceled && t.filePath && h.writeFileSync(t.filePath, JSON.stringify(n, null, 2), "utf-8");
-}
-const dt = v.join(D.getPath("userData"), "data"), st = v.join(dt, "torneios");
-function he(e) {
-  return v.join(st, `${e}.json`);
-}
-function B(e) {
-  const n = he(e);
-  if (!h.existsSync(n)) throw new Error("Torneio não encontrado");
-  return JSON.parse(h.readFileSync(n, "utf-8"));
-}
-function j(e) {
-  h.writeFileSync(he(e.id), JSON.stringify(e, null, 2), "utf-8");
-}
-function Q(e) {
-  const n = /* @__PURE__ */ new Set();
-  for (const o of e) {
-    const r = o.nome.match(/^Área (\d+)$/i);
-    r && n.add(Number(r[1]));
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(list, null, 2), "utf-8");
   }
-  let t = 1;
-  for (; n.has(t); ) t += 1;
-  return `Área ${t}`;
 }
-function z(e) {
+const DATA_DIR$2 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR$2 = path.join(DATA_DIR$2, "torneios");
+function getTorneioPath$2(torneioId) {
+  return path.join(TORNEIOS_DIR$2, `${torneioId}.json`);
+}
+function loadTorneio$2(torneioId) {
+  const filePath = getTorneioPath$2(torneioId);
+  if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
+}
+function saveTorneio$2(torneio) {
+  fs.writeFileSync(getTorneioPath$2(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
+}
+function gerarNomeAreaPadrao(areas) {
+  const usados = /* @__PURE__ */ new Set();
+  for (const a of areas) {
+    const m = a.nome.match(/^Área (\d+)$/i);
+    if (m) usados.add(Number(m[1]));
+  }
+  let n = 1;
+  while (usados.has(n)) n += 1;
+  return `Área ${n}`;
+}
+function normalizeArea(area) {
   return {
-    id: e.id,
-    nome: e.nome ?? "",
-    arbitroIds: Array.isArray(e.arbitroIds) ? e.arbitroIds.filter(Boolean) : e.arbitroId ? [e.arbitroId] : [],
-    createdAt: e.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-    updatedAt: e.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-    deletedAt: e.deletedAt ?? null
+    id: area.id,
+    nome: area.nome ?? "",
+    arbitroIds: Array.isArray(area.arbitroIds) ? area.arbitroIds.filter(Boolean) : area.arbitroId ? [area.arbitroId] : [],
+    createdAt: area.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+    updatedAt: area.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+    deletedAt: area.deletedAt ?? null
   };
 }
-function W(e) {
-  return (B(e).areas ?? []).map((o) => z(o)).filter((o) => o.deletedAt == null);
+function loadAreas(torneioId) {
+  const torneio = loadTorneio$2(torneioId);
+  const list = (torneio.areas ?? []).map((a) => normalizeArea(a));
+  return list.filter((a) => a.deletedAt == null);
 }
-function X(e, n, t) {
-  const o = n ?? [];
-  if (o.length === 0) return;
-  const r = W(e), a = /* @__PURE__ */ new Set();
-  for (const l of r)
-    if (l.id !== t)
-      for (const d of l.arbitroIds)
-        a.add(d);
-  if (o.filter((l) => l && a.has(l)).length > 0)
+function checkRefereeNotInUse(torneioId, arbitroIds, excludeAreaId) {
+  const ids = arbitroIds ?? [];
+  if (ids.length === 0) return;
+  const areas = loadAreas(torneioId);
+  const assigned = /* @__PURE__ */ new Set();
+  for (const area of areas) {
+    if (area.id === excludeAreaId) continue;
+    for (const rid of area.arbitroIds) {
+      assigned.add(rid);
+    }
+  }
+  const conflict = ids.filter((rid) => rid && assigned.has(rid));
+  if (conflict.length > 0) {
     throw new Error("Um ou mais árbitros já estão atribuídos a outra área de luta.");
+  }
 }
-function lt(e, n) {
-  const t = n.arbitroIds ?? [];
-  X(e, t);
-  const o = B(e), r = (o.areas ?? []).map((s) => z(s)), a = r.filter((s) => s.deletedAt == null), i = (/* @__PURE__ */ new Date()).toISOString(), l = n.nome.trim() === "" ? Q(a) : n.nome.trim(), d = {
-    id: y.randomUUID(),
-    nome: l,
-    arbitroIds: t.filter(Boolean),
-    createdAt: i,
-    updatedAt: i,
+function saveArea(torneioId, data) {
+  const arbitroIds = data.arbitroIds ?? [];
+  checkRefereeNotInUse(torneioId, arbitroIds);
+  const torneio = loadTorneio$2(torneioId);
+  const allAreas = (torneio.areas ?? []).map((a) => normalizeArea(a));
+  const activeAreas = allAreas.filter((a) => a.deletedAt == null);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const nomeFinal = data.nome.trim() === "" ? gerarNomeAreaPadrao(activeAreas) : data.nome.trim();
+  const area = {
+    id: crypto.randomUUID(),
+    nome: nomeFinal,
+    arbitroIds: arbitroIds.filter(Boolean),
+    createdAt: now,
+    updatedAt: now,
     deletedAt: null
   };
-  return r.push(d), o.areas = r, o.updatedAt = i, j(o), d;
+  allAreas.push(area);
+  torneio.areas = allAreas;
+  torneio.updatedAt = now;
+  saveTorneio$2(torneio);
+  return area;
 }
-function ct(e, n) {
-  const t = n.arbitroIds ?? [];
-  X(e, t, n.id);
-  const o = B(e), r = (o.areas ?? []).map((c) => z(c)), a = r.findIndex((c) => c.id === n.id);
-  if (a === -1) throw new Error("Área de luta não encontrada");
-  const i = r[a], l = (/* @__PURE__ */ new Date()).toISOString(), d = r.filter((c) => c.deletedAt == null && c.id !== n.id), s = n.nome.trim() === "" ? Q(d) : n.nome.trim();
-  return r[a] = {
-    ...n,
-    nome: s,
-    arbitroIds: t.filter(Boolean),
-    createdAt: i.createdAt,
-    deletedAt: i.deletedAt ?? null,
-    updatedAt: l
-  }, o.areas = r, o.updatedAt = l, j(o), r[a];
+function updateArea(torneioId, data) {
+  const arbitroIds = data.arbitroIds ?? [];
+  checkRefereeNotInUse(torneioId, arbitroIds, data.id);
+  const torneio = loadTorneio$2(torneioId);
+  const allAreas = (torneio.areas ?? []).map((a) => normalizeArea(a));
+  const index = allAreas.findIndex((a) => a.id === data.id);
+  if (index === -1) throw new Error("Área de luta não encontrada");
+  const previous = allAreas[index];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const activeOthers = allAreas.filter((a) => a.deletedAt == null && a.id !== data.id);
+  const nomeFinal = data.nome.trim() === "" ? gerarNomeAreaPadrao(activeOthers) : data.nome.trim();
+  allAreas[index] = {
+    ...data,
+    nome: nomeFinal,
+    arbitroIds: arbitroIds.filter(Boolean),
+    createdAt: previous.createdAt,
+    deletedAt: previous.deletedAt ?? null,
+    updatedAt: now
+  };
+  torneio.areas = allAreas;
+  torneio.updatedAt = now;
+  saveTorneio$2(torneio);
+  return allAreas[index];
 }
-function ut(e, n) {
-  const t = B(e), o = t.areas ?? [], r = (/* @__PURE__ */ new Date()).toISOString(), a = o.findIndex((i) => i.id === n);
-  if (a === -1) throw new Error("Área de luta não encontrada");
-  o[a] = {
-    ...o[a],
-    deletedAt: r,
-    updatedAt: r
-  }, t.areas = o, t.updatedAt = r, j(t);
+function deleteArea(torneioId, areaId) {
+  const torneio = loadTorneio$2(torneioId);
+  const list = torneio.areas ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const index = list.findIndex((a) => a.id === areaId);
+  if (index === -1) throw new Error("Área de luta não encontrada");
+  list[index] = {
+    ...list[index],
+    deletedAt: now,
+    updatedAt: now
+  };
+  torneio.areas = list;
+  torneio.updatedAt = now;
+  saveTorneio$2(torneio);
 }
-function ft(e, n) {
-  const t = B(e), o = new Set(n), r = t.areas ?? [], a = (/* @__PURE__ */ new Date()).toISOString();
-  for (let i = 0; i < r.length; i += 1)
-    o.has(r[i].id) && (r[i] = {
-      ...r[i],
-      deletedAt: a,
-      updatedAt: a
-    });
-  t.areas = r, t.updatedAt = a, j(t);
+function deleteAreas(torneioId, areaIds) {
+  const torneio = loadTorneio$2(torneioId);
+  const idSet = new Set(areaIds);
+  const list = torneio.areas ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  for (let i = 0; i < list.length; i += 1) {
+    if (idSet.has(list[i].id)) {
+      list[i] = {
+        ...list[i],
+        deletedAt: now,
+        updatedAt: now
+      };
+    }
+  }
+  torneio.areas = list;
+  torneio.updatedAt = now;
+  saveTorneio$2(torneio);
 }
-function mt(e, n) {
-  const t = B(e), o = t.areas ?? [], r = (/* @__PURE__ */ new Date()).toISOString(), a = o.findIndex((i) => i.id === n);
-  if (a === -1) throw new Error("Área de luta não encontrada");
-  o[a] = {
-    ...o[a],
+function restoreArea(torneioId, areaId) {
+  const torneio = loadTorneio$2(torneioId);
+  const list = torneio.areas ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const index = list.findIndex((a) => a.id === areaId);
+  if (index === -1) throw new Error("Área de luta não encontrada");
+  list[index] = {
+    ...list[index],
     deletedAt: null,
-    updatedAt: r
-  }, t.areas = o, t.updatedAt = r, j(t);
+    updatedAt: now
+  };
+  torneio.areas = list;
+  torneio.updatedAt = now;
+  saveTorneio$2(torneio);
 }
-function ht(e) {
-  return (B(e).areas ?? []).map((o) => z(o)).filter((o) => o.deletedAt != null);
+function loadDeletedAreas(torneioId) {
+  const torneio = loadTorneio$2(torneioId);
+  const list = (torneio.areas ?? []).map((a) => normalizeArea(a));
+  return list.filter((a) => a.deletedAt != null);
 }
-function It(e, n) {
-  const t = B(e), o = t.areas ?? [], r = o.findIndex((a) => a.id === n);
-  if (r === -1) throw new Error("Área de luta não encontrada");
-  o.splice(r, 1), t.areas = o, t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), j(t);
+function permanentlyDeleteArea(torneioId, areaId) {
+  const torneio = loadTorneio$2(torneioId);
+  const list = torneio.areas ?? [];
+  const index = list.findIndex((a) => a.id === areaId);
+  if (index === -1) throw new Error("Área de luta não encontrada");
+  list.splice(index, 1);
+  torneio.areas = list;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$2(torneio);
 }
-function At(e, n) {
-  const t = B(e), o = new Set(n), r = t.areas ?? [];
-  t.areas = r.filter((a) => !o.has(a.id)), t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), j(t);
+function permanentlyDeleteAreas(torneioId, areaIds) {
+  const torneio = loadTorneio$2(torneioId);
+  const idSet = new Set(areaIds);
+  const list = torneio.areas ?? [];
+  torneio.areas = list.filter((a) => !idSet.has(a.id));
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$2(torneio);
 }
-function pt(e, n) {
-  const t = h.readFileSync(n, "utf-8"), o = JSON.parse(t);
-  if (!Array.isArray(o))
+function importAreasFromFile(torneioId, filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const incoming = JSON.parse(raw);
+  if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de áreas de luta.");
-  const r = B(e), a = (r.areas ?? []).map((c) => z(c)), i = a.filter((c) => c.deletedAt == null), l = (/* @__PURE__ */ new Date()).toISOString();
-  let d = 0, s = 0;
-  for (const c of o) {
-    if (!c || typeof c != "object")
+  }
+  const torneio = loadTorneio$2(torneioId);
+  const allAreas = (torneio.areas ?? []).map((a) => normalizeArea(a));
+  const activeAreas = allAreas.filter((a) => a.deletedAt == null);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  let imported = 0;
+  let skipped = 0;
+  for (const item of incoming) {
+    if (!item || typeof item !== "object") {
       throw new Error("Área inválida no arquivo: formato incorreto.");
-    const I = c;
-    if (I.arbitroIds !== void 0 && !Array.isArray(I.arbitroIds))
-      throw new Error(`Área inválida no arquivo: "${String(I.nome ?? "sem nome")}" — arbitroIds deve ser um array.`);
-    const p = typeof I.nome == "string" ? I.nome.trim() : "", w = Array.isArray(I.arbitroIds) ? I.arbitroIds.filter((x) => typeof x == "string" && x.length > 0) : [];
-    if (i.some(
-      (x) => x.nome.trim().toLowerCase() === p.toLowerCase() && p !== ""
-    )) {
-      s += 1;
+    }
+    const itemObj = item;
+    if (itemObj.arbitroIds !== void 0 && !Array.isArray(itemObj.arbitroIds)) {
+      throw new Error(`Área inválida no arquivo: "${String(itemObj.nome ?? "sem nome")}" — arbitroIds deve ser um array.`);
+    }
+    const nomeRaw = typeof itemObj.nome === "string" ? itemObj.nome.trim() : "";
+    const arbitroIdsIn = Array.isArray(itemObj.arbitroIds) ? itemObj.arbitroIds.filter((x) => typeof x === "string" && x.length > 0) : [];
+    const duplicate = activeAreas.some(
+      (ex) => ex.nome.trim().toLowerCase() === nomeRaw.toLowerCase() && nomeRaw !== ""
+    );
+    if (duplicate) {
+      skipped += 1;
       continue;
     }
-    X(e, w);
-    const S = p === "" ? Q(i) : p, b = {
-      id: y.randomUUID(),
-      nome: S,
-      arbitroIds: w,
-      createdAt: l,
-      updatedAt: l,
+    checkRefereeNotInUse(torneioId, arbitroIdsIn);
+    const nomeFinal = nomeRaw === "" ? gerarNomeAreaPadrao(activeAreas) : nomeRaw;
+    const area = {
+      id: crypto.randomUUID(),
+      nome: nomeFinal,
+      arbitroIds: arbitroIdsIn,
+      createdAt: now,
+      updatedAt: now,
       deletedAt: null
     };
-    a.push(b), i.push(b), d += 1;
+    allAreas.push(area);
+    activeAreas.push(area);
+    imported += 1;
   }
-  return r.areas = a, r.updatedAt = l, j(r), { imported: d, skipped: s };
+  torneio.areas = allAreas;
+  torneio.updatedAt = now;
+  saveTorneio$2(torneio);
+  return { imported, skipped };
 }
-async function wt() {
-  const e = await _.showOpenDialog({
+async function openAreaFileDialog() {
+  const result = await dialog.showOpenDialog({
     properties: ["openFile"],
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  return e.canceled || e.filePaths.length === 0 ? null : e.filePaths[0];
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
 }
-async function vt(e) {
-  const n = W(e), t = await _.showSaveDialog({
+async function exportAreas(torneioId) {
+  const list = loadAreas(torneioId);
+  const result = await dialog.showSaveDialog({
     title: "Exportar Áreas de Luta",
     defaultPath: "areas.json",
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  !t.canceled && t.filePath && h.writeFileSync(t.filePath, JSON.stringify(n, null, 2), "utf-8");
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(list, null, 2), "utf-8");
+  }
 }
-const gt = v.join(D.getPath("userData"), "data"), St = v.join(gt, "torneios");
-function Ie(e) {
-  return v.join(St, `${e}.json`);
+const DATA_DIR$1 = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR$1 = path.join(DATA_DIR$1, "torneios");
+function getTorneioPath$1(torneioId) {
+  return path.join(TORNEIOS_DIR$1, `${torneioId}.json`);
 }
-function E(e) {
-  const n = Ie(e);
-  if (!h.existsSync(n)) throw new Error("Torneio não encontrado");
-  return JSON.parse(h.readFileSync(n, "utf-8"));
+function loadTorneio$1(torneioId) {
+  const filePath = getTorneioPath$1(torneioId);
+  if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
-function J(e) {
-  h.writeFileSync(Ie(e.id), JSON.stringify(e, null, 2), "utf-8");
+function saveTorneio$1(torneio) {
+  fs.writeFileSync(getTorneioPath$1(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
 }
-function Ae(e) {
-  return [...e].sort((n, t) => {
-    if (n.pesoKg !== t.pesoKg) return t.pesoKg - n.pesoKg;
-    const o = (/* @__PURE__ */ new Date()).getFullYear() - n.anoNascimento, r = (/* @__PURE__ */ new Date()).getFullYear() - t.anoNascimento;
-    return o !== r ? r - o : n.nome.localeCompare(t.nome);
+function sortAtletas(atletas) {
+  return [...atletas].sort((a, b) => {
+    if (a.pesoKg !== b.pesoKg) return b.pesoKg - a.pesoKg;
+    const idadeA = (/* @__PURE__ */ new Date()).getFullYear() - a.anoNascimento;
+    const idadeB = (/* @__PURE__ */ new Date()).getFullYear() - b.anoNascimento;
+    if (idadeA !== idadeB) return idadeB - idadeA;
+    return a.nome.localeCompare(b.nome);
   });
 }
-function bt(e) {
-  const n = Ae(e), t = n.length;
-  if (t <= 2) return n;
-  const o = Math.ceil(t / 2), r = Array.from({ length: o }, (i, l) => l), a = Array.from({ length: t - o }, (i, l) => l + o);
-  for (const i of [r, a]) {
-    const l = /* @__PURE__ */ new Set();
-    for (const d of i) {
-      const s = n[d].equipe;
-      if (s) {
-        if (l.has(s)) {
-          const c = i === r ? a : r;
-          for (const I of c) {
-            const p = n[I].equipe;
-            if (p !== s && !l.has(p)) {
-              [n[d], n[I]] = [n[I], n[d]];
-              break;
-            }
+function aplicarSeedSorting(atletas) {
+  const sorted = sortAtletas(atletas);
+  const n = sorted.length;
+  if (n <= 2) return sorted;
+  const half = Math.ceil(n / 2);
+  const sideA = Array.from({ length: half }, (_, i) => i);
+  const sideB = Array.from({ length: n - half }, (_, i) => i + half);
+  for (const side of [sideA, sideB]) {
+    const seen = /* @__PURE__ */ new Set();
+    for (const idx of side) {
+      const team = sorted[idx].equipe;
+      if (!team) continue;
+      if (seen.has(team)) {
+        const otherSide = side === sideA ? sideB : sideA;
+        for (const oi of otherSide) {
+          const otherTeam = sorted[oi].equipe;
+          if (otherTeam !== team && !seen.has(otherTeam)) {
+            [sorted[idx], sorted[oi]] = [sorted[oi], sorted[idx]];
+            break;
           }
         }
-        l.add(n[d].equipe);
       }
+      seen.add(sorted[idx].equipe);
     }
   }
-  return n;
+  return sorted;
 }
-function pe(e) {
-  const n = Ae(e), t = n.slice(0, 8), o = n.slice(8, 16);
-  for (const r of [t, o]) {
-    const a = /* @__PURE__ */ new Map();
-    r.forEach((i, l) => {
-      if (i.equipe) {
-        const d = a.get(i.equipe) ?? [];
-        d.push(l), a.set(i.equipe, d);
+function aplicarSeedSorting16(atletas) {
+  const sorted = sortAtletas(atletas);
+  const sideA = sorted.slice(0, 8);
+  const sideB = sorted.slice(8, 16);
+  for (const side of [sideA, sideB]) {
+    const seen = /* @__PURE__ */ new Map();
+    side.forEach((a, idx) => {
+      if (a.equipe) {
+        const list = seen.get(a.equipe) ?? [];
+        list.push(idx);
+        seen.set(a.equipe, list);
       }
     });
-    for (const [i, l] of a) {
-      if (l.length < 2) continue;
-      const d = r === t ? o : t;
-      for (let s = 1; s < l.length; s++) {
-        const c = d.findIndex((I) => I.equipe !== i);
-        c >= 0 && ([r[l[s]], d[c]] = [d[c], r[l[s]]]);
+    for (const [team, indices] of seen) {
+      if (indices.length < 2) continue;
+      const otherSide = side === sideA ? sideB : sideA;
+      for (let i = 1; i < indices.length; i++) {
+        const swapIdx = otherSide.findIndex((o) => o.equipe !== team);
+        if (swapIdx >= 0) {
+          [side[indices[i]], otherSide[swapIdx]] = [otherSide[swapIdx], side[indices[i]]];
+        }
       }
     }
   }
-  return [...t, ...o];
+  return [...sideA, ...sideB];
 }
-const f = "tbd";
-function u(e, n, t, o) {
-  return { id: y.randomUUID(), ordem: e, rodada: n, atletaAId: t, atletaBId: o, status: "pending", vencedorId: null };
+const TBD = "tbd";
+function criarLuta(ordem, rodada, atletaAId, atletaBId) {
+  return { id: crypto.randomUUID(), ordem, rodada, atletaAId, atletaBId, status: "pending", vencedorId: null };
 }
-function yt(e) {
-  return [u(1, 1, e[0].id, e[1].id)];
+function gerarLutasDois(posicoes) {
+  return [criarLuta(1, 1, posicoes[0].id, posicoes[1].id)];
 }
-function xt(e) {
+function gerarLutasTres(posicoes) {
   return [
-    u(1, 1, e[0].id, e[1].id),
-    u(2, 2, f, e[2].id),
-    u(3, 3, f, f)
+    criarLuta(1, 1, posicoes[0].id, posicoes[1].id),
+    criarLuta(2, 2, TBD, posicoes[2].id),
+    criarLuta(3, 3, TBD, TBD)
   ];
 }
-function Dt(e) {
+function gerarLutasQuatro(posicoes) {
   return [
-    u(1, 1, e[0].id, e[3].id),
-    u(2, 1, e[1].id, e[2].id),
-    u(3, 2, f, f)
+    criarLuta(1, 1, posicoes[0].id, posicoes[3].id),
+    criarLuta(2, 1, posicoes[1].id, posicoes[2].id),
+    criarLuta(3, 2, TBD, TBD)
   ];
 }
-function Et(e) {
-  const n = u(3, 1, e[4].id, f);
-  return n.vencedorId = e[4].id, n.status = "wo", [
-    u(1, 1, e[0].id, e[1].id),
-    u(2, 1, e[2].id, e[3].id),
-    n,
-    u(4, 2, f, e[4].id),
-    u(5, 2, f, f),
-    u(6, 3, f, f)
-  ];
-}
-function Ot(e) {
-  const n = [];
-  let t = 1;
-  const o = u(t++, 1, e[0].id, e[1].id), r = u(t++, 1, e[2].id, f);
-  r.vencedorId = e[2].id, r.status = "wo";
-  const a = u(t++, 1, e[3].id, e[4].id), i = u(t++, 1, e[5].id, f);
-  i.vencedorId = e[5].id, i.status = "wo";
-  const l = u(t++, 1, e[6].id, e[7].id), d = u(t++, 1, e[8].id, f);
-  d.vencedorId = e[8].id, d.status = "wo", n.push(o, r, a, i, l, d);
-  const s = u(t++, 2, f, e[2].id), c = u(t++, 2, f, e[5].id), I = u(t++, 2, f, e[8].id);
-  n.push(s, c, I);
-  const p = u(t++, 3, f, f), w = u(t++, 3, f, f);
-  n.push(p, w);
-  const g = u(t++, 4, f, f);
-  return n.push(g), n;
-}
-function Nt(e) {
-  const n = [];
-  let t = 1;
-  const o = u(t++, 1, e[0].id, e[1].id), r = u(t++, 1, e[2].id, e[3].id), a = u(t++, 1, e[4].id, e[5].id), i = u(t++, 1, e[6].id, f);
-  i.vencedorId = e[6].id, i.status = "wo";
-  const l = u(t++, 1, e[7].id, f);
-  l.vencedorId = e[7].id, l.status = "wo";
-  const d = u(t++, 1, e[8].id, f);
-  d.vencedorId = e[8].id, d.status = "wo";
-  const s = u(t++, 1, e[9].id, f);
-  s.vencedorId = e[9].id, s.status = "wo";
-  const c = u(t++, 1, e[10].id, f);
-  c.vencedorId = e[10].id, c.status = "wo", n.push(o, r, a, i, l, d, s, c);
-  const I = u(t++, 2, f, f), p = u(t++, 2, f, e[6].id), w = u(t++, 2, e[7].id, e[8].id), g = u(t++, 2, e[9].id, e[10].id);
-  n.push(I, p, w, g);
-  const S = u(t++, 3, f, f), b = u(t++, 3, f, f);
-  n.push(S, b);
-  const x = u(t++, 4, f, f);
-  return n.push(x), n;
-}
-function Bt(e) {
-  const n = [];
-  let t = 1;
-  const o = u(t++, 1, e[0].id, e[1].id), r = u(t++, 1, e[2].id, e[3].id), a = u(t++, 1, e[4].id, e[5].id), i = u(t++, 1, e[6].id, e[7].id), l = u(t++, 1, e[8].id, f);
-  l.vencedorId = e[8].id, l.status = "wo";
-  const d = u(t++, 1, e[9].id, f);
-  d.vencedorId = e[9].id, d.status = "wo";
-  const s = u(t++, 1, e[10].id, f);
-  s.vencedorId = e[10].id, s.status = "wo";
-  const c = u(t++, 1, e[11].id, f);
-  c.vencedorId = e[11].id, c.status = "wo", n.push(o, r, a, i, l, d, s, c);
-  const I = u(t++, 2, f, f), p = u(t++, 2, f, f), w = u(t++, 2, e[8].id, e[9].id), g = u(t++, 2, e[10].id, e[11].id);
-  n.push(I, p, w, g);
-  const S = u(t++, 3, f, f), b = u(t++, 3, f, f);
-  n.push(S, b);
-  const x = u(t++, 4, f, f);
-  return n.push(x), n;
-}
-function Lt(e) {
-  const n = [];
-  let t = 1;
-  const o = u(t++, 1, e[0].id, e[1].id), r = u(t++, 1, e[2].id, e[3].id), a = u(t++, 1, e[4].id, e[5].id), i = u(t++, 1, e[6].id, e[7].id), l = u(t++, 1, e[8].id, e[9].id), d = u(t++, 1, e[10].id, f);
-  d.vencedorId = e[10].id, d.status = "wo";
-  const s = u(t++, 1, e[11].id, f);
-  s.vencedorId = e[11].id, s.status = "wo";
-  const c = u(t++, 1, e[12].id, f);
-  c.vencedorId = e[12].id, c.status = "wo", n.push(o, r, a, i, l, d, s, c);
-  const I = u(t++, 2, f, f), p = u(t++, 2, f, f), w = u(t++, 2, f, e[10].id), g = u(t++, 2, e[11].id, e[12].id);
-  n.push(I, p, w, g);
-  const S = u(t++, 3, f, f), b = u(t++, 3, f, f);
-  n.push(S, b);
-  const x = u(t++, 4, f, f);
-  return n.push(x), n;
-}
-function _t(e) {
-  const n = [];
-  let t = 1;
-  const o = u(t++, 1, e[0].id, e[1].id), r = u(t++, 1, e[2].id, e[3].id), a = u(t++, 1, e[4].id, e[5].id), i = u(t++, 1, e[6].id, e[7].id), l = u(t++, 1, e[8].id, e[9].id), d = u(t++, 1, e[10].id, e[11].id), s = u(t++, 1, e[12].id, f);
-  s.vencedorId = e[12].id, s.status = "wo";
-  const c = u(t++, 1, e[13].id, f);
-  c.vencedorId = e[13].id, c.status = "wo", n.push(o, r, a, i, l, d, s, c);
-  const I = u(t++, 2, f, f), p = u(t++, 2, f, f), w = u(t++, 2, f, f), g = u(t++, 2, e[12].id, e[13].id);
-  n.push(I, p, w, g);
-  const S = u(t++, 3, f, f), b = u(t++, 3, f, f);
-  n.push(S, b);
-  const x = u(t++, 4, f, f);
-  return n.push(x), n;
-}
-function Pt(e) {
-  const n = [];
-  let t = 1;
-  const o = u(t++, 1, e[0].id, e[1].id), r = u(t++, 1, e[2].id, e[3].id), a = u(t++, 1, e[4].id, e[5].id), i = u(t++, 1, e[6].id, e[7].id), l = u(t++, 1, e[8].id, e[9].id), d = u(t++, 1, e[10].id, e[11].id), s = u(t++, 1, e[12].id, e[13].id), c = u(t++, 1, e[14].id, f);
-  c.vencedorId = e[14].id, c.status = "wo", n.push(o, r, a, i, l, d, s, c);
-  const I = u(t++, 2, f, f), p = u(t++, 2, f, f), w = u(t++, 2, f, f), g = u(t++, 2, f, e[14].id);
-  n.push(I, p, w, g);
-  const S = u(t++, 3, f, f), b = u(t++, 3, f, f);
-  n.push(S, b);
-  const x = u(t++, 4, f, f);
-  return n.push(x), n;
-}
-function Tt(e) {
-  const n = [];
-  let t = 1;
-  const o = u(t++, 1, e[0].id, e[1].id), r = u(t++, 1, e[2].id, e[3].id), a = u(t++, 1, e[4].id, e[5].id), i = u(t++, 1, e[6].id, e[7].id), l = u(t++, 1, e[8].id, f);
-  l.vencedorId = e[8].id, l.status = "wo";
-  const d = u(t++, 1, e[9].id, f);
-  d.vencedorId = e[9].id, d.status = "wo", n.push(o, r, a, i, l, d);
-  const s = u(t++, 2, f, f), c = u(t++, 2, f, f), I = u(t++, 2, f, f), p = u(t++, 2, e[8].id, e[9].id);
-  n.push(s, c, I, p);
-  const w = u(t++, 3, f, f), g = u(t++, 3, f, f);
-  n.push(w, g);
-  const S = u(t++, 4, f, f);
-  return n.push(S), n;
-}
-function Ft(e) {
-  const n = u(2, 1, e[2].id, f);
-  n.vencedorId = e[2].id, n.status = "wo";
-  const t = u(4, 1, e[5].id, f);
-  t.vencedorId = e[5].id, t.status = "wo";
-  const o = u(5, 2, e[2].id, f), r = u(6, 2, e[5].id, f);
+function gerarLutasCinco(posicoes) {
+  const luta3 = criarLuta(3, 1, posicoes[4].id, TBD);
+  luta3.vencedorId = posicoes[4].id;
+  luta3.status = "wo";
   return [
-    u(1, 1, e[0].id, e[1].id),
-    n,
-    u(3, 1, e[3].id, e[4].id),
-    t,
-    o,
-    r,
-    u(7, 3, f, f)
+    criarLuta(1, 1, posicoes[0].id, posicoes[1].id),
+    criarLuta(2, 1, posicoes[2].id, posicoes[3].id),
+    luta3,
+    criarLuta(4, 2, TBD, posicoes[4].id),
+    criarLuta(5, 2, TBD, TBD),
+    criarLuta(6, 3, TBD, TBD)
   ];
 }
-function jt(e) {
-  return e <= 2 ? 1 : e === 3 ? 3 : e <= 4 ? 2 : Math.ceil(Math.log2(e));
+function gerarLutasNove(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, TBD);
+  l2.vencedorId = posicoes[2].id;
+  l2.status = "wo";
+  const l3 = criarLuta(ordem++, 1, posicoes[3].id, posicoes[4].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[5].id, TBD);
+  l4.vencedorId = posicoes[5].id;
+  l4.status = "wo";
+  const l5 = criarLuta(ordem++, 1, posicoes[6].id, posicoes[7].id);
+  const l6 = criarLuta(ordem++, 1, posicoes[8].id, TBD);
+  l6.vencedorId = posicoes[8].id;
+  l6.status = "wo";
+  lutas.push(l1, l2, l3, l4, l5, l6);
+  const l7 = criarLuta(ordem++, 2, TBD, posicoes[2].id);
+  const l8 = criarLuta(ordem++, 2, TBD, posicoes[5].id);
+  const l9 = criarLuta(ordem++, 2, TBD, posicoes[8].id);
+  lutas.push(l7, l8, l9);
+  const l10 = criarLuta(ordem++, 3, TBD, TBD);
+  const l11 = criarLuta(ordem++, 3, TBD, TBD);
+  lutas.push(l10, l11);
+  const l12 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l12);
+  return lutas;
 }
-function Rt(e) {
-  const n = e.length, t = Math.ceil(Math.log2(n)), o = [];
-  let r = 1;
-  const a = [];
-  for (let d = 0; d < n; d += 2)
-    if (d + 1 < n) {
-      const s = u(r++, 1, e[d].id, e[d + 1].id);
-      o.push(s), a.push(s.id);
+function gerarLutasOnze(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, posicoes[3].id);
+  const l3 = criarLuta(ordem++, 1, posicoes[4].id, posicoes[5].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[6].id, TBD);
+  l4.vencedorId = posicoes[6].id;
+  l4.status = "wo";
+  const l5 = criarLuta(ordem++, 1, posicoes[7].id, TBD);
+  l5.vencedorId = posicoes[7].id;
+  l5.status = "wo";
+  const l6 = criarLuta(ordem++, 1, posicoes[8].id, TBD);
+  l6.vencedorId = posicoes[8].id;
+  l6.status = "wo";
+  const l7 = criarLuta(ordem++, 1, posicoes[9].id, TBD);
+  l7.vencedorId = posicoes[9].id;
+  l7.status = "wo";
+  const l8 = criarLuta(ordem++, 1, posicoes[10].id, TBD);
+  l8.vencedorId = posicoes[10].id;
+  l8.status = "wo";
+  lutas.push(l1, l2, l3, l4, l5, l6, l7, l8);
+  const l9 = criarLuta(ordem++, 2, TBD, TBD);
+  const l10 = criarLuta(ordem++, 2, TBD, posicoes[6].id);
+  const l11 = criarLuta(ordem++, 2, posicoes[7].id, posicoes[8].id);
+  const l12 = criarLuta(ordem++, 2, posicoes[9].id, posicoes[10].id);
+  lutas.push(l9, l10, l11, l12);
+  const l13 = criarLuta(ordem++, 3, TBD, TBD);
+  const l14 = criarLuta(ordem++, 3, TBD, TBD);
+  lutas.push(l13, l14);
+  const l15 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l15);
+  return lutas;
+}
+function gerarLutasDoze(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, posicoes[3].id);
+  const l3 = criarLuta(ordem++, 1, posicoes[4].id, posicoes[5].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[6].id, posicoes[7].id);
+  const l5 = criarLuta(ordem++, 1, posicoes[8].id, TBD);
+  l5.vencedorId = posicoes[8].id;
+  l5.status = "wo";
+  const l6 = criarLuta(ordem++, 1, posicoes[9].id, TBD);
+  l6.vencedorId = posicoes[9].id;
+  l6.status = "wo";
+  const l7 = criarLuta(ordem++, 1, posicoes[10].id, TBD);
+  l7.vencedorId = posicoes[10].id;
+  l7.status = "wo";
+  const l8 = criarLuta(ordem++, 1, posicoes[11].id, TBD);
+  l8.vencedorId = posicoes[11].id;
+  l8.status = "wo";
+  lutas.push(l1, l2, l3, l4, l5, l6, l7, l8);
+  const l9 = criarLuta(ordem++, 2, TBD, TBD);
+  const l10 = criarLuta(ordem++, 2, TBD, TBD);
+  const l11 = criarLuta(ordem++, 2, posicoes[8].id, posicoes[9].id);
+  const l12 = criarLuta(ordem++, 2, posicoes[10].id, posicoes[11].id);
+  lutas.push(l9, l10, l11, l12);
+  const l13 = criarLuta(ordem++, 3, TBD, TBD);
+  const l14 = criarLuta(ordem++, 3, TBD, TBD);
+  lutas.push(l13, l14);
+  const l15 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l15);
+  return lutas;
+}
+function gerarLutasTreze(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, posicoes[3].id);
+  const l3 = criarLuta(ordem++, 1, posicoes[4].id, posicoes[5].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[6].id, posicoes[7].id);
+  const l5 = criarLuta(ordem++, 1, posicoes[8].id, posicoes[9].id);
+  const l6 = criarLuta(ordem++, 1, posicoes[10].id, TBD);
+  l6.vencedorId = posicoes[10].id;
+  l6.status = "wo";
+  const l7 = criarLuta(ordem++, 1, posicoes[11].id, TBD);
+  l7.vencedorId = posicoes[11].id;
+  l7.status = "wo";
+  const l8 = criarLuta(ordem++, 1, posicoes[12].id, TBD);
+  l8.vencedorId = posicoes[12].id;
+  l8.status = "wo";
+  lutas.push(l1, l2, l3, l4, l5, l6, l7, l8);
+  const l9 = criarLuta(ordem++, 2, TBD, TBD);
+  const l10 = criarLuta(ordem++, 2, TBD, TBD);
+  const l11 = criarLuta(ordem++, 2, TBD, posicoes[10].id);
+  const l12 = criarLuta(ordem++, 2, posicoes[11].id, posicoes[12].id);
+  lutas.push(l9, l10, l11, l12);
+  const l13 = criarLuta(ordem++, 3, TBD, TBD);
+  const l14 = criarLuta(ordem++, 3, TBD, TBD);
+  lutas.push(l13, l14);
+  const l15 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l15);
+  return lutas;
+}
+function gerarLutasQuatorze(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, posicoes[3].id);
+  const l3 = criarLuta(ordem++, 1, posicoes[4].id, posicoes[5].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[6].id, posicoes[7].id);
+  const l5 = criarLuta(ordem++, 1, posicoes[8].id, posicoes[9].id);
+  const l6 = criarLuta(ordem++, 1, posicoes[10].id, posicoes[11].id);
+  const l7 = criarLuta(ordem++, 1, posicoes[12].id, TBD);
+  l7.vencedorId = posicoes[12].id;
+  l7.status = "wo";
+  const l8 = criarLuta(ordem++, 1, posicoes[13].id, TBD);
+  l8.vencedorId = posicoes[13].id;
+  l8.status = "wo";
+  lutas.push(l1, l2, l3, l4, l5, l6, l7, l8);
+  const l9 = criarLuta(ordem++, 2, TBD, TBD);
+  const l10 = criarLuta(ordem++, 2, TBD, TBD);
+  const l11 = criarLuta(ordem++, 2, TBD, TBD);
+  const l12 = criarLuta(ordem++, 2, posicoes[12].id, posicoes[13].id);
+  lutas.push(l9, l10, l11, l12);
+  const l13 = criarLuta(ordem++, 3, TBD, TBD);
+  const l14 = criarLuta(ordem++, 3, TBD, TBD);
+  lutas.push(l13, l14);
+  const l15 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l15);
+  return lutas;
+}
+function gerarLutasQuinze(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, posicoes[3].id);
+  const l3 = criarLuta(ordem++, 1, posicoes[4].id, posicoes[5].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[6].id, posicoes[7].id);
+  const l5 = criarLuta(ordem++, 1, posicoes[8].id, posicoes[9].id);
+  const l6 = criarLuta(ordem++, 1, posicoes[10].id, posicoes[11].id);
+  const l7 = criarLuta(ordem++, 1, posicoes[12].id, posicoes[13].id);
+  const l8 = criarLuta(ordem++, 1, posicoes[14].id, TBD);
+  l8.vencedorId = posicoes[14].id;
+  l8.status = "wo";
+  lutas.push(l1, l2, l3, l4, l5, l6, l7, l8);
+  const l9 = criarLuta(ordem++, 2, TBD, TBD);
+  const l10 = criarLuta(ordem++, 2, TBD, TBD);
+  const l11 = criarLuta(ordem++, 2, TBD, TBD);
+  const l12 = criarLuta(ordem++, 2, TBD, posicoes[14].id);
+  lutas.push(l9, l10, l11, l12);
+  const l13 = criarLuta(ordem++, 3, TBD, TBD);
+  const l14 = criarLuta(ordem++, 3, TBD, TBD);
+  lutas.push(l13, l14);
+  const l15 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l15);
+  return lutas;
+}
+function gerarLutasDez(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  const l1 = criarLuta(ordem++, 1, posicoes[0].id, posicoes[1].id);
+  const l2 = criarLuta(ordem++, 1, posicoes[2].id, posicoes[3].id);
+  const l3 = criarLuta(ordem++, 1, posicoes[4].id, posicoes[5].id);
+  const l4 = criarLuta(ordem++, 1, posicoes[6].id, posicoes[7].id);
+  const l5 = criarLuta(ordem++, 1, posicoes[8].id, TBD);
+  l5.vencedorId = posicoes[8].id;
+  l5.status = "wo";
+  const l6 = criarLuta(ordem++, 1, posicoes[9].id, TBD);
+  l6.vencedorId = posicoes[9].id;
+  l6.status = "wo";
+  lutas.push(l1, l2, l3, l4, l5, l6);
+  const l7 = criarLuta(ordem++, 2, TBD, TBD);
+  const l8 = criarLuta(ordem++, 2, TBD, TBD);
+  const l9 = criarLuta(ordem++, 2, TBD, TBD);
+  const l10 = criarLuta(ordem++, 2, posicoes[8].id, posicoes[9].id);
+  lutas.push(l7, l8, l9, l10);
+  const l11 = criarLuta(ordem++, 3, TBD, TBD);
+  const l12 = criarLuta(ordem++, 3, TBD, TBD);
+  lutas.push(l11, l12);
+  const l13 = criarLuta(ordem++, 4, TBD, TBD);
+  lutas.push(l13);
+  return lutas;
+}
+function gerarLutasSeis(posicoes) {
+  const luta2 = criarLuta(2, 1, posicoes[2].id, TBD);
+  luta2.vencedorId = posicoes[2].id;
+  luta2.status = "wo";
+  const luta4 = criarLuta(4, 1, posicoes[5].id, TBD);
+  luta4.vencedorId = posicoes[5].id;
+  luta4.status = "wo";
+  const luta5 = criarLuta(5, 2, posicoes[2].id, TBD);
+  const luta6 = criarLuta(6, 2, posicoes[5].id, TBD);
+  const lutas = [
+    criarLuta(1, 1, posicoes[0].id, posicoes[1].id),
+    luta2,
+    criarLuta(3, 1, posicoes[3].id, posicoes[4].id),
+    luta4,
+    luta5,
+    luta6,
+    criarLuta(7, 3, TBD, TBD)
+  ];
+  return lutas;
+}
+function getTotalRodadas(totalAtletas) {
+  if (totalAtletas <= 2) return 1;
+  if (totalAtletas === 3) return 3;
+  if (totalAtletas <= 4) return 2;
+  return Math.ceil(Math.log2(totalAtletas));
+}
+function gerarLutasGeral(posicoes) {
+  const n = posicoes.length;
+  const numRodadas = Math.ceil(Math.log2(n));
+  const lutas = [];
+  let ordem = 1;
+  const round1Entries = [];
+  for (let i = 0; i < n; i += 2) {
+    if (i + 1 < n) {
+      const luta = criarLuta(ordem++, 1, posicoes[i].id, posicoes[i + 1].id);
+      lutas.push(luta);
+      round1Entries.push(luta.id);
     } else {
-      const s = u(r++, 1, e[d].id, f);
-      s.vencedorId = e[d].id, s.status = "wo", o.push(s), a.push(e[d].id);
+      const byeLuta = criarLuta(ordem++, 1, posicoes[i].id, TBD);
+      byeLuta.vencedorId = posicoes[i].id;
+      byeLuta.status = "wo";
+      lutas.push(byeLuta);
+      round1Entries.push(posicoes[i].id);
     }
-  let i = a, l = 2;
-  for (; l <= t; ) {
-    const d = [];
-    for (let s = 0; s < i.length; s += 2)
-      if (s + 1 < i.length) {
-        const c = u(r++, l, f, f);
-        o.push(c), d.push(c.id);
-      } else
-        d.push(i[s]);
-    i = d, l++;
   }
-  for (let d = 1; d < t; d++) {
-    const s = o.filter((p) => p.rodada === d), c = o.filter((p) => p.rodada === d + 1);
-    if (c.length === 0) continue;
-    const I = s.length / c.length;
-    if (Number.isInteger(I))
-      for (let p = 0; p < s.length; p++) {
-        const w = s[p];
-        if (w.status !== "wo" || !w.vencedorId) continue;
-        const g = Math.floor(p / I), S = p % I;
-        if (g >= c.length) continue;
-        const b = c[g];
-        S === 0 && (b.atletaAId === "tbd" || b.atletaAId === "") ? b.atletaAId = w.vencedorId : S === 1 && (b.atletaBId === "tbd" || b.atletaBId === "") && (b.atletaBId = w.vencedorId);
+  let currentEntries = round1Entries;
+  let rodada = 2;
+  while (rodada <= numRodadas) {
+    const nextEntries = [];
+    for (let i = 0; i < currentEntries.length; i += 2) {
+      if (i + 1 < currentEntries.length) {
+        const luta = criarLuta(ordem++, rodada, TBD, TBD);
+        lutas.push(luta);
+        nextEntries.push(luta.id);
+      } else {
+        nextEntries.push(currentEntries[i]);
       }
+    }
+    currentEntries = nextEntries;
+    rodada++;
   }
-  return o;
+  for (let r = 1; r < numRodadas; r++) {
+    const currentRoundLutas = lutas.filter((l) => l.rodada === r);
+    const nextRoundLutas = lutas.filter((l) => l.rodada === r + 1);
+    if (nextRoundLutas.length === 0) continue;
+    const fightsPerNextMatch = currentRoundLutas.length / nextRoundLutas.length;
+    if (!Number.isInteger(fightsPerNextMatch)) continue;
+    for (let i = 0; i < currentRoundLutas.length; i++) {
+      const luta = currentRoundLutas[i];
+      if (luta.status !== "wo" || !luta.vencedorId) continue;
+      const nextMatchIndex = Math.floor(i / fightsPerNextMatch);
+      const slotInNextMatch = i % fightsPerNextMatch;
+      if (nextMatchIndex >= nextRoundLutas.length) continue;
+      const nextLuta = nextRoundLutas[nextMatchIndex];
+      if (slotInNextMatch === 0 && (nextLuta.atletaAId === "tbd" || nextLuta.atletaAId === "")) {
+        nextLuta.atletaAId = luta.vencedorId;
+      } else if (slotInNextMatch === 1 && (nextLuta.atletaBId === "tbd" || nextLuta.atletaBId === "")) {
+        nextLuta.atletaBId = luta.vencedorId;
+      }
+    }
+  }
+  return lutas;
 }
-function Ct(e) {
-  const n = [];
-  let t = 1;
-  for (let o = 0; o < 8; o++)
-    n.push(u(t++, 1, e[o * 2].id, e[o * 2 + 1].id));
-  for (let o = 0; o < 4; o++)
-    n.push(u(t++, 2, f, f));
-  for (let o = 0; o < 2; o++)
-    n.push(u(t++, 3, f, f));
-  return n.push(u(t++, 4, f, f)), n;
+function gerarLutas16(posicoes) {
+  const lutas = [];
+  let ordem = 1;
+  for (let i = 0; i < 8; i++) {
+    lutas.push(criarLuta(ordem++, 1, posicoes[i * 2].id, posicoes[i * 2 + 1].id));
+  }
+  for (let i = 0; i < 4; i++) {
+    lutas.push(criarLuta(ordem++, 2, TBD, TBD));
+  }
+  for (let i = 0; i < 2; i++) {
+    lutas.push(criarLuta(ordem++, 3, TBD, TBD));
+  }
+  lutas.push(criarLuta(ordem++, 4, TBD, TBD));
+  return lutas;
 }
-function we(e) {
-  switch (e.length) {
+function gerarLutas(posicoes) {
+  switch (posicoes.length) {
     case 2:
-      return yt(e);
+      return gerarLutasDois(posicoes);
     case 3:
-      return xt(e);
+      return gerarLutasTres(posicoes);
     case 4:
-      return Dt(e);
+      return gerarLutasQuatro(posicoes);
     case 5:
-      return Et(e);
+      return gerarLutasCinco(posicoes);
     case 6:
-      return Ft(e);
+      return gerarLutasSeis(posicoes);
     case 9:
-      return Ot(e);
+      return gerarLutasNove(posicoes);
     case 10:
-      return Tt(e);
+      return gerarLutasDez(posicoes);
     case 11:
-      return Nt(e);
+      return gerarLutasOnze(posicoes);
     case 12:
-      return Bt(e);
+      return gerarLutasDoze(posicoes);
     case 13:
-      return Lt(e);
+      return gerarLutasTreze(posicoes);
     case 14:
-      return _t(e);
+      return gerarLutasQuatorze(posicoes);
     case 15:
-      return Pt(e);
+      return gerarLutasQuinze(posicoes);
     case 16:
-      return Ct(e);
+      return gerarLutas16(posicoes);
     default:
-      if (e.length >= 7 && e.length <= 15) return Rt(e);
+      if (posicoes.length >= 7 && posicoes.length <= 15) return gerarLutasGeral(posicoes);
       throw new Error("Número inválido de atletas");
   }
 }
-const de = {
-  branca: 0,
-  cinza: 1,
-  amarela: 2,
-  laranja: 3,
-  verde: 4,
-  azul: 5,
-  roxa: 6,
-  marrom: 7,
-  preta: 8
+const FAIXA_ORDER = {
+  "branca": 0,
+  "cinza": 1,
+  "amarela": 2,
+  "laranja": 3,
+  "verde": 4,
+  "azul": 5,
+  "roxa": 6,
+  "marrom": 7,
+  "preta": 8
 };
-function Mt(e) {
-  const n = [...e];
-  for (let t = n.length - 1; t > 0; t--) {
-    const o = Math.floor(Math.random() * (t + 1));
-    [n[t], n[o]] = [n[o], n[t]];
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
   }
-  return n;
+  return a;
 }
-function ve(e, n) {
-  if (n.length < 2 || n.length > 16)
+function gerarChave(categoriaId, atletas) {
+  if (atletas.length < 2 || atletas.length > 16) {
     throw new Error("A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.");
-  const t = Mt(n), o = t.length === 16 ? pe(t) : bt(t), r = we(o);
+  }
+  const embaralhados = shuffleArray(atletas);
+  const posicoes = embaralhados.length === 16 ? aplicarSeedSorting16(embaralhados) : aplicarSeedSorting(embaralhados);
+  const lutas = gerarLutas(posicoes);
   return {
-    id: y.randomUUID(),
-    categoriaId: e,
-    lutas: r,
-    posicoesAtletas: o.map((a) => a.id),
+    id: crypto.randomUUID(),
+    categoriaId,
+    lutas,
+    posicoesAtletas: posicoes.map((a) => a.id),
     arbitroId: null,
-    totalAtletas: o.length,
-    totalLutas: r.length,
-    totalRodadas: jt(o.length),
+    totalAtletas: posicoes.length,
+    totalLutas: lutas.length,
+    totalRodadas: getTotalRodadas(posicoes.length),
     status: "gerada"
   };
 }
-function Jt(e) {
-  const n = e.chaves ?? [], t = e.arbitros ?? [];
-  if (n.length === 0 || t.length === 0) return;
-  for (const a of t)
-    a.chaveIds = [];
-  const o = n.map((a) => {
-    const i = a.posicoesAtletas.map((d) => (e.atletas ?? []).find((s) => s.id === d)).filter((d) => d !== void 0), l = Math.max(...i.map((d) => de[d.faixa] ?? 0), 0);
-    return { chave: a, maxLevel: l };
+function autoAtribuirArbitros(torneio) {
+  const chaves = torneio.chaves ?? [];
+  const arbitros = torneio.arbitros ?? [];
+  if (chaves.length === 0 || arbitros.length === 0) return;
+  for (const r of arbitros) {
+    r.chaveIds = [];
+  }
+  const chaveMaxLevel = chaves.map((chave) => {
+    const atletas = chave.posicoesAtletas.map((id) => (torneio.atletas ?? []).find((a) => a.id === id)).filter((a) => a !== void 0);
+    const maxLevel = Math.max(...atletas.map((a) => FAIXA_ORDER[a.faixa] ?? 0), 0);
+    return { chave, maxLevel };
   });
-  o.sort((a, i) => i.maxLevel - a.maxLevel);
-  const r = /* @__PURE__ */ new Map();
-  for (const a of t) r.set(a.id, 0);
-  for (const { chave: a, maxLevel: i } of o) {
-    const l = t.filter((d) => (de[d.faixa] ?? 0) >= i).sort((d, s) => (r.get(d.id) ?? 0) - (r.get(s.id) ?? 0))[0];
-    l && (a.arbitroId = l.id, r.set(l.id, (r.get(l.id) ?? 0) + 1), l.chaveIds.includes(a.id) || l.chaveIds.push(a.id));
+  chaveMaxLevel.sort((a, b) => b.maxLevel - a.maxLevel);
+  const usage = /* @__PURE__ */ new Map();
+  for (const r of arbitros) usage.set(r.id, 0);
+  for (const { chave, maxLevel } of chaveMaxLevel) {
+    const best = arbitros.filter((r) => (FAIXA_ORDER[r.faixa] ?? 0) >= maxLevel).sort((a, b) => (usage.get(a.id) ?? 0) - (usage.get(b.id) ?? 0))[0];
+    if (best) {
+      chave.arbitroId = best.id;
+      usage.set(best.id, (usage.get(best.id) ?? 0) + 1);
+      if (!best.chaveIds.includes(chave.id)) {
+        best.chaveIds.push(chave.id);
+      }
+    }
   }
 }
-function $t(e, n) {
-  const t = e.length;
-  if (t <= n && t >= 2) return [e];
-  const o = [];
-  let r = 0;
-  for (; r < t; )
-    t - r <= n ? (o.push(e.slice(r)), r = t) : (o.push(e.slice(r, r + n)), r += n);
-  const a = o[o.length - 1];
-  if (a && a.length === 1 && o.length > 1) {
-    const l = o[o.length - 2].pop();
-    a.unshift(l);
+function splitGrupo(grupo, maxPorChave) {
+  const n = grupo.length;
+  if (n <= maxPorChave && n >= 2) return [grupo];
+  const subgrupos = [];
+  let idx = 0;
+  while (idx < n) {
+    const remaining = n - idx;
+    if (remaining <= maxPorChave) {
+      subgrupos.push(grupo.slice(idx));
+      idx = n;
+    } else {
+      subgrupos.push(grupo.slice(idx, idx + maxPorChave));
+      idx += maxPorChave;
+    }
   }
-  return o;
+  const last = subgrupos[subgrupos.length - 1];
+  if (last && last.length === 1 && subgrupos.length > 1) {
+    const prev = subgrupos[subgrupos.length - 2];
+    const migrated = prev.pop();
+    last.unshift(migrated);
+  }
+  return subgrupos;
 }
-function qt(e, n = 16) {
-  const t = E(e), o = t.atletas ?? [];
-  t.chaves = [];
-  const r = [], a = /* @__PURE__ */ new Map();
-  for (const c of o) {
-    if (!c.categoria) {
-      r.push(c.nome);
+function gerarTodasChavesHandler(torneioId, maxPorChave = 16) {
+  const torneio = loadTorneio$1(torneioId);
+  const atletas = torneio.atletas ?? [];
+  torneio.chaves = [];
+  const atletasIgnorados = [];
+  const grupos = /* @__PURE__ */ new Map();
+  for (const a of atletas) {
+    if (!a.categoria) {
+      atletasIgnorados.push(a.nome);
       continue;
     }
-    const I = a.get(c.categoria) ?? [];
-    I.push(c), a.set(c.categoria, I);
+    const g = grupos.get(a.categoria) ?? [];
+    g.push(a);
+    grupos.set(a.categoria, g);
   }
-  const i = [], l = [], d = [];
-  for (const [c, I] of a) {
-    if (I.length === 0) continue;
-    if (I.length === 1) {
-      l.push(I[0]), d.push({
-        categoriaId: c,
+  const novasChaves = [];
+  const atletasSemChave = [];
+  const metadados = [];
+  for (const [categoriaId, grupo] of grupos) {
+    if (grupo.length === 0) continue;
+    if (grupo.length === 1) {
+      atletasSemChave.push(grupo[0]);
+      metadados.push({
+        categoriaId,
         totalAtletas: 1,
         chavesGeradas: 0,
-        atletasIgnorados: [...r]
+        atletasIgnorados: [...atletasIgnorados]
       });
       continue;
     }
-    const p = $t(I, n);
-    let w = 0;
-    for (const g of p) {
-      if (g.length === 1) {
-        l.push(g[0]);
+    const subgrupos = splitGrupo(grupo, maxPorChave);
+    let chavesGeradas = 0;
+    for (const sub of subgrupos) {
+      if (sub.length === 1) {
+        atletasSemChave.push(sub[0]);
         continue;
       }
-      i.push(ve(c, g)), w++;
+      novasChaves.push(gerarChave(categoriaId, sub));
+      chavesGeradas++;
     }
-    d.push({
-      categoriaId: c,
-      totalAtletas: I.length,
-      chavesGeradas: w,
-      atletasIgnorados: [...r]
+    metadados.push({
+      categoriaId,
+      totalAtletas: grupo.length,
+      chavesGeradas,
+      atletasIgnorados: [...atletasIgnorados]
     });
   }
-  t.chaves = i, Jt(t);
-  const s = /* @__PURE__ */ new Set();
-  for (const c of i)
-    for (const I of c.posicoesAtletas)
-      s.add(I);
-  for (const c of t.atletas ?? [])
-    c.emChave = s.has(c.id);
-  return t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), J(t), { chaves: i, metadados: d, atletasSemChave: l };
+  torneio.chaves = novasChaves;
+  autoAtribuirArbitros(torneio);
+  const atletasEmChaves = /* @__PURE__ */ new Set();
+  for (const chave of novasChaves) {
+    for (const id of chave.posicoesAtletas) {
+      atletasEmChaves.add(id);
+    }
+  }
+  for (const a of torneio.atletas ?? []) {
+    a.emChave = atletasEmChaves.has(a.id);
+  }
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$1(torneio);
+  return { chaves: novasChaves, metadados, atletasSemChave };
 }
-function Ut(e) {
-  var r, a, i;
-  const n = e.length;
+function separarEquipes(atletas) {
+  var _a, _b, _c;
+  const n = atletas.length;
   if (n < 4) return;
-  const t = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : n === 6 ? [0, 1, 2] : n === 9 ? [0, 1, 2, 3, 4] : n === 10 ? [0, 1, 2, 3, 4] : n === 11 ? [0, 1, 2, 3, 4, 5] : n === 12 ? [0, 1, 2, 3, 4, 5] : n === 13 ? [0, 1, 2, 3, 4, 5] : n === 14 ? [0, 1, 2, 3, 4, 5] : n === 15 ? [0, 1, 2, 3, 4, 5, 6] : [0, 1], o = n === 4 ? [1, 2] : n === 5 ? [3, 4] : n === 6 ? [3, 4, 5] : n === 9 ? [5, 6, 7, 8] : n === 10 ? [5, 6, 7, 8, 9] : n === 11 ? [6, 7, 8, 9, 10] : n === 12 ? [6, 7, 8, 9, 10, 11] : n === 13 ? [6, 7, 8, 9, 10, 11, 12] : n === 14 ? [6, 7, 8, 9, 10, 11, 12, 13] : n === 15 ? [7, 8, 9, 10, 11, 12, 13, 14] : [2, 3, 4];
-  for (const l of [t, o]) {
-    const d = /* @__PURE__ */ new Set();
-    for (const s of l) {
-      const c = (r = e[s]) == null ? void 0 : r.equipe;
-      if (c) {
-        if (d.has(c)) {
-          const I = l === t ? o : t;
-          for (const p of I)
-            if (((a = e[p]) == null ? void 0 : a.equipe) !== c) {
-              [e[s], e[p]] = [e[p], e[s]];
-              break;
-            }
+  const sideA = n === 4 ? [0, 3] : n === 5 ? [0, 1, 2] : n === 6 ? [0, 1, 2] : n === 9 ? [0, 1, 2, 3, 4] : n === 10 ? [0, 1, 2, 3, 4] : n === 11 ? [0, 1, 2, 3, 4, 5] : n === 12 ? [0, 1, 2, 3, 4, 5] : n === 13 ? [0, 1, 2, 3, 4, 5] : n === 14 ? [0, 1, 2, 3, 4, 5] : n === 15 ? [0, 1, 2, 3, 4, 5, 6] : [0, 1];
+  const sideB = n === 4 ? [1, 2] : n === 5 ? [3, 4] : n === 6 ? [3, 4, 5] : n === 9 ? [5, 6, 7, 8] : n === 10 ? [5, 6, 7, 8, 9] : n === 11 ? [6, 7, 8, 9, 10] : n === 12 ? [6, 7, 8, 9, 10, 11] : n === 13 ? [6, 7, 8, 9, 10, 11, 12] : n === 14 ? [6, 7, 8, 9, 10, 11, 12, 13] : n === 15 ? [7, 8, 9, 10, 11, 12, 13, 14] : [2, 3, 4];
+  for (const side of [sideA, sideB]) {
+    const seenTeams = /* @__PURE__ */ new Set();
+    for (const idx of side) {
+      const team = (_a = atletas[idx]) == null ? void 0 : _a.equipe;
+      if (!team) continue;
+      if (seenTeams.has(team)) {
+        const otherSide = side === sideA ? sideB : sideA;
+        for (const oi of otherSide) {
+          const otherTeam = (_b = atletas[oi]) == null ? void 0 : _b.equipe;
+          if (otherTeam !== team) {
+            [atletas[idx], atletas[oi]] = [atletas[oi], atletas[idx]];
+            break;
+          }
         }
-        (i = e[s]) != null && i.equipe && d.add(e[s].equipe);
       }
+      if ((_c = atletas[idx]) == null ? void 0 : _c.equipe) seenTeams.add(atletas[idx].equipe);
     }
   }
 }
-function zt(e, n) {
-  const t = E(e), o = t.chaves ?? [], r = o.findIndex((d) => d.id === n.chaveId);
-  if (r < 0) throw new Error("Chave não encontrada");
-  const a = o[r], i = [...a.posicoesAtletas];
-  for (let d = i.length - 1; d > 0; d--) {
-    const s = Math.floor(Math.random() * (d + 1));
-    [i[d], i[s]] = [i[s], i[d]];
+function randomizarChaveHandler(torneioId, data) {
+  const torneio = loadTorneio$1(torneioId);
+  const chaves = torneio.chaves ?? [];
+  const index = chaves.findIndex((c) => c.id === data.chaveId);
+  if (index < 0) throw new Error("Chave não encontrada");
+  const chave = chaves[index];
+  const shuffled = [...chave.posicoesAtletas];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  const l = i.map((d) => (t.atletas ?? []).find((s) => s.id === d)).filter((d) => d !== void 0);
-  if (l.length === 16) {
-    const d = pe(l);
-    a.posicoesAtletas = d.map((s) => s.id);
-  } else
-    Ut(l), a.posicoesAtletas = l.map((d) => d.id);
-  a.lutas = we(l), o[r] = a, t.chaves = o;
-  for (const d of t.atletas ?? [])
-    a.posicoesAtletas.includes(d.id) && (d.emChave = !0);
-  return t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), J(t), a;
+  const atletas = shuffled.map((id) => (torneio.atletas ?? []).find((a) => a.id === id)).filter((a) => a !== void 0);
+  if (atletas.length === 16) {
+    const sorted = aplicarSeedSorting16(atletas);
+    chave.posicoesAtletas = sorted.map((a) => a.id);
+  } else {
+    separarEquipes(atletas);
+    chave.posicoesAtletas = atletas.map((a) => a.id);
+  }
+  chave.lutas = gerarLutas(atletas);
+  chaves[index] = chave;
+  torneio.chaves = chaves;
+  for (const a of torneio.atletas ?? []) {
+    if (chave.posicoesAtletas.includes(a.id)) {
+      a.emChave = true;
+    }
+  }
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$1(torneio);
+  return chave;
 }
-function kt(e, n) {
-  const t = E(e), o = t.chaves ?? [], r = o.findIndex((l) => l.id === n.chaveId);
-  if (r < 0) throw new Error("Chave não encontrada");
-  const a = o[r], i = a.arbitroId;
-  if (i) {
-    const l = (t.arbitros ?? []).find((d) => d.id === i);
-    l && (l.chaveIds = l.chaveIds.filter((d) => d !== n.chaveId));
+function atribuirArbitroHandler(torneioId, data) {
+  const torneio = loadTorneio$1(torneioId);
+  const chaves = torneio.chaves ?? [];
+  const chaveIndex = chaves.findIndex((c) => c.id === data.chaveId);
+  if (chaveIndex < 0) throw new Error("Chave não encontrada");
+  const chave = chaves[chaveIndex];
+  const oldArbitroId = chave.arbitroId;
+  if (oldArbitroId) {
+    const oldArbitro = (torneio.arbitros ?? []).find((r) => r.id === oldArbitroId);
+    if (oldArbitro) {
+      oldArbitro.chaveIds = oldArbitro.chaveIds.filter((id) => id !== data.chaveId);
+    }
   }
-  if (n.arbitroId) {
-    const l = (t.arbitros ?? []).find((d) => d.id === n.arbitroId);
-    if (!l) throw new Error("Árbitro não encontrado no torneio.");
-    l.chaveIds.includes(n.chaveId) || l.chaveIds.push(n.chaveId);
+  if (data.arbitroId) {
+    const newArbitro = (torneio.arbitros ?? []).find((r) => r.id === data.arbitroId);
+    if (!newArbitro) throw new Error("Árbitro não encontrado no torneio.");
+    if (!newArbitro.chaveIds.includes(data.chaveId)) {
+      newArbitro.chaveIds.push(data.chaveId);
+    }
   }
-  return a.arbitroId = n.arbitroId, o[r] = a, t.chaves = o, t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), J(t), a;
+  chave.arbitroId = data.arbitroId;
+  chaves[chaveIndex] = chave;
+  torneio.chaves = chaves;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$1(torneio);
+  return chave;
 }
-async function Wt() {
-  const e = await _.showOpenDialog({
+async function openBracketFileDialog() {
+  const result = await dialog.showOpenDialog({
     properties: ["openFile"],
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  return e.canceled || e.filePaths.length === 0 ? null : e.filePaths[0];
+  return result.canceled || result.filePaths.length === 0 ? null : result.filePaths[0];
 }
-function Ht(e, n) {
-  const t = h.readFileSync(n, "utf-8"), o = JSON.parse(t);
-  if (!Array.isArray(o))
+function importChavesFromFile(torneioId, filePath) {
+  const raw = fs.readFileSync(filePath, "utf-8");
+  const incoming = JSON.parse(raw);
+  if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de chaves.");
-  const r = E(e), a = o.map((l) => {
-    if (!l.categoriaId || !Array.isArray(l.lutas))
+  }
+  const torneio = loadTorneio$1(torneioId);
+  const chaves = incoming.map((c) => {
+    if (!c.categoriaId || !Array.isArray(c.lutas)) {
       throw new Error("Estrutura de chave inválida no arquivo.");
+    }
     return {
-      ...l,
-      id: l.id || y.randomUUID()
+      ...c,
+      id: c.id || crypto.randomUUID()
     };
   });
-  r.chaves = a;
-  const i = /* @__PURE__ */ new Set();
-  for (const l of a)
-    for (const d of l.posicoesAtletas)
-      i.add(d);
-  for (const l of r.atletas ?? [])
-    l.emChave = i.has(l.id);
-  return r.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), J(r), { imported: o.length };
+  torneio.chaves = chaves;
+  const atletasEmChaves = /* @__PURE__ */ new Set();
+  for (const chave of chaves) {
+    for (const id of chave.posicoesAtletas) {
+      atletasEmChaves.add(id);
+    }
+  }
+  for (const a of torneio.atletas ?? []) {
+    a.emChave = atletasEmChaves.has(a.id);
+  }
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$1(torneio);
+  return { imported: incoming.length };
 }
-async function Vt(e) {
-  const n = E(e), t = n.chaves ?? [], o = await _.showSaveDialog({
+async function exportChavesToFile(torneioId) {
+  const torneio = loadTorneio$1(torneioId);
+  const chaves = torneio.chaves ?? [];
+  const result = await dialog.showSaveDialog({
     title: "Exportar Chaves",
-    defaultPath: `${(n.nome || "torneio").replace(/[^a-zA-Z0-9]/g, "_")}_chaves.json`,
+    defaultPath: `${(torneio.nome || "torneio").replace(/[^a-zA-Z0-9]/g, "_")}_chaves.json`,
     filters: [{ name: "JSON", extensions: ["json"] }]
   });
-  !o.canceled && o.filePath && h.writeFileSync(o.filePath, JSON.stringify(t, null, 2), "utf-8");
-}
-function Gt(e) {
-  return {
-    id: e.id,
-    ordem: e.ordem ?? 0,
-    rodada: e.rodada ?? 1,
-    atletaAId: e.atletaAId ?? "",
-    atletaBId: e.atletaBId ?? "",
-    status: e.status ?? "pending",
-    vencedorId: e.vencedorId ?? null,
-    placarA: e.placarA ?? void 0,
-    placarB: e.placarB ?? void 0,
-    finalizacao: e.finalizacao ?? void 0,
-    desclassificacao: e.desclassificacao ?? void 0,
-    desclassificadoId: e.desclassificadoId ?? void 0,
-    desempateArbitro: e.desempateArbitro ?? void 0,
-    horarioInicio: e.horarioInicio ?? void 0,
-    horarioTermino: e.horarioTermino ?? void 0
-  };
-}
-function G(e) {
-  const n = (e.lutas ?? []).map(Gt);
-  return {
-    id: e.id,
-    categoriaId: e.categoriaId ?? "",
-    lutas: n,
-    posicoesAtletas: e.posicoesAtletas ?? [],
-    arbitroId: e.arbitroId ?? null,
-    totalAtletas: e.totalAtletas ?? 0,
-    totalLutas: e.totalLutas ?? 0,
-    totalRodadas: e.totalRodadas ?? (n.length > 0 ? Math.max(...n.map((t) => t.rodada)) : 1),
-    status: e.status ?? "gerada"
-  };
-}
-function Kt(e, n) {
-  const t = E(e), r = W(e).find((i) => i.id === n);
-  if (!r) return [];
-  const a = new Set(r.arbitroIds);
-  return (t.chaves ?? []).map((i) => G(i)).filter((i) => i.arbitroId && a.has(i.arbitroId));
-}
-function K(e, n, t) {
-  for (const o of e.lutas)
-    o.rodada <= n || (o.atletaAId === t && (o.atletaAId = "tbd", o.vencedorId = null, (o.status === "completed" || o.status === "wo") && (o.status = "pending"), K(e, o.rodada, t)), o.atletaBId === t && (o.atletaBId = "tbd", o.vencedorId = null, (o.status === "completed" || o.status === "wo") && (o.status = "pending"), K(e, o.rodada, t)));
-}
-function Yt(e, n) {
-  const t = e.lutas.filter((a) => a.rodada === n.rodada), o = t.indexOf(n);
-  if (o < 0) return;
-  let r = n.rodada + 1;
-  for (; r <= (e.totalRodadas || 3); ) {
-    const a = e.lutas.filter((c) => c.rodada === r);
-    if (a.length === 0) return;
-    const i = t.length / a.length, l = Math.floor(o / i);
-    if (l >= a.length) return;
-    const d = a[l], s = Math.floor(o % i);
-    if (s === 0 && (d.atletaAId === "tbd" || d.atletaAId === "")) {
-      d.atletaAId = n.vencedorId;
-      return;
-    }
-    if (s === 1 && (d.atletaBId === "tbd" || d.atletaBId === "")) {
-      d.atletaBId = n.vencedorId;
-      return;
-    }
-    r++;
+  if (!result.canceled && result.filePath) {
+    fs.writeFileSync(result.filePath, JSON.stringify(chaves, null, 2), "utf-8");
   }
 }
-function Qt(e, n) {
-  const t = n.vencedorId;
-  if (t) {
-    if (n.ordem === 1) {
-      const o = e.lutas.find((a) => a.ordem === 5);
-      o && (o.atletaAId = t, o.vencedorId = t, o.status = "wo");
-      const r = e.lutas.find((a) => a.ordem === 6);
-      r && (r.atletaBId = t);
-    } else if (n.ordem === 2) {
-      const o = e.lutas.find((r) => r.ordem === 4);
-      o && (o.atletaAId = t);
-    } else if (n.ordem === 3) {
-      const o = e.lutas.find((r) => r.ordem === 4);
-      o && (o.atletaBId = t);
-    } else if (n.ordem === 4) {
-      const o = e.lutas.find((r) => r.ordem === 6);
-      o && (o.atletaAId = t);
+function normalizeLuta(luta) {
+  return {
+    id: luta.id,
+    ordem: luta.ordem ?? 0,
+    rodada: luta.rodada ?? 1,
+    atletaAId: luta.atletaAId ?? "",
+    atletaBId: luta.atletaBId ?? "",
+    status: luta.status ?? "pending",
+    vencedorId: luta.vencedorId ?? null,
+    placarA: luta.placarA ?? void 0,
+    placarB: luta.placarB ?? void 0,
+    finalizacao: luta.finalizacao ?? void 0,
+    desclassificacao: luta.desclassificacao ?? void 0,
+    desclassificadoId: luta.desclassificadoId ?? void 0,
+    desempateArbitro: luta.desempateArbitro ?? void 0,
+    horarioInicio: luta.horarioInicio ?? void 0,
+    horarioTermino: luta.horarioTermino ?? void 0
+  };
+}
+function normalizeChave(chave) {
+  const lutas = (chave.lutas ?? []).map(normalizeLuta);
+  return {
+    id: chave.id,
+    categoriaId: chave.categoriaId ?? "",
+    lutas,
+    posicoesAtletas: chave.posicoesAtletas ?? [],
+    arbitroId: chave.arbitroId ?? null,
+    totalAtletas: chave.totalAtletas ?? 0,
+    totalLutas: chave.totalLutas ?? 0,
+    totalRodadas: chave.totalRodadas ?? (lutas.length > 0 ? Math.max(...lutas.map((l) => l.rodada)) : 1),
+    status: chave.status ?? "gerada"
+  };
+}
+function loadChavesPorAreaHandler(torneioId, areaId) {
+  const torneio = loadTorneio$1(torneioId);
+  const areas = loadAreas(torneioId);
+  const area = areas.find((a) => a.id === areaId);
+  if (!area) return [];
+  const arbitroIds = new Set(area.arbitroIds);
+  return (torneio.chaves ?? []).map((c) => normalizeChave(c)).filter((c) => c.arbitroId && arbitroIds.has(c.arbitroId));
+}
+function clearWinnerFromLaterRounds(chave, rodada, atletaId) {
+  for (const l of chave.lutas) {
+    if (l.rodada <= rodada) continue;
+    if (l.atletaAId === atletaId) {
+      l.atletaAId = "tbd";
+      l.vencedorId = null;
+      if (l.status === "completed" || l.status === "wo") l.status = "pending";
+      clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
+    }
+    if (l.atletaBId === atletaId) {
+      l.atletaBId = "tbd";
+      l.vencedorId = null;
+      if (l.status === "completed" || l.status === "wo") l.status = "pending";
+      clearWinnerFromLaterRounds(chave, l.rodada, atletaId);
     }
   }
 }
-function Xt(e, n) {
-  const t = n.vencedorId;
-  if (!t) return;
-  if (!e.lutas.some((r) => r.ordem === 4 && r.rodada === 1)) {
-    if (n.ordem === 1) {
-      const r = e.lutas.filter((a) => a.rodada === 2);
-      r[0] && (r[0].atletaAId = t);
-    } else if (n.ordem === 2) {
-      const r = e.lutas.filter((a) => a.rodada === 2);
-      r[0] && (r[0].atletaBId = t);
-    } else if (n.ordem === 3) {
-      const r = e.lutas.filter((a) => a.rodada === 2);
-      r[1] && (r[1].atletaAId = t);
-    } else if (n.rodada === 2) {
-      const r = e.lutas.find((l) => l.rodada === 3), i = e.lutas.filter((l) => l.rodada === 2).indexOf(n);
-      r && i === 0 && (r.atletaAId = t), r && i === 1 && (r.atletaBId = t);
+function advanceWinnerInChave(chave, luta) {
+  const currentRoundLutas = chave.lutas.filter((l) => l.rodada === luta.rodada);
+  const matchIndex = currentRoundLutas.indexOf(luta);
+  if (matchIndex < 0) return;
+  let targetRodada = luta.rodada + 1;
+  while (targetRodada <= (chave.totalRodadas || 3)) {
+    const nextRoundLutas = chave.lutas.filter((l) => l.rodada === targetRodada);
+    if (nextRoundLutas.length === 0) return;
+    const fightsPerNextMatch = currentRoundLutas.length / nextRoundLutas.length;
+    const nextMatchIndex = Math.floor(matchIndex / fightsPerNextMatch);
+    if (nextMatchIndex >= nextRoundLutas.length) return;
+    const nextLuta = nextRoundLutas[nextMatchIndex];
+    const slotInNextMatch = Math.floor(matchIndex % fightsPerNextMatch);
+    if (slotInNextMatch === 0 && (nextLuta.atletaAId === "tbd" || nextLuta.atletaAId === "")) {
+      nextLuta.atletaAId = luta.vencedorId;
+      return;
+    }
+    if (slotInNextMatch === 1 && (nextLuta.atletaBId === "tbd" || nextLuta.atletaBId === "")) {
+      nextLuta.atletaBId = luta.vencedorId;
+      return;
+    }
+    targetRodada++;
+  }
+}
+function advanceWinner5(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  if (luta.ordem === 1) {
+    const luta5 = chave.lutas.find((l) => l.ordem === 5);
+    if (luta5) {
+      luta5.atletaAId = winnerId;
+      luta5.vencedorId = winnerId;
+      luta5.status = "wo";
+    }
+    const luta6 = chave.lutas.find((l) => l.ordem === 6);
+    if (luta6) {
+      luta6.atletaBId = winnerId;
+    }
+  } else if (luta.ordem === 2) {
+    const luta4 = chave.lutas.find((l) => l.ordem === 4);
+    if (luta4) {
+      luta4.atletaAId = winnerId;
+    }
+  } else if (luta.ordem === 3) {
+    const luta4 = chave.lutas.find((l) => l.ordem === 4);
+    if (luta4) {
+      luta4.atletaBId = winnerId;
+    }
+  } else if (luta.ordem === 4) {
+    const luta6 = chave.lutas.find((l) => l.ordem === 6);
+    if (luta6) {
+      luta6.atletaAId = winnerId;
+    }
+  }
+}
+function advanceWinner6(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const hasLuta4 = chave.lutas.some((l) => l.ordem === 4 && l.rodada === 1);
+  if (!hasLuta4) {
+    if (luta.ordem === 1) {
+      const r2lutas = chave.lutas.filter((l) => l.rodada === 2);
+      if (r2lutas[0]) r2lutas[0].atletaAId = winnerId;
+    } else if (luta.ordem === 2) {
+      const r2lutas = chave.lutas.filter((l) => l.rodada === 2);
+      if (r2lutas[0]) r2lutas[0].atletaBId = winnerId;
+    } else if (luta.ordem === 3) {
+      const r2lutas = chave.lutas.filter((l) => l.rodada === 2);
+      if (r2lutas[1]) r2lutas[1].atletaAId = winnerId;
+    } else if (luta.rodada === 2) {
+      const r3luta = chave.lutas.find((l) => l.rodada === 3);
+      const r2lutas = chave.lutas.filter((l) => l.rodada === 2);
+      const matchIndex = r2lutas.indexOf(luta);
+      if (r3luta && matchIndex === 0) r3luta.atletaAId = winnerId;
+      if (r3luta && matchIndex === 1) r3luta.atletaBId = winnerId;
     }
     return;
   }
-  if (n.ordem === 1) {
-    const r = e.lutas.find((a) => a.ordem === 5);
-    r && (r.atletaBId = t);
-  } else if (n.ordem !== 2) {
-    if (n.ordem === 3) {
-      const r = e.lutas.find((a) => a.ordem === 6);
-      r && (r.atletaBId = t);
-    } else if (n.ordem !== 4) {
-      if (n.ordem === 5) {
-        const r = e.lutas.find((a) => a.ordem === 7);
-        r && (r.atletaAId = t);
-      } else if (n.ordem === 6) {
-        const r = e.lutas.find((a) => a.ordem === 7);
-        r && (r.atletaBId = t);
+  if (luta.ordem === 1) {
+    const luta5 = chave.lutas.find((l) => l.ordem === 5);
+    if (luta5) luta5.atletaBId = winnerId;
+  } else if (luta.ordem === 2) ;
+  else if (luta.ordem === 3) {
+    const luta6 = chave.lutas.find((l) => l.ordem === 6);
+    if (luta6) luta6.atletaBId = winnerId;
+  } else if (luta.ordem === 4) ;
+  else if (luta.ordem === 5) {
+    const luta7 = chave.lutas.find((l) => l.ordem === 7);
+    if (luta7) luta7.atletaAId = winnerId;
+  } else if (luta.ordem === 6) {
+    const luta7 = chave.lutas.find((l) => l.ordem === 7);
+    if (luta7) luta7.atletaBId = winnerId;
+  }
+}
+function advanceWinner9(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const l7 = chave.lutas.find((l) => l.ordem === 7);
+  const l8 = chave.lutas.find((l) => l.ordem === 8);
+  const l9 = chave.lutas.find((l) => l.ordem === 9);
+  const l10 = chave.lutas.find((l) => l.ordem === 10);
+  const l11 = chave.lutas.find((l) => l.ordem === 11);
+  const l12 = chave.lutas.find((l) => l.ordem === 12);
+  if (luta.ordem === 1) {
+    if (l7) l7.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l7) l7.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l8) l8.atletaAId = winnerId;
+  } else if (luta.ordem === 4) {
+    if (l8) l8.atletaBId = winnerId;
+  } else if (luta.ordem === 5) {
+    if (l9) l9.atletaAId = winnerId;
+  } else if (luta.ordem === 6) {
+    if (l9) l9.atletaBId = winnerId;
+  } else if (luta.ordem === 7) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem === 8) {
+    if (l10) l10.atletaBId = winnerId;
+  } else if (luta.ordem === 9) {
+    if (l11) {
+      l11.atletaAId = winnerId;
+      l11.vencedorId = winnerId;
+      l11.status = "wo";
+    }
+    if (l12) {
+      l12.atletaBId = winnerId;
+    }
+  } else if (luta.ordem === 10) {
+    if (l12) l12.atletaAId = winnerId;
+  }
+}
+function advanceWinner10(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const l7 = chave.lutas.find((l) => l.ordem === 7);
+  const l8 = chave.lutas.find((l) => l.ordem === 8);
+  const l9 = chave.lutas.find((l) => l.ordem === 9);
+  const l10 = chave.lutas.find((l) => l.ordem === 10);
+  const l11 = chave.lutas.find((l) => l.ordem === 11);
+  const l12 = chave.lutas.find((l) => l.ordem === 12);
+  const l13 = chave.lutas.find((l) => l.ordem === 13);
+  if (luta.ordem === 1) {
+    if (l7) l7.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l7) l7.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l8) {
+      l8.atletaAId = winnerId;
+      l8.vencedorId = winnerId;
+      l8.status = "wo";
+    }
+    if (l11) l11.atletaBId = winnerId;
+  } else if (luta.ordem === 4) {
+    if (l9) {
+      l9.atletaAId = winnerId;
+      l9.vencedorId = winnerId;
+      l9.status = "wo";
+    }
+    if (l12) l12.atletaAId = winnerId;
+  } else if (luta.ordem === 5) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem === 6) {
+    if (l10) l10.atletaBId = winnerId;
+  } else if (luta.ordem === 7) {
+    if (l11) l11.atletaAId = winnerId;
+  } else if (luta.ordem === 10) {
+    if (l12) l12.atletaBId = winnerId;
+  } else if (luta.ordem === 11) {
+    if (l13) l13.atletaAId = winnerId;
+  } else if (luta.ordem === 12) {
+    if (l13) l13.atletaBId = winnerId;
+  }
+}
+function advanceWinner11(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const l9 = chave.lutas.find((l) => l.ordem === 9);
+  const l10 = chave.lutas.find((l) => l.ordem === 10);
+  const l13 = chave.lutas.find((l) => l.ordem === 13);
+  const l14 = chave.lutas.find((l) => l.ordem === 14);
+  const l15 = chave.lutas.find((l) => l.ordem === 15);
+  if (luta.ordem === 1) {
+    if (l9) l9.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l9) l9.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem >= 4 && luta.ordem <= 8) ;
+  else if (luta.ordem === 9) {
+    if (l13) l13.atletaAId = winnerId;
+  } else if (luta.ordem === 10) {
+    if (l13) l13.atletaBId = winnerId;
+  } else if (luta.ordem === 11) {
+    if (l14) l14.atletaAId = winnerId;
+  } else if (luta.ordem === 12) {
+    if (l14) l14.atletaBId = winnerId;
+  } else if (luta.ordem === 13) {
+    if (l15) l15.atletaAId = winnerId;
+  } else if (luta.ordem === 14) {
+    if (l15) l15.atletaBId = winnerId;
+  }
+}
+function advanceWinner12(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const l9 = chave.lutas.find((l) => l.ordem === 9);
+  const l10 = chave.lutas.find((l) => l.ordem === 10);
+  const l13 = chave.lutas.find((l) => l.ordem === 13);
+  const l14 = chave.lutas.find((l) => l.ordem === 14);
+  const l15 = chave.lutas.find((l) => l.ordem === 15);
+  if (luta.ordem === 1) {
+    if (l9) l9.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l9) l9.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem === 4) {
+    if (l10) l10.atletaBId = winnerId;
+  } else if (luta.ordem >= 5 && luta.ordem <= 8) ;
+  else if (luta.ordem === 9) {
+    if (l13) l13.atletaAId = winnerId;
+  } else if (luta.ordem === 10) {
+    if (l13) l13.atletaBId = winnerId;
+  } else if (luta.ordem === 11) {
+    if (l14) l14.atletaAId = winnerId;
+  } else if (luta.ordem === 12) {
+    if (l14) l14.atletaBId = winnerId;
+  } else if (luta.ordem === 13) {
+    if (l15) l15.atletaAId = winnerId;
+  } else if (luta.ordem === 14) {
+    if (l15) l15.atletaBId = winnerId;
+  }
+}
+function advanceWinner13(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const l9 = chave.lutas.find((l) => l.ordem === 9);
+  const l10 = chave.lutas.find((l) => l.ordem === 10);
+  const l11 = chave.lutas.find((l) => l.ordem === 11);
+  const l13 = chave.lutas.find((l) => l.ordem === 13);
+  const l14 = chave.lutas.find((l) => l.ordem === 14);
+  const l15 = chave.lutas.find((l) => l.ordem === 15);
+  if (luta.ordem === 1) {
+    if (l9) l9.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l9) l9.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem === 4) {
+    if (l10) l10.atletaBId = winnerId;
+  } else if (luta.ordem === 5) {
+    if (l11) l11.atletaAId = winnerId;
+  } else if (luta.ordem >= 6 && luta.ordem <= 8) ;
+  else if (luta.ordem === 9) {
+    if (l13) l13.atletaAId = winnerId;
+  } else if (luta.ordem === 10) {
+    if (l13) l13.atletaBId = winnerId;
+  } else if (luta.ordem === 11) {
+    if (l14) l14.atletaAId = winnerId;
+  } else if (luta.ordem === 12) {
+    if (l14) l14.atletaBId = winnerId;
+  } else if (luta.ordem === 13) {
+    if (l15) l15.atletaAId = winnerId;
+  } else if (luta.ordem === 14) {
+    if (l15) l15.atletaBId = winnerId;
+  }
+}
+function advanceWinner14(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const l9 = chave.lutas.find((l) => l.ordem === 9);
+  const l10 = chave.lutas.find((l) => l.ordem === 10);
+  const l11 = chave.lutas.find((l) => l.ordem === 11);
+  const l13 = chave.lutas.find((l) => l.ordem === 13);
+  const l14 = chave.lutas.find((l) => l.ordem === 14);
+  const l15 = chave.lutas.find((l) => l.ordem === 15);
+  if (luta.ordem === 1) {
+    if (l9) l9.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l9) l9.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem === 4) {
+    if (l10) l10.atletaBId = winnerId;
+  } else if (luta.ordem === 5) {
+    if (l11) l11.atletaAId = winnerId;
+  } else if (luta.ordem === 6) {
+    if (l11) l11.atletaBId = winnerId;
+  } else if (luta.ordem >= 7 && luta.ordem <= 8) ;
+  else if (luta.ordem === 9) {
+    if (l13) l13.atletaAId = winnerId;
+  } else if (luta.ordem === 10) {
+    if (l13) l13.atletaBId = winnerId;
+  } else if (luta.ordem === 11) {
+    if (l14) l14.atletaAId = winnerId;
+  } else if (luta.ordem === 12) {
+    if (l14) l14.atletaBId = winnerId;
+  } else if (luta.ordem === 13) {
+    if (l15) l15.atletaAId = winnerId;
+  } else if (luta.ordem === 14) {
+    if (l15) l15.atletaBId = winnerId;
+  }
+}
+function advanceWinner15(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const l9 = chave.lutas.find((l) => l.ordem === 9);
+  const l10 = chave.lutas.find((l) => l.ordem === 10);
+  const l11 = chave.lutas.find((l) => l.ordem === 11);
+  const l12 = chave.lutas.find((l) => l.ordem === 12);
+  const l13 = chave.lutas.find((l) => l.ordem === 13);
+  const l14 = chave.lutas.find((l) => l.ordem === 14);
+  const l15 = chave.lutas.find((l) => l.ordem === 15);
+  if (luta.ordem === 1) {
+    if (l9) l9.atletaAId = winnerId;
+  } else if (luta.ordem === 2) {
+    if (l9) l9.atletaBId = winnerId;
+  } else if (luta.ordem === 3) {
+    if (l10) l10.atletaAId = winnerId;
+  } else if (luta.ordem === 4) {
+    if (l10) l10.atletaBId = winnerId;
+  } else if (luta.ordem === 5) {
+    if (l11) l11.atletaAId = winnerId;
+  } else if (luta.ordem === 6) {
+    if (l11) l11.atletaBId = winnerId;
+  } else if (luta.ordem === 7) {
+    if (l12) l12.atletaAId = winnerId;
+  } else if (luta.ordem === 8) ;
+  else if (luta.ordem === 9) {
+    if (l13) l13.atletaAId = winnerId;
+  } else if (luta.ordem === 10) {
+    if (l13) l13.atletaBId = winnerId;
+  } else if (luta.ordem === 11) {
+    if (l14) l14.atletaAId = winnerId;
+  } else if (luta.ordem === 12) {
+    if (l14) l14.atletaBId = winnerId;
+  } else if (luta.ordem === 13) {
+    if (l15) l15.atletaAId = winnerId;
+  } else if (luta.ordem === 14) {
+    if (l15) l15.atletaBId = winnerId;
+  }
+}
+function advanceWinner16(chave, luta) {
+  const winnerId = luta.vencedorId;
+  if (!winnerId) return;
+  const lutaIndex = chave.lutas.indexOf(luta);
+  if (lutaIndex < 0) return;
+  if (luta.rodada === 1) {
+    const r2Index = 8 + Math.floor(lutaIndex / 2);
+    const isFirst = lutaIndex % 2 === 0;
+    const r2Luta = chave.lutas[r2Index];
+    if (r2Luta) {
+      if (isFirst) r2Luta.atletaAId = winnerId;
+      else r2Luta.atletaBId = winnerId;
+    }
+  } else if (luta.rodada === 2) {
+    const adjIdx = lutaIndex - 8;
+    const r3Index = 12 + Math.floor(adjIdx / 2);
+    const isFirst = adjIdx % 2 === 0;
+    const r3Luta = chave.lutas[r3Index];
+    if (r3Luta) {
+      if (isFirst) r3Luta.atletaAId = winnerId;
+      else r3Luta.atletaBId = winnerId;
+    }
+  } else if (luta.rodada === 3) {
+    const r4Luta = chave.lutas[14];
+    if (r4Luta) {
+      const isFirst = lutaIndex - 12 === 0;
+      if (isFirst) r4Luta.atletaAId = winnerId;
+      else r4Luta.atletaBId = winnerId;
+    }
+  }
+}
+function registrarResultadoHandler(torneioId, data) {
+  const torneio = loadTorneio$1(torneioId);
+  const chaves = [...torneio.chaves ?? []];
+  const chaveIndex = chaves.findIndex((c) => c.id === data.chaveId);
+  if (chaveIndex < 0) throw new Error("Chave não encontrada");
+  const chave = JSON.parse(JSON.stringify(chaves[chaveIndex]));
+  const luta = chave.lutas.find((l) => l.id === data.lutaId);
+  if (!luta) throw new Error("Luta não encontrada");
+  const oldWinnerId = luta.vencedorId;
+  if (oldWinnerId && oldWinnerId !== data.vencedorId) {
+    clearWinnerFromLaterRounds(chave, luta.rodada, oldWinnerId);
+  }
+  luta.vencedorId = data.vencedorId;
+  luta.status = data.status === "wo" ? "wo" : "completed";
+  luta.placarA = data.placarA;
+  luta.placarB = data.placarB;
+  luta.finalizacao = data.finalizacao ?? false;
+  luta.desclassificacao = data.desclassificacao ?? false;
+  luta.desempateArbitro = data.desempateArbitro ?? false;
+  luta.horarioInicio = data.horarioInicio ?? luta.horarioInicio;
+  luta.horarioTermino = data.horarioTermino ?? luta.horarioTermino;
+  if (data.desclassificacao && luta.vencedorId) {
+    luta.desclassificadoId = luta.atletaAId === luta.vencedorId ? luta.atletaBId : luta.atletaAId;
+  } else {
+    luta.desclassificadoId = void 0;
+  }
+  if (chave.totalAtletas === 3) {
+    const r2 = chave.lutas.find((l) => l.rodada === 2);
+    const r3 = chave.lutas.find((l) => l.rodada === 3);
+    if (luta.rodada === 1) {
+      const loserId = luta.vencedorId === luta.atletaAId ? luta.atletaBId : luta.atletaAId;
+      if (data.desclassificacao) {
+        if (r2 && r3) {
+          r2.atletaAId = r2.atletaBId;
+          r2.vencedorId = r2.atletaBId;
+          r2.status = "wo";
+          r3.atletaAId = luta.vencedorId;
+          r3.atletaBId = r2.atletaBId;
+          r3.vencedorId = null;
+          r3.status = "pending";
+        }
+      } else {
+        if (r2) {
+          r2.atletaAId = loserId;
+          r2.vencedorId = null;
+          r2.status = "pending";
+        }
+        if (r3) {
+          r3.atletaAId = luta.vencedorId;
+          r3.atletaBId = "tbd";
+          r3.vencedorId = null;
+          r3.status = "pending";
+        }
+      }
+    } else if (luta.rodada === 2) {
+      if (r3 && r3.atletaBId === "tbd") {
+        r3.atletaBId = luta.vencedorId;
+        r3.status = "pending";
       }
     }
+  } else if (chave.totalAtletas === 5) {
+    advanceWinner5(chave, luta);
+  } else if (chave.totalAtletas === 6) {
+    advanceWinner6(chave, luta);
+  } else if (chave.totalAtletas === 9) {
+    advanceWinner9(chave, luta);
+  } else if (chave.totalAtletas === 10) {
+    advanceWinner10(chave, luta);
+  } else if (chave.totalAtletas === 11) {
+    advanceWinner11(chave, luta);
+  } else if (chave.totalAtletas === 12) {
+    advanceWinner12(chave, luta);
+  } else if (chave.totalAtletas === 13) {
+    advanceWinner13(chave, luta);
+  } else if (chave.totalAtletas === 14) {
+    advanceWinner14(chave, luta);
+  } else if (chave.totalAtletas === 15) {
+    advanceWinner15(chave, luta);
+  } else if (chave.totalAtletas === 16) {
+    advanceWinner16(chave, luta);
+  } else {
+    advanceWinnerInChave(chave, luta);
   }
+  chaves[chaveIndex] = chave;
+  torneio.chaves = chaves;
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio$1(torneio);
+  return chave;
 }
-function Zt(e, n) {
-  const t = n.vencedorId;
-  if (!t) return;
-  const o = e.lutas.find((s) => s.ordem === 7), r = e.lutas.find((s) => s.ordem === 8), a = e.lutas.find((s) => s.ordem === 9), i = e.lutas.find((s) => s.ordem === 10), l = e.lutas.find((s) => s.ordem === 11), d = e.lutas.find((s) => s.ordem === 12);
-  n.ordem === 1 ? o && (o.atletaAId = t) : n.ordem === 2 ? o && (o.atletaBId = t) : n.ordem === 3 ? r && (r.atletaAId = t) : n.ordem === 4 ? r && (r.atletaBId = t) : n.ordem === 5 ? a && (a.atletaAId = t) : n.ordem === 6 ? a && (a.atletaBId = t) : n.ordem === 7 ? i && (i.atletaAId = t) : n.ordem === 8 ? i && (i.atletaBId = t) : n.ordem === 9 ? (l && (l.atletaAId = t, l.vencedorId = t, l.status = "wo"), d && (d.atletaBId = t)) : n.ordem === 10 && d && (d.atletaAId = t);
-}
-function en(e, n) {
-  const t = n.vencedorId;
-  if (!t) return;
-  const o = e.lutas.find((c) => c.ordem === 7), r = e.lutas.find((c) => c.ordem === 8), a = e.lutas.find((c) => c.ordem === 9), i = e.lutas.find((c) => c.ordem === 10), l = e.lutas.find((c) => c.ordem === 11), d = e.lutas.find((c) => c.ordem === 12), s = e.lutas.find((c) => c.ordem === 13);
-  n.ordem === 1 ? o && (o.atletaAId = t) : n.ordem === 2 ? o && (o.atletaBId = t) : n.ordem === 3 ? (r && (r.atletaAId = t, r.vencedorId = t, r.status = "wo"), l && (l.atletaBId = t)) : n.ordem === 4 ? (a && (a.atletaAId = t, a.vencedorId = t, a.status = "wo"), d && (d.atletaAId = t)) : n.ordem === 5 ? i && (i.atletaAId = t) : n.ordem === 6 ? i && (i.atletaBId = t) : n.ordem === 7 ? l && (l.atletaAId = t) : n.ordem === 10 ? d && (d.atletaBId = t) : n.ordem === 11 ? s && (s.atletaAId = t) : n.ordem === 12 && s && (s.atletaBId = t);
-}
-function tn(e, n) {
-  const t = n.vencedorId;
-  if (!t) return;
-  const o = e.lutas.find((d) => d.ordem === 9), r = e.lutas.find((d) => d.ordem === 10), a = e.lutas.find((d) => d.ordem === 13), i = e.lutas.find((d) => d.ordem === 14), l = e.lutas.find((d) => d.ordem === 15);
-  n.ordem === 1 ? o && (o.atletaAId = t) : n.ordem === 2 ? o && (o.atletaBId = t) : n.ordem === 3 ? r && (r.atletaAId = t) : n.ordem >= 4 && n.ordem <= 8 || (n.ordem === 9 ? a && (a.atletaAId = t) : n.ordem === 10 ? a && (a.atletaBId = t) : n.ordem === 11 ? i && (i.atletaAId = t) : n.ordem === 12 ? i && (i.atletaBId = t) : n.ordem === 13 ? l && (l.atletaAId = t) : n.ordem === 14 && l && (l.atletaBId = t));
-}
-function nn(e, n) {
-  const t = n.vencedorId;
-  if (!t) return;
-  const o = e.lutas.find((d) => d.ordem === 9), r = e.lutas.find((d) => d.ordem === 10), a = e.lutas.find((d) => d.ordem === 13), i = e.lutas.find((d) => d.ordem === 14), l = e.lutas.find((d) => d.ordem === 15);
-  n.ordem === 1 ? o && (o.atletaAId = t) : n.ordem === 2 ? o && (o.atletaBId = t) : n.ordem === 3 ? r && (r.atletaAId = t) : n.ordem === 4 ? r && (r.atletaBId = t) : n.ordem >= 5 && n.ordem <= 8 || (n.ordem === 9 ? a && (a.atletaAId = t) : n.ordem === 10 ? a && (a.atletaBId = t) : n.ordem === 11 ? i && (i.atletaAId = t) : n.ordem === 12 ? i && (i.atletaBId = t) : n.ordem === 13 ? l && (l.atletaAId = t) : n.ordem === 14 && l && (l.atletaBId = t));
-}
-function on(e, n) {
-  const t = n.vencedorId;
-  if (!t) return;
-  const o = e.lutas.find((s) => s.ordem === 9), r = e.lutas.find((s) => s.ordem === 10), a = e.lutas.find((s) => s.ordem === 11), i = e.lutas.find((s) => s.ordem === 13), l = e.lutas.find((s) => s.ordem === 14), d = e.lutas.find((s) => s.ordem === 15);
-  n.ordem === 1 ? o && (o.atletaAId = t) : n.ordem === 2 ? o && (o.atletaBId = t) : n.ordem === 3 ? r && (r.atletaAId = t) : n.ordem === 4 ? r && (r.atletaBId = t) : n.ordem === 5 ? a && (a.atletaAId = t) : n.ordem >= 6 && n.ordem <= 8 || (n.ordem === 9 ? i && (i.atletaAId = t) : n.ordem === 10 ? i && (i.atletaBId = t) : n.ordem === 11 ? l && (l.atletaAId = t) : n.ordem === 12 ? l && (l.atletaBId = t) : n.ordem === 13 ? d && (d.atletaAId = t) : n.ordem === 14 && d && (d.atletaBId = t));
-}
-function rn(e, n) {
-  const t = n.vencedorId;
-  if (!t) return;
-  const o = e.lutas.find((s) => s.ordem === 9), r = e.lutas.find((s) => s.ordem === 10), a = e.lutas.find((s) => s.ordem === 11), i = e.lutas.find((s) => s.ordem === 13), l = e.lutas.find((s) => s.ordem === 14), d = e.lutas.find((s) => s.ordem === 15);
-  n.ordem === 1 ? o && (o.atletaAId = t) : n.ordem === 2 ? o && (o.atletaBId = t) : n.ordem === 3 ? r && (r.atletaAId = t) : n.ordem === 4 ? r && (r.atletaBId = t) : n.ordem === 5 ? a && (a.atletaAId = t) : n.ordem === 6 ? a && (a.atletaBId = t) : n.ordem >= 7 && n.ordem <= 8 || (n.ordem === 9 ? i && (i.atletaAId = t) : n.ordem === 10 ? i && (i.atletaBId = t) : n.ordem === 11 ? l && (l.atletaAId = t) : n.ordem === 12 ? l && (l.atletaBId = t) : n.ordem === 13 ? d && (d.atletaAId = t) : n.ordem === 14 && d && (d.atletaBId = t));
-}
-function an(e, n) {
-  const t = n.vencedorId;
-  if (!t) return;
-  const o = e.lutas.find((c) => c.ordem === 9), r = e.lutas.find((c) => c.ordem === 10), a = e.lutas.find((c) => c.ordem === 11), i = e.lutas.find((c) => c.ordem === 12), l = e.lutas.find((c) => c.ordem === 13), d = e.lutas.find((c) => c.ordem === 14), s = e.lutas.find((c) => c.ordem === 15);
-  n.ordem === 1 ? o && (o.atletaAId = t) : n.ordem === 2 ? o && (o.atletaBId = t) : n.ordem === 3 ? r && (r.atletaAId = t) : n.ordem === 4 ? r && (r.atletaBId = t) : n.ordem === 5 ? a && (a.atletaAId = t) : n.ordem === 6 ? a && (a.atletaBId = t) : n.ordem === 7 ? i && (i.atletaAId = t) : n.ordem === 8 || (n.ordem === 9 ? l && (l.atletaAId = t) : n.ordem === 10 ? l && (l.atletaBId = t) : n.ordem === 11 ? d && (d.atletaAId = t) : n.ordem === 12 ? d && (d.atletaBId = t) : n.ordem === 13 ? s && (s.atletaAId = t) : n.ordem === 14 && s && (s.atletaBId = t));
-}
-function dn(e, n) {
-  const t = n.vencedorId;
-  if (!t) return;
-  const o = e.lutas.indexOf(n);
-  if (!(o < 0)) {
-    if (n.rodada === 1) {
-      const r = 8 + Math.floor(o / 2), a = o % 2 === 0, i = e.lutas[r];
-      i && (a ? i.atletaAId = t : i.atletaBId = t);
-    } else if (n.rodada === 2) {
-      const r = o - 8, a = 12 + Math.floor(r / 2), i = r % 2 === 0, l = e.lutas[a];
-      l && (i ? l.atletaAId = t : l.atletaBId = t);
-    } else if (n.rodada === 3) {
-      const r = e.lutas[14];
-      r && (o - 12 === 0 ? r.atletaAId = t : r.atletaBId = t);
-    }
-  }
-}
-function sn(e, n) {
-  const t = E(e), o = [...t.chaves ?? []], r = o.findIndex((d) => d.id === n.chaveId);
-  if (r < 0) throw new Error("Chave não encontrada");
-  const a = JSON.parse(JSON.stringify(o[r])), i = a.lutas.find((d) => d.id === n.lutaId);
-  if (!i) throw new Error("Luta não encontrada");
-  const l = i.vencedorId;
-  if (l && l !== n.vencedorId && K(a, i.rodada, l), i.vencedorId = n.vencedorId, i.status = n.status === "wo" ? "wo" : "completed", i.placarA = n.placarA, i.placarB = n.placarB, i.finalizacao = n.finalizacao ?? !1, i.desclassificacao = n.desclassificacao ?? !1, i.desempateArbitro = n.desempateArbitro ?? !1, i.horarioInicio = n.horarioInicio ?? i.horarioInicio, i.horarioTermino = n.horarioTermino ?? i.horarioTermino, n.desclassificacao && i.vencedorId ? i.desclassificadoId = i.atletaAId === i.vencedorId ? i.atletaBId : i.atletaAId : i.desclassificadoId = void 0, a.totalAtletas === 3) {
-    const d = a.lutas.find((c) => c.rodada === 2), s = a.lutas.find((c) => c.rodada === 3);
-    if (i.rodada === 1) {
-      const c = i.vencedorId === i.atletaAId ? i.atletaBId : i.atletaAId;
-      n.desclassificacao ? d && s && (d.atletaAId = d.atletaBId, d.vencedorId = d.atletaBId, d.status = "wo", s.atletaAId = i.vencedorId, s.atletaBId = d.atletaBId, s.vencedorId = null, s.status = "pending") : (d && (d.atletaAId = c, d.vencedorId = null, d.status = "pending"), s && (s.atletaAId = i.vencedorId, s.atletaBId = "tbd", s.vencedorId = null, s.status = "pending"));
-    } else i.rodada === 2 && s && s.atletaBId === "tbd" && (s.atletaBId = i.vencedorId, s.status = "pending");
-  } else a.totalAtletas === 5 ? Qt(a, i) : a.totalAtletas === 6 ? Xt(a, i) : a.totalAtletas === 9 ? Zt(a, i) : a.totalAtletas === 10 ? en(a, i) : a.totalAtletas === 11 ? tn(a, i) : a.totalAtletas === 12 ? nn(a, i) : a.totalAtletas === 13 ? on(a, i) : a.totalAtletas === 14 ? rn(a, i) : a.totalAtletas === 15 ? an(a, i) : a.totalAtletas === 16 ? dn(a, i) : Yt(a, i);
-  return o[r] = a, t.chaves = o, t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), J(t), a;
-}
-function ln() {
-  m.handle("gerar-todas-chaves", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    const o = n && n >= 2 && n <= 16 ? n : 16;
-    return qt(t, o);
-  }), m.handle("gerar-chave", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    const o = E(t), r = (o.atletas ?? []).filter((l) => l.categoria === n.categoriaId);
-    if (r.length < 2 || r.length > 16)
+function registerBracketHandlers() {
+  ipcMain.handle("gerar-todas-chaves", (_event, maxPorChave) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const max = maxPorChave && maxPorChave >= 2 && maxPorChave <= 16 ? maxPorChave : 16;
+    return gerarTodasChavesHandler(torneioId, max);
+  });
+  ipcMain.handle("gerar-chave", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const torneio = loadTorneio$1(torneioId);
+    const atletas = (torneio.atletas ?? []).filter((a) => a.categoria === data.categoriaId);
+    if (atletas.length < 2 || atletas.length > 16) {
       throw new Error("A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.");
-    const a = o.chaves ?? [];
-    if (a.some((l) => l.categoriaId === n.categoriaId))
+    }
+    const chaves = torneio.chaves ?? [];
+    if (chaves.some((c) => c.categoriaId === data.categoriaId)) {
       throw new Error("Chave já existe para esta categoria.");
-    const i = ve(n.categoriaId, r);
-    o.chaves = [...a, i];
-    for (const l of o.atletas ?? [])
-      i.posicoesAtletas.includes(l.id) && (l.emChave = !0);
-    return o.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), J(o), i;
-  }), m.handle("load-chaves", () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return (E(e).chaves ?? []).map((t) => G(t));
-  }), m.handle("load-chave-por-categoria", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return (E(t).chaves ?? []).map((r) => G(r)).find((r) => r.categoriaId === n) ?? null;
-  }), m.handle("randomizar-chave", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return zt(t, n);
-  }), m.handle("atribuir-arbitro-chave", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return kt(t, n);
-  }), m.handle("import-chaves", async () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    const n = await Wt();
-    return n ? Ht(e, n) : { imported: 0 };
-  }), m.handle("export-chaves", async () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return Vt(e);
-  }), m.handle("load-chaves-por-area", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return Kt(t, n);
-  }), m.handle("registrar-resultado", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return sn(t, n);
+    }
+    const chave = gerarChave(data.categoriaId, atletas);
+    torneio.chaves = [...chaves, chave];
+    for (const a of torneio.atletas ?? []) {
+      if (chave.posicoesAtletas.includes(a.id)) {
+        a.emChave = true;
+      }
+    }
+    torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    saveTorneio$1(torneio);
+    return chave;
+  });
+  ipcMain.handle("load-chaves", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const chaves = (loadTorneio$1(torneioId).chaves ?? []).map((c) => normalizeChave(c));
+    return chaves;
+  });
+  ipcMain.handle("load-chave-por-categoria", (_event, categoriaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const chaves = (loadTorneio$1(torneioId).chaves ?? []).map((c) => normalizeChave(c));
+    return chaves.find((c) => c.categoriaId === categoriaId) ?? null;
+  });
+  ipcMain.handle("randomizar-chave", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return randomizarChaveHandler(torneioId, data);
+  });
+  ipcMain.handle("atribuir-arbitro-chave", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return atribuirArbitroHandler(torneioId, data);
+  });
+  ipcMain.handle("import-chaves", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const filePath = await openBracketFileDialog();
+    if (!filePath) return { imported: 0 };
+    return importChavesFromFile(torneioId, filePath);
+  });
+  ipcMain.handle("export-chaves", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return exportChavesToFile(torneioId);
+  });
+  ipcMain.handle("load-chaves-por-area", (_event, areaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadChavesPorAreaHandler(torneioId, areaId);
+  });
+  ipcMain.handle("registrar-resultado", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return registrarResultadoHandler(torneioId, data);
   });
 }
-const cn = v.join(D.getPath("userData"), "data"), un = v.join(cn, "torneios");
-function ge(e) {
-  return v.join(un, `${e}.json`);
+const DATA_DIR = path.join(app.getPath("userData"), "data");
+const TORNEIOS_DIR = path.join(DATA_DIR, "torneios");
+function getTorneioPath(torneioId) {
+  return path.join(TORNEIOS_DIR, `${torneioId}.json`);
 }
-function H(e) {
-  const n = ge(e);
-  if (!h.existsSync(n)) throw new Error("Torneio não encontrado");
-  return JSON.parse(h.readFileSync(n, "utf-8"));
+function loadTorneio(torneioId) {
+  const filePath = getTorneioPath(torneioId);
+  if (!fs.existsSync(filePath)) throw new Error("Torneio não encontrado");
+  return JSON.parse(fs.readFileSync(filePath, "utf-8"));
 }
-function Z(e) {
-  h.writeFileSync(ge(e.id), JSON.stringify(e, null, 2), "utf-8");
+function saveTorneio(torneio) {
+  fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
 }
-function fn(e) {
-  const n = e.status ?? "pending";
+function normalizeLutaCasada(raw) {
+  const status = raw.status ?? "pending";
   return {
-    id: e.id,
-    areaId: e.areaId,
-    arbitroId: e.arbitroId ?? null,
-    atletaAId: e.atletaAId,
-    atletaBId: e.atletaBId,
-    atletaASnapshot: e.atletaASnapshot,
-    atletaBSnapshot: e.atletaBSnapshot,
+    id: raw.id,
+    areaId: raw.areaId,
+    arbitroId: raw.arbitroId ?? null,
+    atletaAId: raw.atletaAId,
+    atletaBId: raw.atletaBId,
+    atletaASnapshot: raw.atletaASnapshot,
+    atletaBSnapshot: raw.atletaBSnapshot,
     tag: "luta-casada",
-    status: n,
-    placarA: e.placarA,
-    placarB: e.placarB,
-    vencedorId: e.vencedorId ?? null,
-    finalizacao: e.finalizacao ?? !1,
-    desclassificacao: e.desclassificacao ?? !1,
-    desempateArbitro: e.desempateArbitro ?? !1,
-    dataFinalizacao: e.dataFinalizacao ?? null,
-    horarioInicio: e.horarioInicio ?? void 0,
-    createdAt: e.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
-    updatedAt: e.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
+    status,
+    placarA: raw.placarA,
+    placarB: raw.placarB,
+    vencedorId: raw.vencedorId ?? null,
+    finalizacao: raw.finalizacao ?? false,
+    desclassificacao: raw.desclassificacao ?? false,
+    desempateArbitro: raw.desempateArbitro ?? false,
+    dataFinalizacao: raw.dataFinalizacao ?? null,
+    horarioInicio: raw.horarioInicio ?? void 0,
+    createdAt: raw.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+    updatedAt: raw.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
   };
 }
-function ee(e) {
-  return (H(e).lutasCasadas ?? []).map((t) => fn(t));
+function loadLutasCasadas(torneioId) {
+  const torneio = loadTorneio(torneioId);
+  return (torneio.lutasCasadas ?? []).map((l) => normalizeLutaCasada(l));
 }
-function mn(e, n) {
-  return ee(e).filter((t) => t.areaId === n);
+function loadLutasCasadasPorArea(torneioId, areaId) {
+  return loadLutasCasadas(torneioId).filter((l) => l.areaId === areaId);
 }
-function hn(e, n) {
-  if (n.atletaAId === n.atletaBId)
+function saveLutaCasada(torneioId, data) {
+  if (data.atletaAId === data.atletaBId) {
     throw new Error("Atleta A e Atleta B não podem ser o mesmo atleta.");
-  const t = H(e), o = ee(e), r = (/* @__PURE__ */ new Date()).toISOString(), a = {
-    id: y.randomUUID(),
-    areaId: n.areaId,
-    arbitroId: n.arbitroId,
-    atletaAId: n.atletaAId,
-    atletaBId: n.atletaBId,
-    atletaASnapshot: n.atletaASnapshot,
-    atletaBSnapshot: n.atletaBSnapshot,
+  }
+  const torneio = loadTorneio(torneioId);
+  const list = loadLutasCasadas(torneioId);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const luta = {
+    id: crypto.randomUUID(),
+    areaId: data.areaId,
+    arbitroId: data.arbitroId,
+    atletaAId: data.atletaAId,
+    atletaBId: data.atletaBId,
+    atletaASnapshot: data.atletaASnapshot,
+    atletaBSnapshot: data.atletaBSnapshot,
     tag: "luta-casada",
-    status: n.status ?? "pending",
-    placarA: n.placarA,
-    placarB: n.placarB,
-    vencedorId: n.vencedorId ?? null,
-    finalizacao: n.finalizacao ?? !1,
-    desclassificacao: n.desclassificacao ?? !1,
-    desempateArbitro: n.desempateArbitro ?? !1,
-    dataFinalizacao: n.dataFinalizacao ?? null,
-    createdAt: r,
-    updatedAt: r
+    status: data.status ?? "pending",
+    placarA: data.placarA,
+    placarB: data.placarB,
+    vencedorId: data.vencedorId ?? null,
+    finalizacao: data.finalizacao ?? false,
+    desclassificacao: data.desclassificacao ?? false,
+    desempateArbitro: data.desempateArbitro ?? false,
+    dataFinalizacao: data.dataFinalizacao ?? null,
+    createdAt: now,
+    updatedAt: now
   };
-  return o.push(a), t.lutasCasadas = o, t.updatedAt = r, Z(t), a;
+  list.push(luta);
+  torneio.lutasCasadas = list;
+  torneio.updatedAt = now;
+  saveTorneio(torneio);
+  return luta;
 }
-function In(e, n) {
-  if (n.atletaAId === n.atletaBId)
+function updateLutaCasada(torneioId, data) {
+  if (data.atletaAId === data.atletaBId) {
     throw new Error("Atleta A e Atleta B não podem ser o mesmo atleta.");
-  const t = H(e), o = ee(e), r = o.findIndex((l) => l.id === n.id);
-  if (r === -1) throw new Error("Luta casada não encontrada");
-  const a = (/* @__PURE__ */ new Date()).toISOString(), i = {
-    ...n,
+  }
+  const torneio = loadTorneio(torneioId);
+  const list = loadLutasCasadas(torneioId);
+  const index = list.findIndex((l) => l.id === data.id);
+  if (index === -1) throw new Error("Luta casada não encontrada");
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  const updated = {
+    ...data,
     tag: "luta-casada",
-    updatedAt: a
+    updatedAt: now
   };
-  return o[r] = i, t.lutasCasadas = o, t.updatedAt = a, Z(t), i;
+  list[index] = updated;
+  torneio.lutasCasadas = list;
+  torneio.updatedAt = now;
+  saveTorneio(torneio);
+  return updated;
 }
-function An(e, n) {
-  const t = H(e);
-  t.lutasCasadas = (t.lutasCasadas ?? []).filter((o) => o.id !== n), t.updatedAt = (/* @__PURE__ */ new Date()).toISOString(), Z(t);
+function deleteLutaCasada(torneioId, lutaCasadaId) {
+  const torneio = loadTorneio(torneioId);
+  torneio.lutasCasadas = (torneio.lutasCasadas ?? []).filter((l) => l.id !== lutaCasadaId);
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio(torneio);
 }
-const te = process.env.MASTER_PASSWORD_HASH || "f83244662ee78bf661577ecd28343bc4ff6538b6f249d6d7b1bf34817ec0ced4", pn = "activation.json", wn = 1;
-function ne() {
-  return v.join(D.getPath("userData"), pn);
+const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "f83244662ee78bf661577ecd28343bc4ff6538b6f249d6d7b1bf34817ec0ced4";
+const ACTIVATION_FILE = "activation.json";
+const EXPIRATION_YEARS = 1;
+function getActivationPath() {
+  return path.join(app.getPath("userData"), ACTIVATION_FILE);
 }
-function Se() {
+function getMachineId() {
   try {
-    return Oe("wmic csproduct get uuid", { encoding: "utf-8" }).split(`
-`).map((t) => t.trim()).filter(Boolean)[1] || y.randomUUID();
+    const uuid = execSync("wmic csproduct get uuid", { encoding: "utf-8" });
+    const lines = uuid.split("\n").map((l) => l.trim()).filter(Boolean);
+    return lines[1] || crypto.randomUUID();
   } catch {
-    return y.randomUUID();
+    return crypto.randomUUID();
   }
 }
-function be(e) {
-  return e ? /* @__PURE__ */ new Date() > new Date(e) : !0;
+function isExpired(expiresAt) {
+  if (!expiresAt) return true;
+  return /* @__PURE__ */ new Date() > new Date(expiresAt);
 }
-function vn(e) {
-  const n = new Date(e).getTime() - Date.now();
-  return Math.max(0, Math.ceil(n / 864e5));
+function computeDaysRemaining(expiresAt) {
+  const diffMs = new Date(expiresAt).getTime() - Date.now();
+  return Math.max(0, Math.ceil(diffMs / 864e5));
 }
-function gn() {
+function checkActivation() {
   try {
-    const e = ne();
-    if (!h.existsSync(e)) return !1;
-    const n = JSON.parse(h.readFileSync(e, "utf-8"));
-    if (be(n.expiresAt)) return !1;
-    const t = Se(), o = y.createHmac("sha256", te).update(t).digest("hex");
-    return n.token === o;
+    const filePath = getActivationPath();
+    if (!fs.existsSync(filePath)) return false;
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    if (isExpired(data.expiresAt)) return false;
+    const machineId = getMachineId();
+    const expectedToken = crypto.createHmac("sha256", MASTER_PASSWORD_HASH).update(machineId).digest("hex");
+    return data.token === expectedToken;
   } catch {
-    return !1;
+    return false;
   }
 }
-function Sn() {
+function getActivationInfo() {
   try {
-    const e = ne();
-    if (!h.existsSync(e))
-      return { activated: !1, activatedAt: null, expiresAt: null, daysRemaining: null };
-    const n = JSON.parse(h.readFileSync(e, "utf-8"));
-    return be(n.expiresAt) ? {
-      activated: !1,
-      activatedAt: n.activatedAt ?? null,
-      expiresAt: n.expiresAt ?? null,
-      daysRemaining: 0
-    } : {
-      activated: !0,
-      activatedAt: n.activatedAt ?? null,
-      expiresAt: n.expiresAt,
-      daysRemaining: vn(n.expiresAt)
+    const filePath = getActivationPath();
+    if (!fs.existsSync(filePath)) {
+      return { activated: false, activatedAt: null, expiresAt: null, daysRemaining: null };
+    }
+    const data = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    const expired = isExpired(data.expiresAt);
+    if (expired) {
+      return {
+        activated: false,
+        activatedAt: data.activatedAt ?? null,
+        expiresAt: data.expiresAt ?? null,
+        daysRemaining: 0
+      };
+    }
+    return {
+      activated: true,
+      activatedAt: data.activatedAt ?? null,
+      expiresAt: data.expiresAt,
+      daysRemaining: computeDaysRemaining(data.expiresAt)
     };
   } catch {
-    return { activated: !1, activatedAt: null, expiresAt: null, daysRemaining: null };
+    return { activated: false, activatedAt: null, expiresAt: null, daysRemaining: null };
   }
 }
-function bn(e) {
-  return y.createHash("sha256").update(e).digest("hex") === te;
+function validatePassword(password) {
+  const hash = crypto.createHash("sha256").update(password).digest("hex");
+  return hash === MASTER_PASSWORD_HASH;
 }
-function yn() {
+function activateLicense() {
   try {
-    const e = Se(), n = y.createHmac("sha256", te).update(e).digest("hex"), t = /* @__PURE__ */ new Date(), o = new Date(t);
-    o.setFullYear(o.getFullYear() + wn);
-    const r = ne();
-    return h.writeFileSync(
-      r,
-      JSON.stringify({ token: n, activatedAt: t.toISOString(), expiresAt: o.toISOString() }, null, 2),
+    const machineId = getMachineId();
+    const token = crypto.createHmac("sha256", MASTER_PASSWORD_HASH).update(machineId).digest("hex");
+    const activatedAt = /* @__PURE__ */ new Date();
+    const expiresAt = new Date(activatedAt);
+    expiresAt.setFullYear(expiresAt.getFullYear() + EXPIRATION_YEARS);
+    const filePath = getActivationPath();
+    fs.writeFileSync(
+      filePath,
+      JSON.stringify({ token, activatedAt: activatedAt.toISOString(), expiresAt: expiresAt.toISOString() }, null, 2),
       "utf-8"
-    ), !0;
+    );
+    return true;
   } catch {
-    return !1;
+    return false;
   }
 }
-const ye = v.dirname(Ee(import.meta.url));
-process.env.APP_ROOT = v.join(ye, "..");
-const Y = process.env.VITE_DEV_SERVER_URL, jn = v.join(process.env.APP_ROOT, "dist-electron"), xe = v.join(process.env.APP_ROOT, "dist");
-process.env.VITE_PUBLIC = Y ? v.join(process.env.APP_ROOT, "public") : xe;
-let L;
-function De() {
-  L = new se({
-    icon: v.join(process.env.VITE_PUBLIC, "favicon.svg"),
+const __dirname$1 = path.dirname(fileURLToPath(import.meta.url));
+process.env.APP_ROOT = path.join(__dirname$1, "..");
+const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
+const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
+const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
+process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
+let win;
+function createWindow() {
+  win = new BrowserWindow({
+    icon: path.join(process.env.VITE_PUBLIC, "favicon.svg"),
     webPreferences: {
-      preload: v.join(ye, "preload.mjs")
+      preload: path.join(__dirname$1, "preload.mjs")
     }
-  }), L.maximize(), L.webContents.on("did-finish-load", () => {
-    L == null || L.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
-  }), Y ? L.loadURL(Y) : L.loadFile(v.join(xe, "index.html"));
+  });
+  win.maximize();
+  win.webContents.on("did-finish-load", () => {
+    win == null ? void 0 : win.webContents.send("main-process-message", (/* @__PURE__ */ new Date()).toLocaleString());
+  });
+  if (VITE_DEV_SERVER_URL) {
+    win.loadURL(VITE_DEV_SERVER_URL);
+  } else {
+    win.loadFile(path.join(RENDERER_DIST, "index.html"));
+  }
 }
-D.on("window-all-closed", () => {
-  process.platform !== "darwin" && (D.quit(), L = null);
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+    win = null;
+  }
 });
-D.on("activate", () => {
-  se.getAllWindows().length === 0 && De();
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    createWindow();
+  }
 });
-function xn() {
-  m.handle("load-athletes", () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return ue(e);
-  }), m.handle("save-athlete", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return Ce(t, n);
-  }), m.handle("update-athlete", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return Me(t, n);
-  }), m.handle("delete-athlete", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return Je(t, n);
-  }), m.handle("delete-athletes", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return $e(t, n);
-  }), m.handle("restore-athlete", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return qe(t, n);
-  }), m.handle("load-deleted-athletes", () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return Ue(e);
-  }), m.handle("permanently-delete-athlete", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return ze(t, n);
-  }), m.handle("permanently-delete-athletes", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return ke(t, n);
-  }), m.handle("import-athletes", async () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    const n = await He();
-    return n ? We(e, n) : { imported: 0, skipped: 0 };
-  }), m.handle("export-athletes", async () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return Ve(e);
+function registerAthleteHandlers() {
+  ipcMain.handle("load-athletes", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadAthletes(torneioId);
+  });
+  ipcMain.handle("save-athlete", (_event, athlete) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return saveAthlete(torneioId, athlete);
+  });
+  ipcMain.handle("update-athlete", (_event, athlete) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return updateAthlete(torneioId, athlete);
+  });
+  ipcMain.handle("delete-athlete", (_event, id) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteAthlete(torneioId, id);
+  });
+  ipcMain.handle("delete-athletes", (_event, ids) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteAthletes(torneioId, ids);
+  });
+  ipcMain.handle("restore-athlete", (_event, id) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return restoreAthlete(torneioId, id);
+  });
+  ipcMain.handle("load-deleted-athletes", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadDeletedAthletes(torneioId);
+  });
+  ipcMain.handle("permanently-delete-athlete", (_event, id) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return permanentlyDeleteAthlete(torneioId, id);
+  });
+  ipcMain.handle("permanently-delete-athletes", (_event, ids) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return permanentlyDeleteAthletes(torneioId, ids);
+  });
+  ipcMain.handle("import-athletes", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const filePath = await openAthleteFileDialog();
+    if (!filePath) return { imported: 0, skipped: 0 };
+    return importAthletesFromFile(torneioId, filePath);
+  });
+  ipcMain.handle("export-athletes", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return exportAthletes(torneioId);
   });
 }
-function Dn() {
-  m.handle("save-arbitro", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return Ye(t, n);
-  }), m.handle("update-arbitro", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return Qe(t, n);
-  }), m.handle("delete-arbitro", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return Xe(t, n);
-  }), m.handle("delete-arbitros", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return Ze(t, n);
-  }), m.handle("restore-arbitro", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return et(t, n);
-  }), m.handle("load-deleted-arbitros", () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return tt(e);
-  }), m.handle("permanently-delete-arbitro", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return nt(t, n);
-  }), m.handle("permanently-delete-arbitros", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return ot(t, n);
-  }), m.handle("load-arbitros", () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return me(e);
-  }), m.handle("import-arbitros", async () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    const n = await rt();
-    return n ? at(e, n) : { imported: 0, skipped: 0 };
-  }), m.handle("export-arbitros", async () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return it(e);
+function registerRefereeHandlers() {
+  ipcMain.handle("save-arbitro", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return saveArbitro(torneioId, data);
+  });
+  ipcMain.handle("update-arbitro", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return updateArbitro(torneioId, data);
+  });
+  ipcMain.handle("delete-arbitro", (_event, arbitroId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteArbitro(torneioId, arbitroId);
+  });
+  ipcMain.handle("delete-arbitros", (_event, arbitroIds) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteArbitros(torneioId, arbitroIds);
+  });
+  ipcMain.handle("restore-arbitro", (_event, arbitroId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return restoreArbitro(torneioId, arbitroId);
+  });
+  ipcMain.handle("load-deleted-arbitros", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadDeletedArbitros(torneioId);
+  });
+  ipcMain.handle("permanently-delete-arbitro", (_event, arbitroId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return permanentlyDeleteArbitro(torneioId, arbitroId);
+  });
+  ipcMain.handle("permanently-delete-arbitros", (_event, arbitroIds) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return permanentlyDeleteArbitros(torneioId, arbitroIds);
+  });
+  ipcMain.handle("load-arbitros", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadArbitros(torneioId);
+  });
+  ipcMain.handle("import-arbitros", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const filePath = await openArbitroFileDialog();
+    if (!filePath) return { imported: 0, skipped: 0 };
+    return importArbitrosFromFile(torneioId, filePath);
+  });
+  ipcMain.handle("export-arbitros", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return exportArbitros(torneioId);
   });
 }
-function En() {
-  m.handle("load-areas", () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return W(e);
-  }), m.handle("save-area", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return lt(t, n);
-  }), m.handle("update-area", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return ct(t, n);
-  }), m.handle("delete-area", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return ut(t, n);
-  }), m.handle("delete-areas", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return ft(t, n);
-  }), m.handle("restore-area", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return mt(t, n);
-  }), m.handle("load-deleted-areas", () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return ht(e);
-  }), m.handle("permanently-delete-area", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return It(t, n);
-  }), m.handle("permanently-delete-areas", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return At(t, n);
-  }), m.handle("import-areas", async () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    const n = await wt();
-    return n ? pt(e, n) : { imported: 0, skipped: 0 };
-  }), m.handle("export-areas", async () => {
-    const e = A();
-    if (!e) throw new Error("Nenhum torneio ativo");
-    return vt(e);
+function registerAreaHandlers() {
+  ipcMain.handle("load-areas", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadAreas(torneioId);
+  });
+  ipcMain.handle("save-area", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return saveArea(torneioId, data);
+  });
+  ipcMain.handle("update-area", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return updateArea(torneioId, data);
+  });
+  ipcMain.handle("delete-area", (_event, areaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteArea(torneioId, areaId);
+  });
+  ipcMain.handle("delete-areas", (_event, areaIds) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteAreas(torneioId, areaIds);
+  });
+  ipcMain.handle("restore-area", (_event, areaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return restoreArea(torneioId, areaId);
+  });
+  ipcMain.handle("load-deleted-areas", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadDeletedAreas(torneioId);
+  });
+  ipcMain.handle("permanently-delete-area", (_event, areaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return permanentlyDeleteArea(torneioId, areaId);
+  });
+  ipcMain.handle("permanently-delete-areas", (_event, areaIds) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return permanentlyDeleteAreas(torneioId, areaIds);
+  });
+  ipcMain.handle("import-areas", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const filePath = await openAreaFileDialog();
+    if (!filePath) return { imported: 0, skipped: 0 };
+    return importAreasFromFile(torneioId, filePath);
+  });
+  ipcMain.handle("export-areas", async () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return exportAreas(torneioId);
   });
 }
-function On() {
-  m.handle("check-activation", () => gn()), m.handle("validate-password", (e, n) => bn(n)), m.handle("activate-license", () => yn()), m.handle("get-activation-info", () => Sn());
-}
-function Nn() {
-  m.handle("load-lutas-casadas-por-area", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return mn(t, n);
-  }), m.handle("save-luta-casada", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return hn(t, n);
-  }), m.handle("update-luta-casada", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return In(t, n);
-  }), m.handle("delete-luta-casada", (e, n) => {
-    const t = A();
-    if (!t) throw new Error("Nenhum torneio ativo");
-    return An(t, n);
+function registerActivationHandlers() {
+  ipcMain.handle("check-activation", () => {
+    return checkActivation();
+  });
+  ipcMain.handle("validate-password", (_event, password) => {
+    return validatePassword(password);
+  });
+  ipcMain.handle("activate-license", () => {
+    return activateLicense();
+  });
+  ipcMain.handle("get-activation-info", () => {
+    return getActivationInfo();
   });
 }
-D.whenReady().then(() => {
-  Ne(), xn(), Dn(), ln(), En(), Nn(), On(), De();
+function registerLutasCasadasHandlers() {
+  ipcMain.handle("load-lutas-casadas-por-area", (_event, areaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadLutasCasadasPorArea(torneioId, areaId);
+  });
+  ipcMain.handle("save-luta-casada", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return saveLutaCasada(torneioId, data);
+  });
+  ipcMain.handle("update-luta-casada", (_event, data) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return updateLutaCasada(torneioId, data);
+  });
+  ipcMain.handle("delete-luta-casada", (_event, lutaCasadaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteLutaCasada(torneioId, lutaCasadaId);
+  });
+}
+app.whenReady().then(() => {
+  registerTournamentHandlers();
+  registerAthleteHandlers();
+  registerRefereeHandlers();
+  registerBracketHandlers();
+  registerAreaHandlers();
+  registerLutasCasadasHandlers();
+  registerActivationHandlers();
+  createWindow();
 });
 export {
-  jn as MAIN_DIST,
-  xe as RENDERER_DIST,
-  Y as VITE_DEV_SERVER_URL
+  MAIN_DIST,
+  RENDERER_DIST,
+  VITE_DEV_SERVER_URL
 };
