@@ -13,7 +13,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-
+### [aberto] Tudo que for relacionado ao menu placar, precisa ter o updatedAt atualizado com o horatio da ultima atualização.
 
 
 ## Histórico de Correções
@@ -21,6 +21,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 
 
 ## Feature
+<!-- Dedicado a informações do que é esperado da feature -->
 
 # Guia de Spec para Implementação de Features
 

@@ -24,6 +24,7 @@ export interface Luta {
   tempoRealSegundos?: number;
   horarioInicio?: string;
   horarioTermino?: string;
+  updatedAt: string;
 }
 
 export interface Chave {
@@ -36,4 +37,5 @@ export interface Chave {
   totalLutas: number;
   totalRodadas: number;
   status: 'gerada';
+  updatedAt: string;
 }
