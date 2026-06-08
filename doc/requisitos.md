@@ -194,7 +194,7 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 - **Toggle dinâmico (sem flash de loading):** no mount da página, `AdminAthletes` carrega **ambas** as listas em paralelo via `Promise.all([loadAthletes(), loadDeletedAthletes()])` e armazena em dois estados (`activeAthletes` e `deletedAthletes`). A lista renderizada é derivada: `athletes = showDeleted ? deletedAthletes : activeAthletes` (memoizada). Alternar o `Switch` é **puramente local** — sem IPC, sem `setLoading(true)`, sem remontagem da UI. Mutações (`saveAthlete`, `updateAthlete`, `deleteAthlete`, `restoreAthlete`, `permanentlyDeleteAthlete*`) usam o retorno do IPC para atualizar `activeAthletes` e fazem update local em `deletedAthletes` (adição/remoção) em vez de chamar `loadList()`. `handleImport` (operação em massa) ainda chama `loadAll()` para ressincronizar ambos os estados.
 - **Lixeira — restaurar (`restoreAthlete` por linha):** na view deletados, cada linha exibe `ActionIcon` verde com `IconRestore` que chama `restoreAthlete` diretamente (sem modal — ação não destrutiva). Notificação verde "Atleta restaurado com sucesso!" e lista recarregada via `loadDeletedAthletes`.
 - **Lixeira — excluir permanentemente (`permanentlyDeleteAthlete` por linha):** na view deletados, cada linha exibe `ActionIcon` vermelho com `IconTrash` que abre modal centralizado "Excluir Permanentemente" com aviso "Esta ação é IRREVERSÍVEL." em vermelho + texto dinâmico com nome do atleta + botões "Cancelar" / "Excluir Permanentemente" (vermelho). Confirmação dispara IPC `permanently-delete-athlete` (remove fisicamente do JSON) e recarrega a lista.
-- **Lixeira — exclusão permanente em lote:** checkbox de seleção por linha + checkbox "Selecionar todos" com estado indeterminado. Com N≥1 selecionados, botão "Excluir Selecionados (N)" aparece abaixo da tabela, abrindo modal de confirmação em lote (mesmo padrão visual da exclusão individual, texto dinâmico com quantidade). Confirmação dispara IPC `permanently-delete-athletes` em operação única.
+- **Lixeira — exclusão permanente em lote:** checkbox de seleção por linha + checkbox "Selecionar todos" com estado indeterminado. Com N≥1 selecionados, botão "Excluir Permanentemente (N)" aparece no topo (entre filtros e tabela), abrindo modal de confirmação em lote (mesmo padrão visual da exclusão individual, texto dinâmico com quantidade). Confirmação dispara IPC `permanently-delete-athletes` em operação única.
 - **Tabela com coluna "Deletado em":** na view deletados, coluna extra exibe `formatDeletedAt(deletedAt)` no formato `dd/MM/yyyy HH:mm`. Ações mudam de `[editar, soft-deletar]` para `[restaurar, excluir permanente]`.
 - **Modal de soft delete — texto atualizado:** o modal de confirmação de exclusão (visível na view ativos) teve seu texto alterado de "Esta ação não pode ser desfeita." para "será movido para os deletados. Você poderá restaurá-lo na aba 'Mostrar apenas os deletados'." — refletindo o novo comportamento de soft delete.
 - **Campo `deletedAt`:** presente em `Atleta`, `Arbitro` e `AreaLuta` como `string | null` opcional. Ausência é tratada como `null` (item ativo). Auto-fix ao carregar preenche `deletedAt: null` em itens legados que não tenham o campo.
@@ -548,10 +548,10 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Exclusão individual:** Ao excluir um árbitro, as chaves que ele estava arbitrando ficam sem árbitro (`arbitroId = null`). Exibe modal de confirmação antes de excluir.
 - **Exclusão em lote (`deleteArbitros`):** Mesmo cascade de exclusão individual — todas as chaves dos árbitros excluídos recebem `arbitroId = null`.
 - **Soft delete (`deleteArbitro`/`deleteArbitros`):** em vez de remover fisicamente, seta `deletedAt = new Date().toISOString()` no item e mantém o cascade (`chave.arbitroId = null`). Itens soft-deletados ficam ocultos de `loadArbitros`. Disponibiliza IPC `restore-arbitro` que limpa `deletedAt`.
-- **Lixeira — visualizar (`loadDeletedArbitros`):** a tela de listagem `AdminArbitros` exibe um `Switch` "Mostrar apenas os deletados" no header (cor padrão do tema, alinhado a `AdminAthletes`). Quando ativado, chama `loadDeletedArbitros` (IPC `load-deleted-arbitros`) que retorna apenas itens com `deletedAt != null`, ordenados alfabeticamente por nome. Botões "Importar", "Exportar" e "Cadastrar", a barra de busca e o `Switch` permanecem visíveis em ambos os estados — apenas o conteúdo da tabela (coluna "Deletado em", ações de restaurar/excluir permanentemente, botão "Excluir Selecionados" inferior) muda. O título da página muda para "Árbitros Deletados".
+- **Lixeira — visualizar (`loadDeletedArbitros`):** a tela de listagem `AdminArbitros` exibe um `Switch` "Mostrar apenas os deletados" no header (cor padrão do tema, alinhado a `AdminAthletes`). Quando ativado, chama `loadDeletedArbitros` (IPC `load-deleted-arbitros`) que retorna apenas itens com `deletedAt != null`, ordenados alfabeticamente por nome. Botões "Importar", "Exportar" e "Cadastrar", a barra de busca e o `Switch` permanecem visíveis em ambos os estados — apenas o conteúdo da tabela (coluna "Deletado em", ações de restaurar/excluir permanentemente, botões bulk no topo) muda. O título da página muda para "Árbitros Deletados".
 - **Lixeira — restaurar (`restoreArbitro` por linha):** na view deletados, cada linha exibe `ActionIcon` verde com `IconRestore` que chama `restoreArbitro` diretamente. Notificação verde e lista recarregada via `loadDeletedArbitros`.
 - **Lixeira — excluir permanentemente (`permanentlyDeleteArbitro` por linha):** na view deletados, cada linha exibe `ActionIcon` vermelho com `IconTrash` que abre modal centralizado "Excluir Permanentemente" com aviso "Esta ação é IRREVERSÍVEL." + texto dinâmico com nome do árbitro + botões "Cancelar" / "Excluir Permanentemente" (vermelho). Confirmação dispara IPC `permanently-delete-arbitro` (remove fisicamente do JSON).
-- **Lixeira — exclusão permanente em lote:** checkbox de seleção + "Selecionar todos" com estado indeterminado. Com N≥1 selecionados, botão "Excluir Selecionados (N)" abaixo da tabela, abrindo modal de confirmação em lote. Confirmação dispara IPC `permanently-delete-arbitros` em operação única.
+- **Lixeira — exclusão permanente em lote:** checkbox de seleção + "Selecionar todos" com estado indeterminado. Com N≥1 selecionados, botão "Excluir Permanentemente (N)" no topo (junto ao campo de busca), abrindo modal de confirmação em lote. Confirmação dispara IPC `permanently-delete-arbitros` em operação única.
 - **Tabela com coluna "Deletado em":** na view deletados, coluna extra exibe `formatDeletedAt(deletedAt)` no formato `dd/MM/yyyy HH:mm`. Ações mudam de `[editar, soft-deletar]` para `[restaurar, excluir permanente]`.
 - **Modal de soft delete — texto atualizado:** o modal de confirmação (visível na view ativos) teve seu texto alterado para informar que o árbitro "será movido para os deletados. Você poderá restaurá-lo na aba 'Mostrar apenas os deletados'.". Modal com `chaveIds.length > 0` continua exibindo o aviso de cascade ("As chaves ficarão sem árbitro") seguido da informação de lixeira. Modal de exclusão em lote segue mesmo padrão.
 - **Atribuição de chaves:** A atribuição de chaves a um árbitro é feita na tela de Gerenciamento de Chaves. Um árbitro pode arbitrar múltiplas chaves, mas uma chave pode ter no máximo 1 árbitro.
@@ -594,10 +594,10 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **`checkRefereeNotInUse` — detalhes:** A função percorre todas as áreas (exceto a própria área sendo editada), coleta todos os `arbitroIds` em uso, e verifica se algum dos árbitros solicitados já está atribuído. No cadastro (`saveArea`), não há exclusão de área; na edição (`updateArea`), a própria área é excluída da verificação.
 - **Normalização ao salvar (`saveArea`/`updateArea`):** `nome.trim()` e `arbitroIds.filter(Boolean)` removem espaços extras e IDs vazios antes de persistir.
 - **Soft delete (`deleteArea`/`deleteAreas`):** em vez de remover fisicamente, seta `deletedAt = new Date().toISOString()` no item. Itens soft-deletados ficam ocultos de `loadAreas`. Disponibiliza IPC `restore-area` que limpa `deletedAt`.
-- **Lixeira — visualizar (`loadDeletedAreas`):** a tela de listagem `AdminAreas` exibe um `Switch` "Mostrar apenas os deletados" no header (cor padrão do tema, alinhado a `AdminAthletes`). Quando ativado, chama `loadDeletedAreas` (IPC `load-deleted-areas`) que retorna apenas itens com `deletedAt != null`, ordenados alfabeticamente por nome. Botões "Importar", "Exportar JSON" e "Cadastrar", a barra de busca e o `Switch` permanecem visíveis em ambos os estados — apenas o conteúdo da tabela (coluna "Deletado em", ações de restaurar/excluir permanentemente, botão "Excluir Selecionados" inferior) muda. O título da página muda para "Áreas de Luta Deletadas".
+- **Lixeira — visualizar (`loadDeletedAreas`):** a tela de listagem `AdminAreas` exibe um `Switch` "Mostrar apenas os deletados" no header (cor padrão do tema, alinhado a `AdminAthletes`). Quando ativado, chama `loadDeletedAreas` (IPC `load-deleted-areas`) que retorna apenas itens com `deletedAt != null`, ordenados alfabeticamente por nome. Botões "Importar", "Exportar JSON" e "Cadastrar", a barra de busca e o `Switch` permanecem visíveis em ambos os estados — apenas o conteúdo da tabela (coluna "Deletado em", ações de restaurar/excluir permanentemente, botões bulk no topo) muda. O título da página muda para "Áreas de Luta Deletadas".
 - **Lixeira — restaurar (`restoreArea` por linha):** na view deletados, cada linha exibe `ActionIcon` verde com `IconRestore` que chama `restoreArea` diretamente. Notificação verde e lista recarregada via `loadDeletedAreas`.
 - **Lixeira — excluir permanentemente (`permanentlyDeleteArea` por linha):** na view deletados, cada linha exibe `ActionIcon` vermelho com `IconTrash` que abre modal centralizado "Excluir Permanentemente" com aviso "Esta ação é IRREVERSÍVEL." + texto dinâmico com nome da área + botões "Cancelar" / "Excluir Permanentemente" (vermelho). Confirmação dispara IPC `permanently-delete-area` (remove fisicamente do JSON).
-- **Lixeira — exclusão permanente em lote:** checkbox de seleção + "Selecionar todos" com estado indeterminado. Com N≥1 selecionados, botão "Excluir Selecionados (N)" abaixo da tabela, abrindo modal de confirmação em lote. Confirmação dispara IPC `permanently-delete-areas` em operação única.
+- **Lixeira — exclusão permanente em lote:** checkbox de seleção + "Selecionar todos" com estado indeterminado. Com N≥1 selecionados, botão "Excluir Permanentemente (N)" no topo (junto ao campo de busca), abrindo modal de confirmação em lote. Confirmação dispara IPC `permanently-delete-areas` em operação única.
 - **Tabela com coluna "Deletado em":** na view deletados, coluna extra exibe `formatDeletedAt(deletedAt)` no formato `dd/MM/yyyy HH:mm`. Ações mudam de `[editar, soft-deletar]` para `[restaurar, excluir permanente]`.
 - **Modal de soft delete — texto atualizado:** o modal de confirmação (visível na view ativos) teve seu texto alterado para informar que a área de luta "será movida para os deletados. Você poderá restaurá-la na aba 'Mostrar apenas os deletados'.". Modal de exclusão em lote segue mesmo padrão.
 - **Migração retroativa:** O campo `normalizeArea()` no backend converte automaticamente dados legados do formato `arbitroId` (string) para `arbitroIds` (array) ao carregar as áreas do JSON.
@@ -761,8 +761,9 @@ Recurso de lutas de exibição/super fight na tela `PlacarChaves` (Placar Area).
   - `tag: 'luta-casada'`
   - `status: 'pending' | 'completed' | 'wo'`
   - `placarA?`, `placarB?`, `vencedorId?`, `finalizacao?`, `desclassificacao?`, `desempateArbitro?`
-  - `dataFinalizacao?`
-  - `createdAt`, `updatedAt`
+   - `dataFinalizacao?`
+   - `deletedAt?` (soft-delete)
+   - `createdAt`, `updatedAt`
 
 #### Fluxo
 
@@ -779,6 +780,7 @@ Recurso de lutas de exibição/super fight na tela `PlacarChaves` (Placar Area).
    - Usa snapshots congelados nos painéis A/B
    - Persiste via `updateLutaCasada` em vez de `registrarResultado`
 5. Ao finalizar, retorna para `PlacarChaves` e a luta aparece com status atualizado.
+6. **Listagem administrativa:** A página `AdminLutasCasadas` (rota `/admin/lutas-casadas`) exibe todas as lutas casadas do torneio em tabela, com checkboxes para seleção múltipla, soft-delete em lote, toggle "Mostrar apenas os deletados", restore e exclusão permanente individual/em lote — mesmo padrão das demais telas de listagem (AdminAthletes, AdminAreas, AdminArbitros).
 
 #### Pontos de Validação
 
@@ -788,16 +790,17 @@ Recurso de lutas de exibição/super fight na tela `PlacarChaves` (Placar Area).
 #### Detalhes de Implementação
 
 - **Arquivo:** `src/types/lutaCasada.ts` — tipo `LutaCasada`, `AtletaSnapshot`, `LutaCasadaStatus`.
-- **Arquivo:** `src/types/tournament.ts` — `Torneio.lutasCasadas?: LutaCasada[]`.
-- **Arquivo:** `electron/lutasCasadas.ts` — persistência (`loadLutasCasadasPorArea`, `saveLutaCasada`, `updateLutaCasada`, `deleteLutaCasada`).
-- **Arquivo:** `electron/main.ts` — `registerLutasCasadasHandlers` (4 IPCs).
-- **Arquivo:** `electron/preload.ts` — expõe `loadLutasCasadasPorArea`, `saveLutaCasada`, `updateLutaCasada`, `deleteLutaCasada`.
+- **Arquivo:** `src/types/tournament.ts` — `Torneio.lutasCasadas?: LutaCasada[]`. Campo `deletedAt` suportado via `LutaCasada`.
+- **Arquivo:** `electron/lutasCasadas.ts` — persistência (`loadLutasCasadas`, `loadDeletedLutasCasadas`, `loadLutasCasadasPorArea`, `saveLutaCasada`, `updateLutaCasada`, `deleteLutaCasada`, `deleteLutasCasadas`, `permanentlyDeleteLutaCasada`, `permanentlyDeleteLutasCasadas`, `restoreLutaCasada`, `restoreLutasCasadas`).
+- **Arquivo:** `electron/main.ts` — `registerLutasCasadasHandlers` (11 IPCs).
+- **Arquivo:** `electron/preload.ts` — expõe todos os métodos acima.
 - **Arquivo:** `src/types/electron.d.ts` — typings dos novos métodos.
 - **Arquivo:** `src/components/ModalCriarLutaCasada.tsx` — modal de criação.
 - **Arquivo:** `src/pages/PlacarChaves.tsx` — seção de lutas casadas e listagem.
 - **Arquivo:** `src/pages/PlacarLutaCasada.tsx` — scoreboard de luta casada.
+- **Arquivo:** `src/pages/AdminLutasCasadas.tsx` — página de listagem/gestão de todas as lutas casadas (dashboard) com checkboxes, soft-delete em lote, toggle lixeira, restore.
 - **Arquivo:** `src/components/PageLayout.tsx` — adiciona prop opcional `headerExtras` para badges no header.
-- **Arquivo:** `src/App.tsx` — nova rota `/admin/placar/luta-casada/:areaId/:lutaCasadaId`.
+- **Arquivo:** `src/App.tsx` — nova rota `/admin/placar/luta-casada/:areaId/:lutaCasadaId` e `/admin/lutas-casadas`.
 - **Spec:** `spec/luta-casada.md`
 
 ### 3.23. Resultados — Tela com Tudo do Torneio
@@ -830,6 +833,10 @@ A página usa `Tabs` do Mantine com 6 abas:
 - Medalhas por equipe são agregadas a partir de todas as chaves encerradas.
 - Lista de atletas usa `stickyHeader` e `maxHeight: 60vh` para scroll interno.
 - Apenas leitura — nenhum dado é modificado.
+- **Status da chave (`getChaveStatus`):** O status é determinado por:
+  - **ENCERRADO** — a luta da rodada final (`maxRodada`) possui `vencedorId` definido.
+  - **EM ANDAMENTO** — pelo menos uma luta com `status === 'completed'` (luta real finalizada) existe. BYE lutas (`status: 'wo'`) não contam.
+  - **PENDENTE** — nenhuma luta real foi finalizada (chave ainda não iniciada).
 
 #### Detalhes de Implementação
 

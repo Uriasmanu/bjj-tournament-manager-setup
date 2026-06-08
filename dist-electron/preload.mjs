@@ -54,10 +54,16 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   loadChavesPorArea: (areaId) => electron.ipcRenderer.invoke("load-chaves-por-area", areaId),
   registrarResultado: (data) => electron.ipcRenderer.invoke("registrar-resultado", data),
   loadLutasCasadas: () => electron.ipcRenderer.invoke("load-lutas-casadas"),
+  loadDeletedLutasCasadas: () => electron.ipcRenderer.invoke("load-deleted-lutas-casadas"),
   loadLutasCasadasPorArea: (areaId) => electron.ipcRenderer.invoke("load-lutas-casadas-por-area", areaId),
   saveLutaCasada: (data) => electron.ipcRenderer.invoke("save-luta-casada", data),
   updateLutaCasada: (data) => electron.ipcRenderer.invoke("update-luta-casada", data),
-  deleteLutaCasada: (lutaCasadaId) => electron.ipcRenderer.invoke("delete-luta-casada", lutaCasadaId)
+  deleteLutaCasada: (lutaCasadaId) => electron.ipcRenderer.invoke("delete-luta-casada", lutaCasadaId),
+  deleteLutasCasadas: (ids) => electron.ipcRenderer.invoke("delete-lutas-casadas", ids),
+  permanentlyDeleteLutaCasada: (lutaCasadaId) => electron.ipcRenderer.invoke("permanently-delete-luta-casada", lutaCasadaId),
+  permanentlyDeleteLutasCasadas: (ids) => electron.ipcRenderer.invoke("permanently-delete-lutas-casadas", ids),
+  restoreLutaCasada: (lutaCasadaId) => electron.ipcRenderer.invoke("restore-luta-casada", lutaCasadaId),
+  restoreLutasCasadas: (ids) => electron.ipcRenderer.invoke("restore-lutas-casadas", ids)
 });
 electron.contextBridge.exposeInMainWorld("activation", {
   check: () => electron.ipcRenderer.invoke("check-activation"),

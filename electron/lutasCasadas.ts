@@ -42,14 +42,23 @@ function normalizeLutaCasada(raw: Record<string, unknown>): LutaCasada {
     desempateArbitro: (raw.desempateArbitro as boolean | undefined) ?? false,
     dataFinalizacao: (raw.dataFinalizacao as string | null | undefined) ?? null,
     horarioInicio: (raw.horarioInicio as string | undefined) ?? undefined,
+    deletedAt: (raw.deletedAt as string | null | undefined) ?? null,
     createdAt: (raw.createdAt as string) ?? new Date().toISOString(),
     updatedAt: (raw.updatedAt as string) ?? new Date().toISOString(),
   }
 }
 
-function loadLutasCasadas(torneioId: string): LutaCasada[] {
+function loadAllLutasCasadas(torneioId: string): LutaCasada[] {
   const torneio = loadTorneio(torneioId)
   return (torneio.lutasCasadas ?? []).map(l => normalizeLutaCasada(l as unknown as Record<string, unknown>))
+}
+
+function loadLutasCasadas(torneioId: string): LutaCasada[] {
+  return loadAllLutasCasadas(torneioId).filter(l => l.deletedAt == null)
+}
+
+function loadDeletedLutasCasadas(torneioId: string): LutaCasada[] {
+  return loadAllLutasCasadas(torneioId).filter(l => l.deletedAt != null)
 }
 
 function loadLutasCasadasPorArea(torneioId: string, areaId: string): LutaCasada[] {
@@ -64,7 +73,7 @@ function saveLutaCasada(
     throw new Error('Atleta A e Atleta B não podem ser o mesmo atleta.')
   }
   const torneio = loadTorneio(torneioId)
-  const list = loadLutasCasadas(torneioId)
+  const list = loadAllLutasCasadas(torneioId)
   const now = new Date().toISOString()
   const luta: LutaCasada = {
     id: crypto.randomUUID(),
@@ -83,6 +92,7 @@ function saveLutaCasada(
     desclassificacao: data.desclassificacao ?? false,
     desempateArbitro: data.desempateArbitro ?? false,
     dataFinalizacao: data.dataFinalizacao ?? null,
+    deletedAt: null,
     createdAt: now,
     updatedAt: now,
   }
@@ -98,7 +108,7 @@ function updateLutaCasada(torneioId: string, data: LutaCasada): LutaCasada {
     throw new Error('Atleta A e Atleta B não podem ser o mesmo atleta.')
   }
   const torneio = loadTorneio(torneioId)
-  const list = loadLutasCasadas(torneioId)
+  const list = loadAllLutasCasadas(torneioId)
   const index = list.findIndex(l => l.id === data.id)
   if (index === -1) throw new Error('Luta casada não encontrada')
   const now = new Date().toISOString()
@@ -116,9 +126,84 @@ function updateLutaCasada(torneioId: string, data: LutaCasada): LutaCasada {
 
 function deleteLutaCasada(torneioId: string, lutaCasadaId: string): void {
   const torneio = loadTorneio(torneioId)
+  const list = loadAllLutasCasadas(torneioId)
+  const index = list.findIndex(l => l.id === lutaCasadaId)
+  if (index === -1) throw new Error('Luta casada não encontrada')
+  const now = new Date().toISOString()
+  list[index].deletedAt = now
+  list[index].updatedAt = now
+  torneio.lutasCasadas = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+}
+
+function deleteLutasCasadas(torneioId: string, ids: string[]): void {
+  const torneio = loadTorneio(torneioId)
+  const list = loadAllLutasCasadas(torneioId)
+  const now = new Date().toISOString()
+  for (const item of list) {
+    if (ids.includes(item.id)) {
+      item.deletedAt = now
+      item.updatedAt = now
+    }
+  }
+  torneio.lutasCasadas = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+}
+
+function permanentlyDeleteLutaCasada(torneioId: string, lutaCasadaId: string): void {
+  const torneio = loadTorneio(torneioId)
   torneio.lutasCasadas = (torneio.lutasCasadas ?? []).filter(l => l.id !== lutaCasadaId)
   torneio.updatedAt = new Date().toISOString()
   saveTorneio(torneio)
 }
 
-export { loadLutasCasadas, loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada }
+function permanentlyDeleteLutasCasadas(torneioId: string, ids: string[]): void {
+  const torneio = loadTorneio(torneioId)
+  torneio.lutasCasadas = (torneio.lutasCasadas ?? []).filter(l => !ids.includes(l.id))
+  torneio.updatedAt = new Date().toISOString()
+  saveTorneio(torneio)
+}
+
+function restoreLutaCasada(torneioId: string, lutaCasadaId: string): void {
+  const torneio = loadTorneio(torneioId)
+  const list = loadAllLutasCasadas(torneioId)
+  const index = list.findIndex(l => l.id === lutaCasadaId)
+  if (index === -1) throw new Error('Luta casada não encontrada')
+  const now = new Date().toISOString()
+  list[index].deletedAt = null
+  list[index].updatedAt = now
+  torneio.lutasCasadas = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+}
+
+function restoreLutasCasadas(torneioId: string, ids: string[]): void {
+  const torneio = loadTorneio(torneioId)
+  const list = loadAllLutasCasadas(torneioId)
+  const now = new Date().toISOString()
+  for (const item of list) {
+    if (ids.includes(item.id)) {
+      item.deletedAt = null
+      item.updatedAt = now
+    }
+  }
+  torneio.lutasCasadas = list
+  torneio.updatedAt = now
+  saveTorneio(torneio)
+}
+
+export {
+  loadLutasCasadas,
+  loadDeletedLutasCasadas,
+  loadLutasCasadasPorArea,
+  saveLutaCasada,
+  updateLutaCasada,
+  deleteLutaCasada,
+  deleteLutasCasadas,
+  permanentlyDeleteLutaCasada,
+  permanentlyDeleteLutasCasadas,
+  restoreLutaCasada,
+  restoreLutasCasadas,
+}

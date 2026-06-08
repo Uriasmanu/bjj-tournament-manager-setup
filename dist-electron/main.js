@@ -2396,13 +2396,20 @@ function normalizeLutaCasada(raw) {
     desempateArbitro: raw.desempateArbitro ?? false,
     dataFinalizacao: raw.dataFinalizacao ?? null,
     horarioInicio: raw.horarioInicio ?? void 0,
+    deletedAt: raw.deletedAt ?? null,
     createdAt: raw.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
     updatedAt: raw.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
   };
 }
-function loadLutasCasadas(torneioId) {
+function loadAllLutasCasadas(torneioId) {
   const torneio = loadTorneio(torneioId);
   return (torneio.lutasCasadas ?? []).map((l) => normalizeLutaCasada(l));
+}
+function loadLutasCasadas(torneioId) {
+  return loadAllLutasCasadas(torneioId).filter((l) => l.deletedAt == null);
+}
+function loadDeletedLutasCasadas(torneioId) {
+  return loadAllLutasCasadas(torneioId).filter((l) => l.deletedAt != null);
 }
 function loadLutasCasadasPorArea(torneioId, areaId) {
   return loadLutasCasadas(torneioId).filter((l) => l.areaId === areaId);
@@ -2412,7 +2419,7 @@ function saveLutaCasada(torneioId, data) {
     throw new Error("Atleta A e Atleta B não podem ser o mesmo atleta.");
   }
   const torneio = loadTorneio(torneioId);
-  const list = loadLutasCasadas(torneioId);
+  const list = loadAllLutasCasadas(torneioId);
   const now = (/* @__PURE__ */ new Date()).toISOString();
   const luta = {
     id: crypto.randomUUID(),
@@ -2431,6 +2438,7 @@ function saveLutaCasada(torneioId, data) {
     desclassificacao: data.desclassificacao ?? false,
     desempateArbitro: data.desempateArbitro ?? false,
     dataFinalizacao: data.dataFinalizacao ?? null,
+    deletedAt: null,
     createdAt: now,
     updatedAt: now
   };
@@ -2445,7 +2453,7 @@ function updateLutaCasada(torneioId, data) {
     throw new Error("Atleta A e Atleta B não podem ser o mesmo atleta.");
   }
   const torneio = loadTorneio(torneioId);
-  const list = loadLutasCasadas(torneioId);
+  const list = loadAllLutasCasadas(torneioId);
   const index = list.findIndex((l) => l.id === data.id);
   if (index === -1) throw new Error("Luta casada não encontrada");
   const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -2462,8 +2470,66 @@ function updateLutaCasada(torneioId, data) {
 }
 function deleteLutaCasada(torneioId, lutaCasadaId) {
   const torneio = loadTorneio(torneioId);
+  const list = loadAllLutasCasadas(torneioId);
+  const index = list.findIndex((l) => l.id === lutaCasadaId);
+  if (index === -1) throw new Error("Luta casada não encontrada");
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  list[index].deletedAt = now;
+  list[index].updatedAt = now;
+  torneio.lutasCasadas = list;
+  torneio.updatedAt = now;
+  saveTorneio(torneio);
+}
+function deleteLutasCasadas(torneioId, ids) {
+  const torneio = loadTorneio(torneioId);
+  const list = loadAllLutasCasadas(torneioId);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  for (const item of list) {
+    if (ids.includes(item.id)) {
+      item.deletedAt = now;
+      item.updatedAt = now;
+    }
+  }
+  torneio.lutasCasadas = list;
+  torneio.updatedAt = now;
+  saveTorneio(torneio);
+}
+function permanentlyDeleteLutaCasada(torneioId, lutaCasadaId) {
+  const torneio = loadTorneio(torneioId);
   torneio.lutasCasadas = (torneio.lutasCasadas ?? []).filter((l) => l.id !== lutaCasadaId);
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio(torneio);
+}
+function permanentlyDeleteLutasCasadas(torneioId, ids) {
+  const torneio = loadTorneio(torneioId);
+  torneio.lutasCasadas = (torneio.lutasCasadas ?? []).filter((l) => !ids.includes(l.id));
+  torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+  saveTorneio(torneio);
+}
+function restoreLutaCasada(torneioId, lutaCasadaId) {
+  const torneio = loadTorneio(torneioId);
+  const list = loadAllLutasCasadas(torneioId);
+  const index = list.findIndex((l) => l.id === lutaCasadaId);
+  if (index === -1) throw new Error("Luta casada não encontrada");
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  list[index].deletedAt = null;
+  list[index].updatedAt = now;
+  torneio.lutasCasadas = list;
+  torneio.updatedAt = now;
+  saveTorneio(torneio);
+}
+function restoreLutasCasadas(torneioId, ids) {
+  const torneio = loadTorneio(torneioId);
+  const list = loadAllLutasCasadas(torneioId);
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  for (const item of list) {
+    if (ids.includes(item.id)) {
+      item.deletedAt = null;
+      item.updatedAt = now;
+    }
+  }
+  torneio.lutasCasadas = list;
+  torneio.updatedAt = now;
   saveTorneio(torneio);
 }
 const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "f83244662ee78bf661577ecd28343bc4ff6538b6f249d6d7b1bf34817ec0ced4";
@@ -2782,6 +2848,11 @@ function registerLutasCasadasHandlers() {
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     return loadLutasCasadas(torneioId);
   });
+  ipcMain.handle("load-deleted-lutas-casadas", () => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return loadDeletedLutasCasadas(torneioId);
+  });
   ipcMain.handle("load-lutas-casadas-por-area", (_event, areaId) => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
@@ -2801,6 +2872,31 @@ function registerLutasCasadasHandlers() {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     return deleteLutaCasada(torneioId, lutaCasadaId);
+  });
+  ipcMain.handle("delete-lutas-casadas", (_event, ids) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return deleteLutasCasadas(torneioId, ids);
+  });
+  ipcMain.handle("permanently-delete-luta-casada", (_event, lutaCasadaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return permanentlyDeleteLutaCasada(torneioId, lutaCasadaId);
+  });
+  ipcMain.handle("permanently-delete-lutas-casadas", (_event, ids) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return permanentlyDeleteLutasCasadas(torneioId, ids);
+  });
+  ipcMain.handle("restore-luta-casada", (_event, lutaCasadaId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return restoreLutaCasada(torneioId, lutaCasadaId);
+  });
+  ipcMain.handle("restore-lutas-casadas", (_event, ids) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    return restoreLutasCasadas(torneioId, ids);
   });
 }
 app.whenReady().then(() => {

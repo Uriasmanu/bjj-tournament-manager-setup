@@ -6,7 +6,7 @@ import { loadAthletes, loadDeletedAthletes, saveAthlete, updateAthlete, deleteAt
 import { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, restoreArbitro, permanentlyDeleteArbitro, permanentlyDeleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
 import { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas } from './areas'
 import { registerBracketHandlers } from './brackets'
-import { loadLutasCasadas, loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada } from './lutasCasadas'
+import { loadLutasCasadas, loadDeletedLutasCasadas, loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada, deleteLutasCasadas, permanentlyDeleteLutaCasada, permanentlyDeleteLutasCasadas, restoreLutaCasada, restoreLutasCasadas } from './lutasCasadas'
 import { checkActivation, validatePassword, activateLicense, getActivationInfo } from './activation'
 import type { AreaLuta } from '../src/types/area'
 import type { Atleta } from '../src/types/athlete'
@@ -311,6 +311,12 @@ function registerLutasCasadasHandlers(): void {
     return loadLutasCasadas(torneioId)
   })
 
+  ipcMain.handle('load-deleted-lutas-casadas', (): LutaCasada[] => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadDeletedLutasCasadas(torneioId)
+  })
+
   ipcMain.handle('load-lutas-casadas-por-area', (_event, areaId: string): LutaCasada[] => {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
@@ -333,6 +339,36 @@ function registerLutasCasadasHandlers(): void {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return deleteLutaCasada(torneioId, lutaCasadaId)
+  })
+
+  ipcMain.handle('delete-lutas-casadas', (_event, ids: string[]): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return deleteLutasCasadas(torneioId, ids)
+  })
+
+  ipcMain.handle('permanently-delete-luta-casada', (_event, lutaCasadaId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return permanentlyDeleteLutaCasada(torneioId, lutaCasadaId)
+  })
+
+  ipcMain.handle('permanently-delete-lutas-casadas', (_event, ids: string[]): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return permanentlyDeleteLutasCasadas(torneioId, ids)
+  })
+
+  ipcMain.handle('restore-luta-casada', (_event, lutaCasadaId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return restoreLutaCasada(torneioId, lutaCasadaId)
+  })
+
+  ipcMain.handle('restore-lutas-casadas', (_event, ids: string[]): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return restoreLutasCasadas(torneioId, ids)
   })
 }
 

@@ -56,7 +56,7 @@ function getChaveStatus(chave: Chave): { label: string; color: string } {
   const maxRodada = Math.max(...chave.lutas.map(l => l.rodada), 0);
   const isEncerrado = chave.lutas.some(l => l.rodada === maxRodada && l.vencedorId);
   if (isEncerrado) return { label: 'ENCERRADO', color: 'yellow' };
-  const isEmAndamento = chave.lutas.some(l => l.status === 'completed' || l.status === 'wo');
+  const isEmAndamento = chave.lutas.some(l => l.status === 'completed');
   if (isEmAndamento) return { label: 'EM ANDAMENTO', color: 'cyan' };
   return { label: 'PENDENTE', color: 'gray' };
 }

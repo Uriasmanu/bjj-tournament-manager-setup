@@ -85,10 +85,16 @@ interface ElectronAPI {
     horarioTermino?: string;
   }) => Promise<Chave>;
   loadLutasCasadas: () => Promise<LutaCasada[]>;
+  loadDeletedLutasCasadas: () => Promise<LutaCasada[]>;
   loadLutasCasadasPorArea: (areaId: string) => Promise<LutaCasada[]>;
   saveLutaCasada: (data: Omit<LutaCasada, 'id' | 'tag' | 'createdAt' | 'updatedAt'>) => Promise<LutaCasada>;
   updateLutaCasada: (data: LutaCasada) => Promise<LutaCasada>;
   deleteLutaCasada: (lutaCasadaId: string) => Promise<void>;
+  deleteLutasCasadas: (ids: string[]) => Promise<void>;
+  permanentlyDeleteLutaCasada: (lutaCasadaId: string) => Promise<void>;
+  permanentlyDeleteLutasCasadas: (ids: string[]) => Promise<void>;
+  restoreLutaCasada: (lutaCasadaId: string) => Promise<void>;
+  restoreLutasCasadas: (ids: string[]) => Promise<void>;
 }
 
 interface ActivationAPI {

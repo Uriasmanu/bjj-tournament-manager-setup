@@ -120,6 +120,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   }) => ipcRenderer.invoke('registrar-resultado', data),
   loadLutasCasadas: () =>
     ipcRenderer.invoke('load-lutas-casadas'),
+  loadDeletedLutasCasadas: () =>
+    ipcRenderer.invoke('load-deleted-lutas-casadas'),
   loadLutasCasadasPorArea: (areaId: string) =>
     ipcRenderer.invoke('load-lutas-casadas-por-area', areaId),
   saveLutaCasada: (data: Omit<LutaCasada, 'id' | 'tag' | 'createdAt' | 'updatedAt'>) =>
@@ -128,6 +130,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('update-luta-casada', data),
   deleteLutaCasada: (lutaCasadaId: string) =>
     ipcRenderer.invoke('delete-luta-casada', lutaCasadaId),
+  deleteLutasCasadas: (ids: string[]) =>
+    ipcRenderer.invoke('delete-lutas-casadas', ids),
+  permanentlyDeleteLutaCasada: (lutaCasadaId: string) =>
+    ipcRenderer.invoke('permanently-delete-luta-casada', lutaCasadaId),
+  permanentlyDeleteLutasCasadas: (ids: string[]) =>
+    ipcRenderer.invoke('permanently-delete-lutas-casadas', ids),
+  restoreLutaCasada: (lutaCasadaId: string) =>
+    ipcRenderer.invoke('restore-luta-casada', lutaCasadaId),
+  restoreLutasCasadas: (ids: string[]) =>
+    ipcRenderer.invoke('restore-lutas-casadas', ids),
 })
 
 contextBridge.exposeInMainWorld('activation', {

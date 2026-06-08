@@ -30,6 +30,7 @@ export interface LutaCasada {
   dataFinalizacao?: string | null;
   tempoRealSegundos?: number;
   horarioInicio?: string;
+  deletedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
