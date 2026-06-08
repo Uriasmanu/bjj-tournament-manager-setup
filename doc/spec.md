@@ -13,7 +13,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Eu tenho 2 import de tornei, o Torneio_2026_06_07 é quando o torneio foi configurado e o Torneio_2026_06_07_ é quando foi usado na are de luta, quando importei o Torneio_2026_06_07_ em cima do Torneio_2026_06_07 o comportamento correto seria as inforções alteradas em Torneio_2026_06_07_ realizar o update em Torneio_2026_06_07, mas isso não aconteceu, as informações das lutas que aconteceram em Torneio_2026_06_07_ se perderam, só prevaleceu a informação da luta casada.
 
 
 
