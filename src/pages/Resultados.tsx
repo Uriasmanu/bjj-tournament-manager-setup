@@ -335,16 +335,18 @@ export function Resultados() {
   const arbitros = useMemo<Arbitro[]>(() => torneio?.arbitros ?? [], [torneio]);
   const lutasCasadas = useMemo<LutaCasada[]>(() => torneio?.lutasCasadas ?? [], [torneio]);
 
+  const atletasMap = useMemo(() => new Map(atletas.map(a => [a.id, a])), [atletas]);
+
   const getAtletaNome = (id: string | null | undefined): string => {
     if (!id || id === 'tbd' || id === 'bye') return 'A definir';
-    const a = atletas.find(x => x.id === id);
+    const a = atletasMap.get(id);
     if (!a) return 'Atleta removido';
     return capitalize(a.nome);
   };
 
   const getAtletaResumo = (id: string): AtletaResumo | null => {
     if (!id || id === 'tbd' || id === 'bye') return null;
-    const a = atletas.find(x => x.id === id);
+    const a = atletasMap.get(id);
     if (!a) return { id, nome: 'Atleta removido', equipe: '', faixa: 'branca', pesoKg: 0, categoria: '' };
     return {
       id: a.id,
@@ -354,6 +356,14 @@ export function Resultados() {
       pesoKg: a.pesoKg,
       categoria: a.categoria,
     };
+  };
+
+  const getAreaDaChave = (chave: Chave): string | null => {
+    if (!chave.arbitroId) return null;
+    for (const area of areas) {
+      if (area.arbitroIds.includes(chave.arbitroId)) return area.nome;
+    }
+    return null;
   };
 
   const chavesEncerradas = useMemo(() => chaves.filter(c => {
@@ -606,7 +616,7 @@ export function Resultados() {
                     return (
                       <Card key={chave.id} withBorder padding="md" radius="md">
                         <Stack gap="xs">
-                          <Text fw={700} size="sm">{getCategoriaTitulo(chave.categoriaId)} — {chave.totalAtletas} atleta(s)</Text>
+                          <Text fw={700} size="sm">{getCategoriaTitulo(chave.categoriaId)} — {chave.totalAtletas} atleta(s){(() => { const area = getAreaDaChave(chave); return area ? ` — ${area}` : ''; })()}</Text>
                           <Group gap="md" wrap="wrap">
                             <Group gap="xs">
                               <Badge color="yellow" variant="filled" size="lg">🥇 1º</Badge>
@@ -693,7 +703,7 @@ export function Resultados() {
                           <Group justify="space-between" wrap="wrap">
                             <Stack gap={2}>
                               <Text fw={700} size="sm">{getCategoriaTitulo(chave.categoriaId)}</Text>
-                              <Text size="xs" c="dimmed">{chave.totalAtletas} atleta(s) · {chave.totalLutas} luta(s)</Text>
+                              <Text size="xs" c="dimmed">{chave.totalAtletas} atleta(s) · {chave.totalLutas} luta(s){(() => { const area = getAreaDaChave(chave); return area ? ` · ${area}` : ''; })()}</Text>
                             </Stack>
                             <Group gap="xs">
                               <Badge color={status.color} variant={status.color === 'yellow' ? 'filled' : 'light'}>

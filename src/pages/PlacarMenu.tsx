@@ -5,9 +5,11 @@ import { useEffect, useState } from 'react';
 import type { AreaLuta } from '../types/area';
 import type { Chave } from '../types/bracket';
 import { PageLayout } from '../components/PageLayout';
+import { useTournamentMode } from '../utils/TournamentModeContext';
 
 export function PlacarMenu() {
   const navigate = useNavigate();
+  const { mode } = useTournamentMode();
   const [areas, setAreas] = useState<AreaLuta[]>([]);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,7 +51,7 @@ export function PlacarMenu() {
   }
 
   return (
-    <PageLayout title="Placar" backRoute="/admin/dashboard">
+    <PageLayout title="Placar" backRoute={mode === 'area' ? '/' : '/admin/dashboard'}>
       <Stack gap="lg" align="center">
         <IconScoreboard size={48} />
 
