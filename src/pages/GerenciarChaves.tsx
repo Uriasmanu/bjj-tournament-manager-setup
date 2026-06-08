@@ -414,7 +414,7 @@ export function GerenciarChaves() {
               {filteredChaves.length === 0 ? (
                 <Text c="dimmed" ta="center" py="xl">Nenhuma chave encontrada para a busca "{searchQuery}"</Text>
               ) : (
-              <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
+              <Stack gap="md">
                 {filteredChaves.map(chave => {
                   const chaveAtletas = chave.posicoesAtletas
                     .map(id => athletes.find(a => a.id === id))
@@ -455,7 +455,7 @@ export function GerenciarChaves() {
                     </Card>
                   );
                 })}
-              </SimpleGrid>
+              </Stack>
               )}
             </Paper>
 

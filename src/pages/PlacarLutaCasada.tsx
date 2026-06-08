@@ -387,6 +387,7 @@ export function PlacarLutaCasada() {
 
   const handleAbrirFinalizar = () => {
     if (bloqueado) return;
+    setRodando(false);
     if (placarA.total === placarB.total) {
       setResultadoTipo('desempate');
     } else {

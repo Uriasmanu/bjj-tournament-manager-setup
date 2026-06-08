@@ -1,4 +1,4 @@
-import { Text, Card, Stack, Group, Badge, Loader, Center, SimpleGrid, TextInput, Button } from '@mantine/core';
+import { Text, Card, Stack, Group, Badge, Loader, Center, TextInput, Button } from '@mantine/core';
 import { IconSearch, IconPlus } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
@@ -86,13 +86,35 @@ export function PlacarChaves() {
     navigate(`/admin/placar/luta-casada/${areaId}/${luta.id}`);
   };
 
+  const sortedChaves = useMemo(() => {
+    const list = chaves.slice();
+
+    const getLatestTs = (chave: Chave): string => {
+      let max = '';
+      for (const l of chave.lutas) {
+        const ts = l.horarioTermino || l.horarioInicio || '';
+        if (ts > max) max = ts;
+      }
+      return max;
+    };
+
+    list.sort((a, b) => {
+      const aEncerrado = a.lutas.some(l => l.rodada === Math.max(...a.lutas.map(x => x.rodada)) && l.vencedorId);
+      const bEncerrado = b.lutas.some(l => l.rodada === Math.max(...b.lutas.map(x => x.rodada)) && l.vencedorId);
+      if (aEncerrado !== bEncerrado) return aEncerrado ? 1 : -1;
+      return getLatestTs(b).localeCompare(getLatestTs(a));
+    });
+
+    return list;
+  }, [chaves]);
+
   const filteredChaves = useMemo(() => {
-    if (!searchQuery.trim()) return chaves;
+    if (!searchQuery.trim()) return sortedChaves;
     const q = searchQuery.toLowerCase().trim();
-    return chaves.filter(chave =>
+    return sortedChaves.filter(chave =>
       getChaveTitle(chave, athletes).toLowerCase().includes(q)
     );
-  }, [chaves, athletes, searchQuery]);
+  }, [sortedChaves, athletes, searchQuery]);
 
   const filteredLutasCasadas = useMemo(() => {
     if (!searchQuery.trim()) return lutasCasadas;
@@ -153,11 +175,14 @@ export function PlacarChaves() {
               : `Nenhum item encontrado para a busca "${searchQuery}"`}
           </Text>
         ) : (
-          <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="md">
+          <Stack gap="md">
             {filteredChaves.map(chave => {
               const chaveAtletas = chave.posicoesAtletas
                 .map(id => athletes.find(a => a.id === id))
                 .filter((a): a is Atleta => a !== undefined);
+              const maxRodada = Math.max(...chave.lutas.map(l => l.rodada));
+              const isEncerrado = chave.lutas.some(l => l.rodada === maxRodada && l.vencedorId);
+              const isEmAndamento = !isEncerrado && chave.lutas.some(l => l.status === 'completed');
               return (
                 <Card
                   key={chave.id}
@@ -166,30 +191,25 @@ export function PlacarChaves() {
                   padding="md"
                   radius="md"
                   role="button"
-                  tabIndex={0}
-                  style={{ cursor: 'pointer', position: 'relative' }}
-                  onClick={() => navigate(`/admin/placar/chave/${areaId}/${chave.id}`)}
+                  tabIndex={isEncerrado ? -1 : 0}
+                  style={{
+                    cursor: isEncerrado ? 'default' : 'pointer',
+                    position: 'relative',
+                    opacity: isEncerrado ? 0.5 : 1,
+                    transition: 'opacity 0.2s',
+                  }}
+                  onClick={isEncerrado ? undefined : () => navigate(`/admin/placar/chave/${areaId}/${chave.id}`)}
                 >
-                  {(() => {
-                    const maxRodada = Math.max(...chave.lutas.map(l => l.rodada));
-                    const isEncerrado = chave.lutas.some(l => l.rodada === maxRodada && l.vencedorId);
-                    const isEmAndamento = !isEncerrado && chave.lutas.some(l => l.status === 'completed');
-                    if (isEncerrado) {
-                      return (
-                        <Badge size="sm" color="yellow" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
-                          ENCERRADO
-                        </Badge>
-                      );
-                    }
-                    if (isEmAndamento) {
-                      return (
-                        <Badge size="sm" color="cyan" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
-                          EM ANDAMENTO
-                        </Badge>
-                      );
-                    }
-                    return null;
-                  })()}
+                  {isEncerrado && (
+                    <Badge size="sm" color="yellow" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
+                      ENCERRADO
+                    </Badge>
+                  )}
+                  {isEmAndamento && (
+                    <Badge size="sm" color="cyan" variant="filled" style={{ position: 'absolute', top: 8, right: 8 }}>
+                      EM ANDAMENTO
+                    </Badge>
+                  )}
                   <Stack gap="xs">
                     <Text fw={700} size="sm">{getChaveTitle(chave, athletes)}</Text>
                     <Group gap={4}>
@@ -261,7 +281,7 @@ export function PlacarChaves() {
                   </Card>
                 );
               })}
-          </SimpleGrid>
+          </Stack>
         )}
       </Stack>
 

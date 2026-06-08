@@ -13,13 +13,42 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Chaves escerradas ficam opacas, apenas o encerrado na cor normal. Continuam sendo clicaveis
-### [aberto] No plcar da luta Tem que mostra a cor da faixa dos atletas que estão lutando
-### [aberto] Quando o modal de finalizar luta é aberto o tempo tem que parar, caso não tenha sido pausado
-### [aberto] em Selecione a área de luta, sempre fica selecionada a ultima area que teve atualização
-### [aberto] Troque a visualização dos cards da chave, tanto em placar, quanto na lista de chave, para um a baixo do outro, ao inves de um ao lado do outro
-### [aberto] Em placar, na parte de selecionar a chave, a que tem a atualização mais recente aparece no topo da lista, e as encerradas ao final
-### [aberto] em resultados, as chaves encerradas vão para o topo da lista
+### [corrigido] Chaves encerradas: aplicar opacidade e remover clique
+**Comportamento atual:** todos os cards de chave em `PlacarChaves.tsx` tinham a mesma aparência (opacidade 1) e eram clicáveis independentemente do status.
+**Comportamento esperado:** chaves encerradas devem ter opacidade reduzida (0.5) e não serem clicáveis (cursor default, sem `onClick`). Chaves pendentes/em andamento mantêm aparência normal e são clicáveis.
+**Correção:** extraído `isEncerrado`/`isEmAndamento` para o escopo do card; aplicado `opacity: isEncerrado ? 0.5 : 1`, `cursor: isEncerrado ? 'default' : 'pointer'` e `onClick` condicional em `PlacarChaves.tsx`.
+**Arquivos:** `src/pages/PlacarChaves.tsx`.
+
+### [corrigido] No placar da luta tem que mostrar a cor da faixa dos atletas que estão lutando
+**Comportamento atual:** `AtletaPanel` em `PlacarLuta.tsx` exibia apenas nome e equipe do atleta, sem mostrar a faixa.
+**Comportamento esperado:** o placar da luta deve exibir a faixa (cor/belt) de cada atleta, abaixo do nome.
+**Correção:** adicionado `FAIXA_LABEL` (mapeamento de faixas para exibição), incluído `faixa` no retorno de `getAtletaInfo` e como prop de `AtletaPanel`, renderizado o texto da faixa entre nome e equipe.
+**Arquivos:** `src/pages/PlacarLuta.tsx`.
+### [corrigido] Quando o modal de finalizar luta é aberto o tempo tem que parar, caso não tenha sido pausado
+**Comportamento atual:** ao abrir o modal de finalização, o cronômetro continuava rodando se estivesse em andamento.
+**Comportamento esperado:** o cronômetro deve ser pausado automaticamente ao abrir o modal de finalizar luta.
+**Correção:** adicionado `setRodando(false)` no início de `handleAbrirFinalizar` em ambos os placares.
+**Arquivos:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`.
+### [corrigido] em Selecione a área de luta, sempre fica selecionada a ultima area que teve atualização
+**Comportamento atual:** o Select de área no PlacarMenu não pré-selecionava nenhuma área (sempre começava vazio), forçando o usuário a lembrar e selecionar manualmente a área onde estava trabalhando.
+**Comportamento esperado:** se houver chaves com lutas em andamento ou finalizadas em alguma área, a área com a atividade mais recente (baseada em `horarioInicio`/`horarioTermino` das lutas) deve vir pré-selecionada. Caso contrário, o Select inicia vazio.
+**Correção:** `PlacarMenu.tsx` agora carrega todas as chaves via `loadChaves`, percorre as lutas em busca do timestamp mais recente (`horarioTermino` ou `horarioInicio`), mapeia a chave para sua área (via `arbitroId` ↔ `arbitroIds`) e pré-seleciona a área correspondente.
+**Arquivos:** `src/pages/PlacarMenu.tsx`.
+### [corrigido] Troque a visualização dos cards da chave, tanto em placar, quanto na lista de chave, para um a baixo do outro, ao inves de um ao lado do outro
+**Comportamento atual:** os cards de chave em `PlacarChaves.tsx` e `GerenciarChaves.tsx` usavam `SimpleGrid` com `cols={{ base: 1, sm: 2, md: 3 }}`, exibindo cards lado a lado.
+**Comportamento esperado:** os cards devem ficar um abaixo do outro (empilhados verticalmente) para facilitar a leitura em dispositivos móveis e evitar compressão horizontal.
+**Correção:** substituído `SimpleGrid` por `Stack` em ambos os arquivos para exibição vertical dos cards de chave.
+**Arquivos:** `src/pages/PlacarChaves.tsx`, `src/pages/GerenciarChaves.tsx`.
+### [corrigido] Em placar, na parte de selecionar a chave, a que tem a atualização mais recente aparece no topo da lista, e as encerradas ao final
+**Comportamento atual:** as chaves em `PlacarChaves.tsx` eram exibidas na ordem original do banco (geralmente ordem de criação), sem considerar atividade recente ou status de encerramento.
+**Comportamento esperado:** chaves encerradas devem ficar no final da lista; chaves não encerradas devem ser ordenadas pela atividade mais recente (horário de início/término das lutas) primeiro.
+**Correção:** adicionado `sortedChaves` useMemo que ordena: encerradas por último, depois por timestamp decrescente (`horarioTermino`/`horarioInicio`).
+**Arquivos:** `src/pages/PlacarChaves.tsx`.
+### [corrigido] em resultados, as chaves encerradas vão para o topo da lista
+**Comportamento atual:** no painel "Chaves" de Resultados, as chaves eram exibidas na ordem original, sem priorizar as encerradas.
+**Comportamento esperado:** chaves encerradas (`getChaveStatus` retornando "ENCERRADO") devem aparecer primeiro na lista.
+**Correção:** adicionado `.sort()` em `chavesFiltradas` que coloca chaves com status "ENCERRADO" antes das demais.
+**Arquivos:** `src/pages/Resultados.tsx`.
 ### [corrigido] Em resultados, lutas com BYE estão sendo consideradas em andamento, olhe para a logica em placar e corrija resultados
 **Comportamento atual:** `getChaveStatus` em Resultados.tsx considerava `l.status === 'wo'` como "EM ANDAMENTO", mas BYE lutas também têm `status: 'wo'` (auto-resolvidas na geração), fazendo chaves sem nenhuma luta real iniciada aparecerem como "EM ANDAMENTO".
 **Comportamento esperado:** Apenas lutas com `status === 'completed'` (lutas reais finalizadas) devem marcar a chave como "EM ANDAMENTO". BYE lutas não contam — mesma lógica de `PlacarChaves.tsx`.

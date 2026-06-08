@@ -35,6 +35,18 @@ import { sugerirTempoLutaMinutos, TEMPO_LUTA_FALLBACK_MINUTOS } from '../types/f
 const AZUL_ANIL = '#1e3a8a';
 const BRANCO = '#ffffff';
 
+const FAIXA_LABEL: Record<string, string> = {
+  branca: 'Branca',
+  cinza: 'Cinza',
+  amarela: 'Amarela',
+  laranja: 'Laranja',
+  verde: 'Verde',
+  azul: 'Azul',
+  roxa: 'Roxa',
+  marrom: 'Marrom',
+  preta: 'Preta',
+};
+
 const TEMPO_DEFAULT_SEGUNDOS = 5 * 60;
 const TEMPO_MIN_MINUTOS = 1;
 const TEMPO_MAX_MINUTOS = 30;
@@ -74,6 +86,7 @@ function capitalize(s: string): string {
 function AtletaPanel({
   nome,
   equipe,
+  faixa,
   placar,
   onChange,
   bloqueado,
@@ -81,6 +94,7 @@ function AtletaPanel({
 }: {
   nome: string;
   equipe: string;
+  faixa: string;
   placar: PlacarLuta;
   onChange: (p: PlacarLuta) => void;
   bloqueado: boolean;
@@ -169,6 +183,11 @@ function AtletaPanel({
           <Text fw={900} style={{ fontSize: FONT_NOME, lineHeight: 1.1, color, wordBreak: 'break-word' }}>
             {nome}
           </Text>
+          {faixa && (
+            <Text size="sm" c={subcolor} fw={600}>
+              {FAIXA_LABEL[faixa] ?? faixa}
+            </Text>
+          )}
           {equipe && (
             <Text size="lg" c={subcolor} tt="capitalize" fw={600}>
               {equipe}
@@ -354,24 +373,25 @@ export function PlacarLuta() {
     };
   }, [rodando]);
 
-  const getAtletaInfo = useCallback((id: string): { nome: string; equipe: string } => {
+  const getAtletaInfo = useCallback((id: string): { nome: string; equipe: string; faixa: string } => {
     if (!id || id === 'bye' || id === 'tbd') {
-      return { nome: 'A definir', equipe: '' };
+      return { nome: 'A definir', equipe: '', faixa: '' };
     }
     const atleta = athletes.find(a => a.id === id);
-    if (!atleta) return { nome: 'Atleta removido', equipe: '' };
+    if (!atleta) return { nome: 'Atleta removido', equipe: '', faixa: '' };
     return {
       nome: capitalize(atleta.nome),
       equipe: atleta.equipe ? capitalize(atleta.equipe) : '',
+      faixa: atleta.faixa,
     };
   }, [athletes]);
 
   const atletaAInfo = useMemo(
-    () => (luta ? getAtletaInfo(luta.atletaAId) : { nome: '', equipe: '' }),
+    () => (luta ? getAtletaInfo(luta.atletaAId) : { nome: '', equipe: '', faixa: '' }),
     [luta, getAtletaInfo]
   );
   const atletaBInfo = useMemo(
-    () => (luta ? getAtletaInfo(luta.atletaBId) : { nome: '', equipe: '' }),
+    () => (luta ? getAtletaInfo(luta.atletaBId) : { nome: '', equipe: '', faixa: '' }),
     [luta, getAtletaInfo]
   );
 
@@ -411,6 +431,7 @@ export function PlacarLuta() {
 
   const handleAbrirFinalizar = () => {
     if (bloqueado) return;
+    setRodando(false);
     if (placarA.total === placarB.total) {
       setResultadoTipo('desempate');
     } else {
@@ -622,6 +643,7 @@ export function PlacarLuta() {
             lado="A"
             nome={atletaAInfo.nome}
             equipe={atletaAInfo.equipe}
+            faixa={atletaAInfo.faixa}
             placar={placarA}
             onChange={setPlacarA}
             bloqueado={bloqueado}
@@ -630,6 +652,7 @@ export function PlacarLuta() {
             lado="B"
             nome={atletaBInfo.nome}
             equipe={atletaBInfo.equipe}
+            faixa={atletaBInfo.faixa}
             placar={placarB}
             onChange={setPlacarB}
             bloqueado={bloqueado}

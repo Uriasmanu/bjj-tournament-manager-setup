@@ -403,8 +403,7 @@ export function Resultados() {
 
   const chavesFiltradas = useMemo(() => {
     const termo = buscaChaves.trim().toLowerCase();
-    if (!termo) return chaves;
-    return chaves.filter(c => {
+    const list = !termo ? chaves : chaves.filter(c => {
       const categoria = getCategoriaTitulo(c.categoriaId).toLowerCase();
       if (categoria.includes(termo)) return true;
       return c.lutas.some(l => {
@@ -412,6 +411,12 @@ export function Resultados() {
         const nomeB = getAtletaNome(l.atletaBId).toLowerCase();
         return nomeA.includes(termo) || nomeB.includes(termo);
       });
+    });
+    return list.slice().sort((a, b) => {
+      const aEncerrado = getChaveStatus(a).label === 'ENCERRADO';
+      const bEncerrado = getChaveStatus(b).label === 'ENCERRADO';
+      if (aEncerrado !== bEncerrado) return aEncerrado ? -1 : 1;
+      return 0;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chaves, buscaChaves, atletas]);

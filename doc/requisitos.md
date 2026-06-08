@@ -267,7 +267,7 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
   - 7-15 atletas (exceto 9, 10, 11, 12, 13, 14 e 15): eliminação simples com byes automáticos — número de rodadas = ceil(log2(N)). Exemplo para 7 atletas: R1 (4 lutas: seed0 vs seed1, seed2 vs seed3, seed4 vs seed5, seed6 vs BYE auto-resolvido), R2 (2 lutas: vencedor(L1) vs vencedor(L2), vencedor(L3) vs vencedor(BYE)), R3 (Final: vencedor(L5) vs vencedor(L6)).
   - 16 atletas: 15 lutas, 4 rodadas (8 lutas R1, 4 lutas R2, 2 lutas R3, 1 luta R4 final)
 - **Chave editável:** O administrador pode reordenar manualmente as posições dos atletas na chave antes do início das lutas (status `gerada`).
-- **Listagem:** Chaves exibidas como cards em grid. Ordenadas alfabeticamente pelo título da chave.
+- **Listagem:** Chaves exibidas como cards em pilha vertical (Stack). Ordenadas alfabeticamente pelo título da chave.
 - **Bloqueio de edição:** Após a primeira luta ser iniciada, a edição é bloqueada.
 - **Seed sorting (geração inicial — `aplicarSeedSorting`):** Ao gerar a chave, os atletas são primeiro embaralhados aleatoriamente (Fisher-Yates shuffle) e depois ordenados por: peso (decrescente) → idade (decrescente, `currentYear - anoNascimento`) → nome (ascendente, `localeCompare`). O embaralhamento prévio garante que a posição do BYE (quando o número de atletas é ímpar) seja aleatória a cada geração. A divisão em lados é dinâmica: metade superior (sideA) e metade inferior (sideB) da seed, com separação de equipes entre lados.
   - 16 atletas (`aplicarSeedSorting16`): sideA = primeiros 8, sideB = últimos 8; dentro de cada lado, atletas da mesma equipe são trocados com o lado oposto.
@@ -630,8 +630,8 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 ### 3.19. Placar / Scoreboard (Implementado)
 
 - **Fluxo de navegação:** `Dashboard → Placar → PlacarMenu` (seleção de área) → `PlacarChaves` (lista de chaves da área) → `PlacarBracket` (bracket + lutas iniciáveis) → `PlacarLuta` (placar funcional).
-- **Tela de seleção de área (`/admin/placar`):** `PlacarMenu` exibe `Select` com as áreas de luta cadastradas. Botão "Acessar" navega para `/admin/placar/chaves/:areaId`.
-- **Tela de chaves da área (`/admin/placar/chaves/:areaId`):** `PlacarChaves` lista as chaves alocadas na área como cards clicáveis. Exibe faixa, peso, quantidade de atletas e árbitro responsável. Suporta busca textual por título da chave. Cada card exibe badge de status no canto superior direito:
+- **Tela de seleção de área (`/admin/placar`):** `PlacarMenu` exibe `Select` com as áreas de luta cadastradas. Se houver chaves com atividade recente (lutas com `horarioInicio` ou `horarioTermino`), a área com a atividade mais recente vem pré-selecionada automaticamente. Caso contrário, o Select inicia vazio. Botão "Acessar" navega para `/admin/placar/chaves/:areaId`.
+- **Tela de chaves da área (`/admin/placar/chaves/:areaId`):** `PlacarChaves` lista as chaves alocadas na área como cards em pilha vertical (Stack). Cards são ordenados: encerradas por último, depois por timestamp de atividade mais recente (horário de início/término das lutas). Exibe faixa, peso, quantidade de atletas e árbitro responsável. Suporta busca textual por título da chave. Cada card exibe badge de status no canto superior direito:
   - **"ENCERRADO"** (amarelo gold): quando a luta da última rodada da chave possui vencedor definido (chave finalizada com campeão).
   - **"EM ANDAMENTO"** (ciano): quando a chave possui pelo menos uma luta finalizada pelo operador (`status: 'completed'`) mas a última rodada ainda não possui vencedor. Lutas com `status: 'wo'` (BYEs auto-resolvidos na geração) não são consideradas.
   - Sem badge: quando nenhuma luta da chave foi iniciada.
@@ -641,11 +641,12 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Tela do placar (`/admin/placar/luta/:areaId/:chaveId/:lutaId`):** `PlacarLuta` exibe:
   - Atleta A no lado esquerdo com fundo **azul anil** (`#1e3a8a`) e texto branco.
   - Atleta B no lado direito com fundo **branco** (`#ffffff`) e texto escuro.
+  - Para cada atleta, exibe nome, faixa (label) e equipe.
   - Cronômetro regressivo central (mm:ss) com botões **Iniciar/Pausar** e **Zerar**; valor inicial editável (1–30 min, padrão 5 min); sem áudio.
   - Contadores de pontos 2/3/4 (com + e −) por atleta; total acumulado = 2×qtd2 + 3×qtd3 + 4×qtd4.
   - Contadores de vantagens e punições (0–4) por atleta.
   - Alerta visual de "Desclassificação" ao atingir 4 punições.
-  - Botão "Finalizar Luta" → modal com tipo (Pontos, Finalização, DQ, Desempate) e vencedor. Todas as opções de resultado estão sempre habilitadas (sem restrição por estado da luta). O modal não exibe detalhes de implementação (flags do JSON). Ao clicar em "Confirmar", um segundo modal centralizado de confirmação aparece (com texto dinâmico por tipo e botão "Confirmar desclassificação" para DQ). Somente após essa segunda confirmação o resultado é persistido e o vencedor é propagado para a próxima rodada.
+  - Botão "Finalizar Luta" → modal com tipo (Pontos, Finalização, DQ, Desempate) e vencedor. Ao abrir o modal, o cronômetro é pausado automaticamente se estiver em andamento. Todas as opções de resultado estão sempre habilitadas (sem restrição por estado da luta). O modal não exibe detalhes de implementação (flags do JSON). Ao clicar em "Confirmar", um segundo modal centralizado de confirmação aparece (com texto dinâmico por tipo e botão "Confirmar desclassificação" para DQ). Somente após essa segunda confirmação o resultado é persistido e o vencedor é propagado para a próxima rodada.
   - Botão "Voltar sem finalizar" → retorna para o `PlacarBracket` da chave (rota `/admin/placar/chave/:areaId/:chaveId`).
 - **Persistência:** Após a segunda confirmação, a `Luta` recebe `vencedorId`, `status` (`completed` ou `wo` — `wo` para DQ), `placarA`, `placarB`, `finalizacao`, `desclassificacao`, `desclassificadoId`, `desempateArbitro`. O vencedor é propagado para a próxima rodada (slot `tbd`) pela função `advanceWinnerInChave` (ver seção 3.11.1). O sistema não implementa regra automática de dupla desclassificação — o operador sempre declara um vencedor.
 - **`desclassificadoId`:** Quando o resultado é do tipo DQ, o campo `desclassificadoId` é preenchido com o ID do atleta desclassificado (o perdedor, que não é o `vencedorId`). Quando o resultado não é DQ, `desclassificadoId` fica `undefined`.
@@ -837,6 +838,7 @@ A página usa `Tabs` do Mantine com 6 abas:
   - **ENCERRADO** — a luta da rodada final (`maxRodada`) possui `vencedorId` definido.
   - **EM ANDAMENTO** — pelo menos uma luta com `status === 'completed'` (luta real finalizada) existe. BYE lutas (`status: 'wo'`) não contam.
   - **PENDENTE** — nenhuma luta real foi finalizada (chave ainda não iniciada).
+- **Ordenação das chaves:** No painel "Chaves", as chaves são ordenadas com encerradas no topo da lista, seguidas pelas demais.
 
 #### Detalhes de Implementação
 

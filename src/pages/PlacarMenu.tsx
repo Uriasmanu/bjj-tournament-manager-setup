@@ -3,6 +3,7 @@ import { IconScoreboard } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import type { AreaLuta } from '../types/area';
+import type { Chave } from '../types/bracket';
 import { PageLayout } from '../components/PageLayout';
 
 export function PlacarMenu() {
@@ -12,8 +13,29 @@ export function PlacarMenu() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    window.electronAPI.loadAreas().then((data) => {
-      setAreas(data);
+    Promise.all([
+      window.electronAPI.loadAreas(),
+      window.electronAPI.loadChaves(),
+    ]).then(([areasData, chavesData]) => {
+      const loadedAreas = areasData as AreaLuta[];
+      const chaves = chavesData as Chave[];
+      setAreas(loadedAreas);
+
+      let latestTs = '';
+      let latestAreaId: string | null = null;
+
+      for (const chave of chaves) {
+        for (const luta of chave.lutas) {
+          const ts = luta.horarioTermino || luta.horarioInicio || '';
+          if (ts > latestTs) {
+            latestTs = ts;
+            const area = loadedAreas.find(a => a.arbitroIds.includes(chave.arbitroId ?? ''));
+            if (area) latestAreaId = area.id;
+          }
+        }
+      }
+
+      setSelectedArea(latestAreaId);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
