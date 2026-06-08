@@ -15,15 +15,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 -->
 ## Histórico de Correções
 
-### [2026-06-08] Corrigido: Accordion de chaves em Resultados lento ao expandir
-**Problema:** O `<Collapse>` do Mantine renderizava todos os `LutaResumoCard` simultaneamente e calculava altura para animação, causando lentidão visível ao expandir chaves com muitas lutas.
-
-**Correção aplicada:**
-- `src/pages/Resultados.tsx`: substituído `<Collapse>` por renderização condicional (`{isExpanded && (...)})` — conteúdo aparece instantaneamente sem cálculo de altura animada
-
-**RF/CA/Passos afetados:** Nenhum.
-
-
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 
