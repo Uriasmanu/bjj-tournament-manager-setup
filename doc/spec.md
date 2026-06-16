@@ -13,9 +13,8 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Quando tem mais de um arbitro designado para a mesma area, quando for criar a luta casada, posso escolher entres os arbitros da area
 
-### [aberto] Pode colocar o mesmo arbitro em mais de uma area porem tem que avisar com uma mensagem no meio da tela que o arbitro ja esta em uma area e qual area ele esta
+### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
@@ -358,3 +357,19 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 ---
 
 *Fontes: Sommerville & Kotonya (1998); Wiegers (2003); IEEE 830-1998; SWEBOK v3; IREB CPRE Syllabus; INCOSE SE Handbook; Standish Group Chaos Report.*
+
+---
+
+## Histórico de Correções
+
+### [resolvido] Seleção de árbitro ao criar luta casada
+- **Data:** 2026-06-16
+- **Problema:** Ao criar uma luta casada, o sistema sempre atribuía o primeiro árbitro da área (`area.arbitroIds[0]`), sem permitir escolha quando havia múltiplos árbitros.
+- **Solução:** Adicionado componente `Select` no `ModalCriarLutaCasada` que lista todos os árbitros da área quando há mais de um. Com apenas um árbitro, a seleção continua automática.
+- **Arquivos alterados:** `src/components/ModalCriarLutaCasada.tsx`
+
+### [resolvido] Permitir mesmo árbitro em múltiplas áreas com aviso
+- **Data:** 2026-06-16
+- **Problema:** O sistema bloqueava a atribuição de um árbitro a mais de uma área, impedindo o uso compartilhado de árbitros entre áreas.
+- **Solução:** Removida a validação de exclusão mútua no backend (`checkRefereeNotInUse` → `checkRefereesExist`). No frontend (`AreaForm`), removido o filtro que ocultava árbitros já usados e adicionado alerta visual quando um árbitro selecionado já está atribuído a outra área, exibindo o nome da área conflitante.
+- **Arquivos alterados:** `electron/areas.ts`, `src/components/AreaForm.tsx`

@@ -1,6 +1,7 @@
-import { Modal, TextInput, MultiSelect, Button, Group, Stack } from '@mantine/core';
+import { Modal, TextInput, MultiSelect, Button, Group, Stack, Alert, Text } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { IconAlertCircle } from '@tabler/icons-react';
 import type { AreaLuta } from '../types/area';
 import type { Arbitro } from '../types/referee';
 
@@ -53,18 +54,28 @@ export function AreaForm({ opened, onClose, onSave, area, areas = [] }: AreaForm
     if (saved) onClose();
   };
 
-  const usedArbitroIds = new Set(
-    areas
-      .filter(a => a.id !== area?.id)
-      .flatMap(a => a.arbitroIds ?? [])
-  );
-
   const arbitroOptions = arbitros
-    .filter(a => !usedArbitroIds.has(a.id))
     .map((a) => ({
       value: a.id,
       label: a.nome.charAt(0).toUpperCase() + a.nome.slice(1),
     }));
+
+  const warnings = useMemo(() => {
+    const selectedIds = form.values.arbitroIds ?? [];
+    const msgs: string[] = [];
+    for (const arbitroId of selectedIds) {
+      const arbitro = arbitros.find(a => a.id === arbitroId);
+      if (!arbitro) continue;
+      const nomeArbitro = arbitro.nome.charAt(0).toUpperCase() + arbitro.nome.slice(1);
+      const otherAreas = areas.filter(
+        a => a.id !== area?.id && (a.arbitroIds ?? []).includes(arbitroId)
+      );
+      for (const other of otherAreas) {
+        msgs.push(`O árbitro "${nomeArbitro}" já está atribuído à área "${other.nome}".`);
+      }
+    }
+    return msgs;
+  }, [form.values.arbitroIds, arbitros, areas, area?.id]);
 
   return (
     <Modal
@@ -91,6 +102,16 @@ export function AreaForm({ opened, onClose, onSave, area, areas = [] }: AreaForm
             nothingFoundMessage="Nenhum árbitro encontrado"
             {...form.getInputProps('arbitroIds')}
           />
+
+          {warnings.length > 0 && (
+            <Alert color="yellow" icon={<IconAlertCircle size={18} />}>
+              <Stack gap={4}>
+                {warnings.map((msg, i) => (
+                  <Text key={i} size="sm">{msg}</Text>
+                ))}
+              </Stack>
+            </Alert>
+          )}
 
           <Group justify="flex-end" mt="md">
             <Button variant="outline" onClick={onClose}>Cancelar</Button>

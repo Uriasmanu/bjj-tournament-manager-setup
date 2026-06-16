@@ -817,7 +817,7 @@ function loadAreas(torneioId) {
   const list = (torneio.areas ?? []).map((a) => normalizeArea(a));
   return list.filter((a) => a.deletedAt == null);
 }
-function checkRefereeNotInUse(torneioId, arbitroIds, excludeAreaId) {
+function checkRefereesExist(torneioId, arbitroIds) {
   const ids = arbitroIds ?? [];
   if (ids.length === 0) return;
   const torneio = loadTorneio$2(torneioId);
@@ -827,22 +827,10 @@ function checkRefereeNotInUse(torneioId, arbitroIds, excludeAreaId) {
   if (invalidos.length > 0) {
     throw new Error("Um ou mais árbitros não existem ou estão deletados.");
   }
-  const areas = loadAreas(torneioId);
-  const assigned = /* @__PURE__ */ new Set();
-  for (const area of areas) {
-    if (area.id === excludeAreaId) continue;
-    for (const rid of area.arbitroIds) {
-      assigned.add(rid);
-    }
-  }
-  const conflict = ids.filter((rid) => rid && assigned.has(rid));
-  if (conflict.length > 0) {
-    throw new Error("Um ou mais árbitros já estão atribuídos a outra área de luta.");
-  }
 }
 function saveArea(torneioId, data) {
   const arbitroIds = data.arbitroIds ?? [];
-  checkRefereeNotInUse(torneioId, arbitroIds);
+  checkRefereesExist(torneioId, arbitroIds);
   const torneio = loadTorneio$2(torneioId);
   const allAreas = (torneio.areas ?? []).map((a) => normalizeArea(a));
   const activeAreas = allAreas.filter((a) => a.deletedAt == null);
@@ -864,7 +852,7 @@ function saveArea(torneioId, data) {
 }
 function updateArea(torneioId, data) {
   const arbitroIds = data.arbitroIds ?? [];
-  checkRefereeNotInUse(torneioId, arbitroIds, data.id);
+  checkRefereesExist(torneioId, arbitroIds);
   const torneio = loadTorneio$2(torneioId);
   const allAreas = (torneio.areas ?? []).map((a) => normalizeArea(a));
   const index = allAreas.findIndex((a) => a.id === data.id);
@@ -986,7 +974,7 @@ function importAreasFromFile(torneioId, filePath) {
       skipped += 1;
       continue;
     }
-    checkRefereeNotInUse(torneioId, arbitroIdsIn);
+    checkRefereesExist(torneioId, arbitroIdsIn);
     const nomeFinal = nomeRaw === "" ? gerarNomeAreaPadrao(activeAreas) : nomeRaw;
     const area = {
       id: crypto.randomUUID(),

@@ -54,7 +54,7 @@ function loadAreas(torneioId: string): AreaLuta[] {
   return list.filter(a => a.deletedAt == null)
 }
 
-function checkRefereeNotInUse(torneioId: string, arbitroIds: string[], excludeAreaId?: string): void {
+function checkRefereesExist(torneioId: string, arbitroIds: string[]): void {
   const ids = arbitroIds ?? []
   if (ids.length === 0) return
 
@@ -65,24 +65,11 @@ function checkRefereeNotInUse(torneioId: string, arbitroIds: string[], excludeAr
   if (invalidos.length > 0) {
     throw new Error('Um ou mais árbitros não existem ou estão deletados.')
   }
-
-  const areas = loadAreas(torneioId)
-  const assigned = new Set<string>()
-  for (const area of areas) {
-    if (area.id === excludeAreaId) continue
-    for (const rid of area.arbitroIds) {
-      assigned.add(rid)
-    }
-  }
-  const conflict = ids.filter(rid => rid && assigned.has(rid))
-  if (conflict.length > 0) {
-    throw new Error('Um ou mais árbitros já estão atribuídos a outra área de luta.')
-  }
 }
 
 function saveArea(torneioId: string, data: { nome: string; arbitroIds: string[] }): AreaLuta {
   const arbitroIds = data.arbitroIds ?? []
-  checkRefereeNotInUse(torneioId, arbitroIds)
+  checkRefereesExist(torneioId, arbitroIds)
   const torneio = loadTorneio(torneioId)
   const allAreas = (torneio.areas ?? []).map(a => normalizeArea(a as unknown as Record<string, unknown>))
   const activeAreas = allAreas.filter(a => a.deletedAt == null)
@@ -105,7 +92,7 @@ function saveArea(torneioId: string, data: { nome: string; arbitroIds: string[] 
 
 function updateArea(torneioId: string, data: AreaLuta): AreaLuta {
   const arbitroIds = data.arbitroIds ?? []
-  checkRefereeNotInUse(torneioId, arbitroIds, data.id)
+  checkRefereesExist(torneioId, arbitroIds)
   const torneio = loadTorneio(torneioId)
   const allAreas = (torneio.areas ?? []).map(a => normalizeArea(a as unknown as Record<string, unknown>))
   const index = allAreas.findIndex(a => a.id === data.id)
@@ -242,7 +229,7 @@ function importAreasFromFile(torneioId: string, filePath: string): { imported: n
       continue
     }
 
-    checkRefereeNotInUse(torneioId, arbitroIdsIn)
+    checkRefereesExist(torneioId, arbitroIdsIn)
 
     const nomeFinal = nomeRaw === '' ? gerarNomeAreaPadrao(activeAreas) : nomeRaw
     const area: AreaLuta = {

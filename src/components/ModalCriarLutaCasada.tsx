@@ -82,6 +82,7 @@ interface ModalCriarLutaCasadaProps {
 export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros, onCriada }: ModalCriarLutaCasadaProps) {
   const [atletaAId, setAtletaAId] = useState<string | null>(null);
   const [atletaBId, setAtletaBId] = useState<string | null>(null);
+  const [arbitroSelectedId, setArbitroSelectedId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -89,9 +90,10 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
     if (opened) {
       setAtletaAId(null);
       setAtletaBId(null);
+      setArbitroSelectedId(area.arbitroIds[0] ?? null);
       setErro(null);
     }
-  }, [opened]);
+  }, [opened, area.arbitroIds]);
 
   const atletasData = useMemo(
     () => atletas
@@ -100,18 +102,25 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
     [atletas]
   );
 
+  const arbitrosDaAreaData = useMemo(() => {
+    const ids = area.arbitroIds ?? [];
+    return ids
+      .map(id => arbitros.find(a => a.id === id))
+      .filter((a): a is Arbitro => a !== undefined)
+      .map(a => ({ value: a.id, label: `${capitalize(a.nome)} (${FAIXA_LABEL[a.faixa] ?? a.faixa})` }));
+  }, [area.arbitroIds, arbitros]);
+
   const atletaA = useMemo(() => atletas.find(a => a.id === atletaAId) ?? null, [atletas, atletaAId]);
   const atletaB = useMemo(() => atletas.find(a => a.id === atletaBId) ?? null, [atletas, atletaBId]);
 
-  const arbitroAtualId = area.arbitroIds[0] ?? null;
   const arbitroAtual = useMemo(
-    () => arbitros.find(a => a.id === arbitroAtualId) ?? null,
-    [arbitros, arbitroAtualId]
+    () => arbitros.find(a => a.id === arbitroSelectedId) ?? null,
+    [arbitros, arbitroSelectedId]
   );
 
-  const semArbitro = !arbitroAtualId;
+  const semArbitro = arbitrosDaAreaData.length === 0;
   const mesmoAtleta = !!(atletaAId && atletaBId && atletaAId === atletaBId);
-  const podeCriar = !!atletaAId && !!atletaBId && !mesmoAtleta && !semArbitro && !salvando;
+  const podeCriar = !!atletaAId && !!atletaBId && !!arbitroSelectedId && !mesmoAtleta && !semArbitro && !salvando;
 
   const handleCriar = async () => {
     if (!podeCriar || !atletaA || !atletaB) return;
@@ -120,7 +129,7 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
     try {
       const nova: LutaCasada = await window.electronAPI.saveLutaCasada({
         areaId: area.id,
-        arbitroId: arbitroAtualId,
+        arbitroId: arbitroSelectedId,
         atletaAId: atletaA.id,
         atletaBId: atletaB.id,
         atletaASnapshot: atletaToSnapshot(atletaA),
@@ -160,11 +169,29 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
         <Paper withBorder p="sm" radius="sm" bg="dark.0">
           <Group justify="space-between">
             <Text size="sm" fw={600}>Árbitro da Área</Text>
-            <Badge variant="filled">
-              {arbitroAtual ? `${capitalize(arbitroAtual.nome)} (${FAIXA_LABEL[arbitroAtual.faixa] ?? arbitroAtual.faixa})` : 'Sem árbitro'}
-            </Badge>
+            {arbitrosDaAreaData.length > 1 ? (
+              <Badge variant="filled" pr={0}>
+                {arbitroAtual ? `${capitalize(arbitroAtual.nome)} (${FAIXA_LABEL[arbitroAtual.faixa] ?? arbitroAtual.faixa})` : 'Selecionar'}
+              </Badge>
+            ) : (
+              <Badge variant="filled">
+                {arbitroAtual ? `${capitalize(arbitroAtual.nome)} (${FAIXA_LABEL[arbitroAtual.faixa] ?? arbitroAtual.faixa})` : 'Sem árbitro'}
+              </Badge>
+            )}
           </Group>
         </Paper>
+
+        {arbitrosDaAreaData.length > 1 && (
+          <Select
+            label="Selecionar Árbitro"
+            placeholder="Escolha o árbitro para esta luta"
+            data={arbitrosDaAreaData}
+            value={arbitroSelectedId}
+            onChange={setArbitroSelectedId}
+            searchable
+            clearable
+          />
+        )}
 
         <Select
           label="Atleta A"
