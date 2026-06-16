@@ -33,12 +33,14 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 
 ### 3.2. Criação de Torneio
 
+- **Acesso sem torneio ativo:** A página de criação (`/admin/criar-torneio`) e importação (`/admin/importar-torneio`) são acessíveis mesmo quando não há torneio ativo. O `AreaGuard` não protege essas rotas, permitindo a criação do primeiro torneio.
 - Campo `nome` é opcional (string vazia se não informado).
 - Campo `data` é obrigatório e deve ser uma data futura (rejeita dia atual e passados).
 - Data é armazenada em ISO (`YYYY-MM-DD`) e exibida no formato brasileiro (`DD/MM/YYYY`).
 - Utiliza `dayjs` para comparação de datas e formatação.
 - Após criar com sucesso, o usuário é redirecionado para a listagem de torneios (`/admin/listar-torneios`).
 - O formulário (`CriarTorneio.tsx`) usa `@mantine/form` com `mode: 'uncontrolled'`.
+- O botão "Criar Torneio" exibe estado de loading durante a submissão do formulário.
 
 ### 3.3. Importação de Torneio
 

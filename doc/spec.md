@@ -14,24 +14,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
 
-### [aberto]  fiz o build do software e coloque em outro pc para rodar, enstou encontrando o seguinte cenario, quando clico em criar torneio ele fica carregando eternamente
-## Histórico de Correções
-
-### [resolvido] Loading infinito ao criar torneio em novo PC
-**Data:** 2026-06-15
-**Comportamento atual:** Ao clicar em "Criar Torneio" em um novo PC (sem torneio ativo), a página fica em loading infinito.
-**Comportamento esperado:** A página de criação de torneio deve ser exibida normalmente, permitindo criar o primeiro torneio.
-**Escopo:** Frontend (AreaGuard, TournamentModeContext, App.tsx, CriarTorneio.tsx)
-**Causa raiz:** `AreaGuard` tratava `mode === null` como "carregando", mas `mode === null` também significa "nenhum torneio ativo". Isso criava um deadlock circular: criar torneio exigia torneio ativo, mas torneio ativo só existia após criação.
-**Correção:** 
-1. Adicionado estado `loading` separado ao `TournamentModeContext`
-2. `AreaGuard` agora usa `loading` para exibir spinner, não `mode === null`
-3. Removido `AreaGuard` das rotas `/admin/criar-torneio` e `/admin/importar-torneio`
-4. Adicionado estado `loading` ao botão "Criar Torneio" em `CriarTorneio.tsx`
-**RF afetados:** RF-01, RF-02, RF-03, RF-04, RF-05
-**CA afetados:** CA-01, CA-02, CA-03, CA-04, CA-05, CA-06
-**Spec:** `spec/corrigir-loading-criar-torneio.md`
-
+### [aberto] As opçoes ficam desabilitadas conforme é adicionada informaçoes, exemplo, primeiro se catastra os atletas, se tem atletas, pode cadastras arbitros, se tem arbitros pode cadastrar area se tem area pode gerar chave, se tem chave pode usar o placar
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 
