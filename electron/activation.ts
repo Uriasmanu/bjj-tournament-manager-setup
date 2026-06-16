@@ -21,12 +21,27 @@ function getActivationPath(): string {
 
 function getMachineId(): string {
   try {
-    const uuid = execSync('wmic csproduct get uuid', { encoding: 'utf-8' })
+    const uuid = execSync('wmic csproduct get uuid', {
+      encoding: 'utf-8',
+      timeout: 3000,
+      windowsHide: true,
+    })
     const lines = uuid.split('\n').map(l => l.trim()).filter(Boolean)
-    return lines[1] || crypto.randomUUID()
+    if (lines[1]) return lines[1]
   } catch {
-    return crypto.randomUUID()
+    // wmic may be slow or unavailable on newer Windows
   }
+  try {
+    const reg = execSync(
+      'reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid',
+      { encoding: 'utf-8', timeout: 3000, windowsHide: true }
+    )
+    const match = reg.match(/MachineGuid\s+REG_SZ\s+(\S+)/i)
+    if (match?.[1]) return match[1]
+  } catch {
+    // fallback failed
+  }
+  return crypto.randomUUID()
 }
 
 function isExpired(expiresAt: string | undefined): boolean {
