@@ -13,6 +13,8 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+
+### [aberto]  fiz o build do software e coloque em outro pc para rodar, enstou encontrando o seguinte cenario, quando clico em criar torneio ele fica carregando eternamente
 ## Histórico de Correções
 
 ## Feature
