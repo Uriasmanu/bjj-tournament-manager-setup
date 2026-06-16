@@ -18,6 +18,21 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!-- Dedicado a informações do que é esperado da feature -->
 As opçoes ficam desabilitadas conforme é adicionada informaçoes, exemplo, primeiro se catastra os atletas, se tem atletas, pode cadastras arbitros, se tem arbitros pode cadastrar area se tem area pode gerar chave, se tem chave pode usar o placar
 
+### [resolvido] Dashboard - Habilitar Opções por Dependência de Dados
+**Data:** 2026-06-15
+**Descrição:** Cards do Dashboard são habilitados/desabilitados dinamicamente conforme a existência de dados dependentes no torneio.
+**Escopo:** `src/pages/Dashboard.tsx`
+**Regras de dependência:**
+- Atletas → sempre habilitado
+- Equipes → requer atletas
+- Árbitros → requer atletas
+- Áreas de Luta → requer árbitros
+- Lutas Casadas → requer áreas
+- Geração de Chaves → requer áreas
+- Placar → requer chaves
+- Resultados → requer chaves
+**Spec:** `spec/dashboard-habilitar-opcoes-por-dependencia.md`
+
 
 # Guia de Spec para Implementação de Features
 

@@ -105,6 +105,16 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 - Cada card possui: ícone em container circular com cor vibrante, título, descrição, badge de contagem informativa no rodapé, link "Acessar →" com hover effect (translateX).
 - Cards de funcionalidades implementadas: clicáveis com hover (translateY(-2px)), opacidade 1.
 - Cards de funcionalidades não implementadas: opacidade 0.5, cursor `not-allowed`, badge "Em breve".
+- **Habilitação por dependência de dados:** Cards são habilitados/desabilitados dinamicamente conforme a existência de dados dependentes no torneio:
+  - **Atletas:** sempre habilitado
+  - **Equipes:** habilitado quando houver pelo menos 1 atleta
+  - **Árbitros:** habilitado quando houver pelo menos 1 atleta
+  - **Áreas de Luta:** habilitado quando houver pelo menos 1 árbitro
+  - **Lutas Casadas:** habilitado quando houver pelo menos 1 área de luta
+  - **Geração de Chaves:** habilitado quando houver pelo menos 1 área de luta
+  - **Placar:** habilitado quando houver pelo menos 1 chave gerada
+  - **Resultados:** habilitado quando houver pelo menos 1 chave gerada
+- Cards desabilitados exibem `opacity: 0.5`, `cursor: not-allowed` e tooltip explicativo ao hover.
 - **Sidebar de navegação** (opcional em telas largas): fundo marinho, links com ícones para todas as seções, active tab com destaque e borda esquerda azul.
 - Card "Atletas" navega para `/admin/atletas` (menu intermediário) e exibe contagem de inscritos.
 - Card "Equipes" navega para `/admin/equipes` e exibe número de academias.

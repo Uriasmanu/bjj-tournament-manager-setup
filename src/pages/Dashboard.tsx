@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Text, Group, Badge, Center, Loader, Grid, Box, Title,
+  Text, Group, Badge, Center, Loader, Grid, Box, Title, Tooltip,
 } from '@mantine/core';
 import {
   IconChevronRight, IconArrowLeft, IconCalendar,
@@ -43,17 +43,18 @@ interface DashboardCard {
   iconColor: string;
   footerLabel: string;
   badge?: { label: string; color: string };
+  requiredData?: string;
 }
 
 const dashboardCards: DashboardCard[] = [
-  { label: 'Resultados', description: 'Quadro Geral de Medalhas por equipes, campeões de categorias e distribuição de pódios do torneio em tempo real.', icon: IconMedal, route: '/admin/resultados', status: 'implemented', iconBg: '#f26c4f', iconColor: '#f26c4f', footerLabel: 'Classificação' },
+  { label: 'Resultados', description: 'Quadro Geral de Medalhas por equipes, campeões de categorias e distribuição de pódios do torneio em tempo real.', icon: IconMedal, route: '/admin/resultados', status: 'implemented', iconBg: '#f26c4f', iconColor: '#f26c4f', footerLabel: 'Classificação', requiredData: 'chaves' },
   { label: 'Atletas', description: 'Cadastro, regularização médica, pesagem e gerenciamento de atletas.', icon: IconUser, route: '/admin/atletas', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Inscritos' },
-  { label: 'Equipes', description: 'Resumo, estatísticas, filiações de equipes e academias participantes.', icon: IconUsersGroup, route: '/admin/equipes', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Academias' },
-  { label: 'Árbitros', description: 'Cadastro, controle de escala por tatame e histórico de atuações.', icon: IconGavel, route: '/admin/arbitros', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Árbitros Escalados' },
-  { label: 'Áreas de Luta', description: 'Status dos tatames, filas de espera de lutas e andamento em tempo real.', icon: IconSquareRounded, route: '/admin/areas', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Áreas Ativas' },
-  { label: 'Lutas Casadas', description: 'Listagem e gerenciamento de lutas casadas — visualize e exclua quando necessário.', icon: IconArrowsCross, route: '/admin/lutas-casadas', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Lutas' },
-  { label: 'Geração de Chaves', description: 'Criação, sorteio e visualização dinâmica de chaves por categoria de peso.', icon: IconHierarchy2, route: '/admin/categorias/chaves', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Categorias' },
-  { label: 'Placar', description: 'Acompanhamento de lutas e controle de pontos/penalidades ativo.', icon: IconStopwatch, route: '/admin/placar', status: 'implemented', iconBg: '#f26c4f', iconColor: '#f26c4f', footerLabel: 'Ao Vivo', badge: { label: 'Ao Vivo', color: '#f26c4f' } },
+  { label: 'Equipes', description: 'Resumo, estatísticas, filiações de equipes e academias participantes.', icon: IconUsersGroup, route: '/admin/equipes', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Academias', requiredData: 'atletas' },
+  { label: 'Árbitros', description: 'Cadastro, controle de escala por tatame e histórico de atuações.', icon: IconGavel, route: '/admin/arbitros', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Árbitros Escalados', requiredData: 'atletas' },
+  { label: 'Áreas de Luta', description: 'Status dos tatames, filas de espera de lutas e andamento em tempo real.', icon: IconSquareRounded, route: '/admin/areas', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Áreas Ativas', requiredData: 'arbitros' },
+  { label: 'Lutas Casadas', description: 'Listagem e gerenciamento de lutas casadas — visualize e exclua quando necessário.', icon: IconArrowsCross, route: '/admin/lutas-casadas', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Lutas', requiredData: 'areas' },
+  { label: 'Geração de Chaves', description: 'Criação, sorteio e visualização dinâmica de chaves por categoria de peso.', icon: IconHierarchy2, route: '/admin/categorias/chaves', status: 'implemented', iconBg: '#3a89c9', iconColor: '#3a89c9', footerLabel: 'Categorias', requiredData: 'areas' },
+  { label: 'Placar', description: 'Acompanhamento de lutas e controle de pontos/penalidades ativo.', icon: IconStopwatch, route: '/admin/placar', status: 'implemented', iconBg: '#f26c4f', iconColor: '#f26c4f', footerLabel: 'Ao Vivo', badge: { label: 'Ao Vivo', color: '#f26c4f' }, requiredData: 'chaves' },
 ];
 
 const AREA_ALLOWED_ROUTES = new Set(['/admin/dashboard', '/admin/resultados', '/admin/placar']);
@@ -239,6 +240,27 @@ export function Dashboard() {
   const teamCount = torneio?.atletas
     ? new Set(torneio.atletas.map((a) => a.equipe).filter(Boolean)).size
     : 0;
+
+  const hasAtletas = (torneio?.atletas?.length ?? 0) > 0;
+  const hasArbitros = (torneio?.arbitros?.length ?? 0) > 0;
+  const hasAreas = (torneio?.areas?.length ?? 0) > 0;
+  const hasChaves = (torneio?.chaves?.length ?? 0) > 0;
+
+  const isCardEnabled = (card: DashboardCard) => {
+    if (card.requiredData === 'atletas') return hasAtletas;
+    if (card.requiredData === 'arbitros') return hasArbitros;
+    if (card.requiredData === 'areas') return hasAreas;
+    if (card.requiredData === 'chaves') return hasChaves;
+    return true;
+  };
+
+  const getDisabledReason = (card: DashboardCard) => {
+    if (card.requiredData === 'atletas') return 'Cadastre atletas primeiro';
+    if (card.requiredData === 'arbitros') return 'Cadastre árbitros primeiro';
+    if (card.requiredData === 'areas') return 'Cadastre áreas de luta primeiro';
+    if (card.requiredData === 'chaves') return 'Gere chaves primeiro';
+    return '';
+  };
 
   const handleNavigate = (route: string) => {
     navigate(route);
@@ -445,6 +467,7 @@ export function Dashboard() {
           <Grid>
             {dashboardCards.filter(c => !isAreaMode || AREA_CARD_LABELS.has(c.label)).map((card) => {
               const isImplemented = card.status === 'implemented';
+              const enabled = isCardEnabled(card);
               const isResultados = card.label === 'Resultados';
               const isPlacar = card.label === 'Placar';
               const Icon = card.icon;
@@ -454,31 +477,37 @@ export function Dashboard() {
                   key={card.label}
                   span={isResultados ? 12 : Math.floor(12 / Math.min(cols, 3))}
                 >
-                  <Box
-                    style={{
-                      background: '#fff',
-                      border: '1px solid rgba(156, 196, 228, 0.6)',
-                      borderRadius: 16,
-                      cursor: isImplemented ? 'pointer' : 'not-allowed',
-                      opacity: isImplemented ? 1 : 0.5,
-                      transition: 'all 0.25s',
-                      display: 'flex',
-                      flexDirection: 'column',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isImplemented) return;
-                      e.currentTarget.style.borderColor = '#3a89c9';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(58,137,201,0.15)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(156, 196, 228, 0.6)';
-                      e.currentTarget.style.boxShadow = 'none';
-                    }}
-                    onClick={() => {
-                      if (isImplemented && card.route) handleNavigate(card.route);
-                    }}
+                  <Tooltip
+                    label={getDisabledReason(card)}
+                    disabled={enabled}
+                    position="top"
+                    withArrow
                   >
-                    {isResultados ? (
+                    <Box
+                      style={{
+                        background: '#fff',
+                        border: '1px solid rgba(156, 196, 228, 0.6)',
+                        borderRadius: 16,
+                        cursor: isImplemented && enabled ? 'pointer' : 'not-allowed',
+                        opacity: isImplemented && enabled ? 1 : 0.5,
+                        transition: 'all 0.25s',
+                        display: 'flex',
+                        flexDirection: 'column',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isImplemented || !enabled) return;
+                        e.currentTarget.style.borderColor = '#3a89c9';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(58,137,201,0.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'rgba(156, 196, 228, 0.6)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                      onClick={() => {
+                        if (isImplemented && enabled && card.route) handleNavigate(card.route);
+                      }}
+                    >
+                      {isResultados ? (
                       /* Resultados: horizontal layout */
                       <Box p="lg">
                         <Group align="flex-start" wrap="nowrap" gap="lg">
@@ -615,6 +644,7 @@ export function Dashboard() {
                       </Box>
                     )}
                   </Box>
+                  </Tooltip>
                 </Grid.Col>
               );
             })}
