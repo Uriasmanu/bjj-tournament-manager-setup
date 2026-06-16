@@ -14,9 +14,10 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
 
-### [aberto] As opçoes ficam desabilitadas conforme é adicionada informaçoes, exemplo, primeiro se catastra os atletas, se tem atletas, pode cadastras arbitros, se tem arbitros pode cadastrar area se tem area pode gerar chave, se tem chave pode usar o placar
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
+As opçoes ficam desabilitadas conforme é adicionada informaçoes, exemplo, primeiro se catastra os atletas, se tem atletas, pode cadastras arbitros, se tem arbitros pode cadastrar area se tem area pode gerar chave, se tem chave pode usar o placar
+
 
 # Guia de Spec para Implementação de Features
 
