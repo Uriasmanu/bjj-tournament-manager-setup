@@ -3,11 +3,13 @@ import { DatePickerInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import dayjs from 'dayjs';
 import { PageLayout } from '../components/PageLayout';
 
 export function CriarTorneio() {
   const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
 
   const form = useForm({
     mode: 'uncontrolled',
@@ -31,6 +33,7 @@ export function CriarTorneio() {
     if (!values.data) return;
 
     const dataStr = dayjs(values.data).format('YYYY-MM-DD');
+    setSubmitting(true);
 
     try {
       await window.electronAPI.createTournament({
@@ -49,6 +52,8 @@ export function CriarTorneio() {
         message: 'Erro ao salvar o torneio.',
         color: 'red',
       });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -79,7 +84,7 @@ export function CriarTorneio() {
           />
 
           <Group justify="flex-end" mt="md">
-            <Button type="submit">
+            <Button type="submit" loading={submitting}>
               Criar Torneio
             </Button>
           </Group>

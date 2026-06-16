@@ -3,9 +3,9 @@ import { useTournamentMode } from '../utils/TournamentModeContext';
 import { Center, Loader } from '@mantine/core';
 
 export function AreaGuard({ children }: { children: React.ReactNode }) {
-  const { mode } = useTournamentMode();
+  const { mode, loading } = useTournamentMode();
 
-  if (mode === null) {
+  if (loading) {
     return (
       <Center py="xl" style={{ minHeight: '100vh' }}>
         <Loader />
