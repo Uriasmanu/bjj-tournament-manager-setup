@@ -15,6 +15,8 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 -->
 ### [aberto] Quando tem mais de um arbitro designado para a mesma area, quando for criar a luta casada, posso escolher entres os arbitros da area
 
+### [aberto] Pode colocar o mesmo arbitro em mais de uma area porem tem que avisar com uma mensagem no meio da tela que o arbitro ja esta em uma area e qual area ele esta
+
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 
