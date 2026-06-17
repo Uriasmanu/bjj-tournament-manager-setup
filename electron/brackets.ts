@@ -1725,4 +1725,25 @@ export function registerBracketHandlers(): void {
     if (!torneioId) throw new Error('Nenhum torneio ativo');
     return registrarResultadoHandler(torneioId, data);
   });
+
+  ipcMain.handle('delete-chave', (_event, chaveId: string): void => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error('Nenhum torneio ativo');
+    const torneio = loadTorneio(torneioId);
+    const chaves = torneio.chaves ?? [];
+    const idx = chaves.findIndex(c => c.id === chaveId);
+    if (idx === -1) throw new Error('Chave não encontrada');
+    const chave = chaves[idx];
+    // Remove emChave flag from athletes in this key
+    const athleteIds = new Set(chave.posicoesAtletas);
+    for (const a of (torneio.atletas ?? [])) {
+      if (athleteIds.has(a.id)) {
+        a.emChave = false;
+      }
+    }
+    chaves.splice(idx, 1);
+    torneio.chaves = chaves;
+    torneio.updatedAt = new Date().toISOString();
+    saveTorneio(torneio);
+  });
 }

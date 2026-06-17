@@ -88,6 +88,24 @@ function updateAthlete(torneioId: string, updated: Atleta): Atleta[] {
   return list.filter(a => a.deletedAt == null)
 }
 
+function removeAthleteFromChaves(torneio: Torneio, athleteId: string): void {
+  const chaves = torneio.chaves ?? []
+  const now = new Date().toISOString()
+  for (const chave of chaves) {
+    const posIdx = chave.posicoesAtletas.indexOf(athleteId)
+    if (posIdx !== -1) {
+      chave.posicoesAtletas.splice(posIdx, 1)
+      chave.totalAtletas = chave.posicoesAtletas.length
+      chave.updatedAt = now
+    }
+    for (const luta of chave.lutas) {
+      if (luta.atletaAId === athleteId) luta.atletaAId = 'tbd'
+      if (luta.atletaBId === athleteId) luta.atletaBId = 'tbd'
+      luta.updatedAt = now
+    }
+  }
+}
+
 function deleteAthlete(torneioId: string, id: string): Atleta[] {
   const torneio = loadTorneio(torneioId)
   const list = torneio.atletas ?? []
@@ -99,6 +117,7 @@ function deleteAthlete(torneioId: string, id: string): Atleta[] {
     deletedAt: now,
     updatedAt: now,
   }
+  removeAthleteFromChaves(torneio, id)
   torneio.atletas = list
   torneio.updatedAt = now
   saveTorneio(torneio)
@@ -118,6 +137,9 @@ function deleteAthletes(torneioId: string, ids: string[]): Atleta[] {
         updatedAt: now,
       }
     }
+  }
+  for (const id of ids) {
+    removeAthleteFromChaves(torneio, id)
   }
   torneio.atletas = list
   torneio.updatedAt = now
@@ -154,6 +176,7 @@ function permanentlyDeleteAthlete(torneioId: string, id: string): Atleta[] {
   const index = list.findIndex(a => a.id === id)
   if (index === -1) throw new Error('Atleta não encontrado')
   list.splice(index, 1)
+  removeAthleteFromChaves(torneio, id)
   torneio.atletas = list
   torneio.updatedAt = new Date().toISOString()
   saveTorneio(torneio)
@@ -165,6 +188,9 @@ function permanentlyDeleteAthletes(torneioId: string, ids: string[]): Atleta[] {
   const idSet = new Set(ids)
   const list = torneio.atletas ?? []
   torneio.atletas = list.filter(a => !idSet.has(a.id))
+  for (const id of ids) {
+    removeAthleteFromChaves(torneio, id)
+  }
   torneio.updatedAt = new Date().toISOString()
   saveTorneio(torneio)
   return torneio.atletas.filter(a => a.deletedAt == null)

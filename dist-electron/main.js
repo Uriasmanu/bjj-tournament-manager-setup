@@ -423,6 +423,23 @@ function updateAthlete(torneioId, updated) {
   saveTorneio$5(torneio);
   return list.filter((a) => a.deletedAt == null);
 }
+function removeAthleteFromChaves(torneio, athleteId) {
+  const chaves = torneio.chaves ?? [];
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  for (const chave of chaves) {
+    const posIdx = chave.posicoesAtletas.indexOf(athleteId);
+    if (posIdx !== -1) {
+      chave.posicoesAtletas.splice(posIdx, 1);
+      chave.totalAtletas = chave.posicoesAtletas.length;
+      chave.updatedAt = now;
+    }
+    for (const luta of chave.lutas) {
+      if (luta.atletaAId === athleteId) luta.atletaAId = "tbd";
+      if (luta.atletaBId === athleteId) luta.atletaBId = "tbd";
+      luta.updatedAt = now;
+    }
+  }
+}
 function deleteAthlete(torneioId, id) {
   const torneio = loadTorneio$5(torneioId);
   const list = torneio.atletas ?? [];
@@ -434,6 +451,7 @@ function deleteAthlete(torneioId, id) {
     deletedAt: now,
     updatedAt: now
   };
+  removeAthleteFromChaves(torneio, id);
   torneio.atletas = list;
   torneio.updatedAt = now;
   saveTorneio$5(torneio);
@@ -452,6 +470,9 @@ function deleteAthletes(torneioId, ids) {
         updatedAt: now
       };
     }
+  }
+  for (const id of ids) {
+    removeAthleteFromChaves(torneio, id);
   }
   torneio.atletas = list;
   torneio.updatedAt = now;
@@ -485,6 +506,7 @@ function permanentlyDeleteAthlete(torneioId, id) {
   const index = list.findIndex((a) => a.id === id);
   if (index === -1) throw new Error("Atleta não encontrado");
   list.splice(index, 1);
+  removeAthleteFromChaves(torneio, id);
   torneio.atletas = list;
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   saveTorneio$5(torneio);
@@ -495,6 +517,9 @@ function permanentlyDeleteAthletes(torneioId, ids) {
   const idSet = new Set(ids);
   const list = torneio.atletas ?? [];
   torneio.atletas = list.filter((a) => !idSet.has(a.id));
+  for (const id of ids) {
+    removeAthleteFromChaves(torneio, id);
+  }
   torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
   saveTorneio$5(torneio);
   return torneio.atletas.filter((a) => a.deletedAt == null);
@@ -2400,6 +2425,25 @@ function registerBracketHandlers() {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     return registrarResultadoHandler(torneioId, data);
+  });
+  ipcMain.handle("delete-chave", (_event, chaveId) => {
+    const torneioId = getActiveTournamentId();
+    if (!torneioId) throw new Error("Nenhum torneio ativo");
+    const torneio = loadTorneio$2(torneioId);
+    const chaves = torneio.chaves ?? [];
+    const idx = chaves.findIndex((c) => c.id === chaveId);
+    if (idx === -1) throw new Error("Chave não encontrada");
+    const chave = chaves[idx];
+    const athleteIds = new Set(chave.posicoesAtletas);
+    for (const a of torneio.atletas ?? []) {
+      if (athleteIds.has(a.id)) {
+        a.emChave = false;
+      }
+    }
+    chaves.splice(idx, 1);
+    torneio.chaves = chaves;
+    torneio.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
+    saveTorneio$2(torneio);
   });
 }
 const DATA_DIR$1 = path.join(app.getPath("userData"), "data");

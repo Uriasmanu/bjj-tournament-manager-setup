@@ -61,6 +61,7 @@ interface ElectronAPI {
   atribuirArbitroChave: (data: { chaveId: string; arbitroId: string | null }) => Promise<Chave>;
   importChaves: () => Promise<{ imported: number }>;
   exportChaves: () => Promise<void>;
+  deleteChave: (chaveId: string) => Promise<void>;
   loadAreas: () => Promise<AreaLuta[]>;
   loadDeletedAreas: () => Promise<AreaLuta[]>;
   saveArea: (data: { nome: string; arbitroIds: string[] }) => Promise<AreaLuta>;

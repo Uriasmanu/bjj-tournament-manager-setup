@@ -86,6 +86,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('import-chaves'),
   exportChaves: () =>
     ipcRenderer.invoke('export-chaves'),
+  deleteChave: (chaveId: string) =>
+    ipcRenderer.invoke('delete-chave', chaveId),
   loadAreas: () =>
     ipcRenderer.invoke('load-areas'),
   loadDeletedAreas: () =>

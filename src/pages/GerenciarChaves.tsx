@@ -1,7 +1,7 @@
 import { Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput, NumberInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowUp, IconArrowDown, IconAward, IconSearch, IconPlus } from '@tabler/icons-react';
+import { IconArrowUp, IconArrowDown, IconAward, IconSearch, IconPlus, IconTrash } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
@@ -292,6 +292,18 @@ export function GerenciarChaves() {
     }
   };
 
+  const handleExcluirChave = async (chaveId: string) => {
+    try {
+      await window.electronAPI.deleteChave(chaveId);
+      setChaves(prev => prev.filter(c => c.id !== chaveId));
+      setViewChave(prev => prev?.id === chaveId ? null : prev);
+      setViewModalOpen(prev => prev && viewChave?.id === chaveId ? false : prev);
+      notifications.show({ color: 'green', title: 'Sucesso', message: 'Chave excluída com sucesso.' });
+    } catch (err: unknown) {
+      notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao excluir chave' });
+    }
+  };
+
   const handleTrocarArbitro = async (chaveId: string, arbitroId: string | null) => {
     try {
       const updated = await window.electronAPI.atribuirArbitroChave({ chaveId, arbitroId });
@@ -444,7 +456,20 @@ export function GerenciarChaves() {
                   return (
                     <Card key={chave.id} withBorder shadow="sm" padding="md" radius="md">
                       <Stack gap="xs">
-                        <Text fw={700} size="sm">{getChaveTitle(chave, athletes)}</Text>
+                        <Group justify="space-between" wrap="nowrap">
+                          <Text fw={700} size="sm">{getChaveTitle(chave, athletes)}</Text>
+                          <Tooltip label="Excluir chave">
+                            <Button
+                              size="compact-xs"
+                              color="red"
+                              variant="subtle"
+                              onClick={() => handleExcluirChave(chave.id)}
+                              leftSection={<IconTrash size={14} />}
+                            >
+                              Excluir
+                            </Button>
+                          </Tooltip>
+                        </Group>
                         <Group gap={4}>
                           <Badge size="sm" color="blue">{chave.totalLutas} luta(s)</Badge>
                           <Badge size="sm" color="green">Gerada</Badge>

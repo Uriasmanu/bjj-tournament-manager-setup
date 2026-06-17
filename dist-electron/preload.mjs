@@ -41,6 +41,7 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   atribuirArbitroChave: (data) => electron.ipcRenderer.invoke("atribuir-arbitro-chave", data),
   importChaves: () => electron.ipcRenderer.invoke("import-chaves"),
   exportChaves: () => electron.ipcRenderer.invoke("export-chaves"),
+  deleteChave: (chaveId) => electron.ipcRenderer.invoke("delete-chave", chaveId),
   loadAreas: () => electron.ipcRenderer.invoke("load-areas"),
   loadDeletedAreas: () => electron.ipcRenderer.invoke("load-deleted-areas"),
   saveArea: (data) => electron.ipcRenderer.invoke("save-area", data),
