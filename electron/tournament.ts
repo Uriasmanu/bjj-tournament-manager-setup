@@ -8,6 +8,7 @@ import type { Arbitro } from '../src/types/referee';
 import type { AreaLuta } from '../src/types/area';
 import type { Chave } from '../src/types/bracket';
 import type { LutaCasada } from '../src/types/lutaCasada';
+import { CATEGORIAS_IBJJF } from '../src/types/category';
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios');
@@ -142,6 +143,9 @@ function normalizeArea(a: AreaLuta): AreaLuta {
 export function registerTournamentHandlers(): void {
   ipcMain.handle('create-tournament', (_event, data: { nome: string; data: string }): Torneio => {
     ensureDirs();
+    const categoriasDesabilitadas = CATEGORIAS_IBJJF
+      .filter(c => c.faixaEtaria !== 'adulto')
+      .map(c => c.id);
     const torneio: Torneio = {
       id: crypto.randomUUID(),
       nome: data.nome,
@@ -149,6 +153,7 @@ export function registerTournamentHandlers(): void {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       atletas: [],
+      categoriasDesabilitadas,
     };
     fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), 'utf-8');
     return torneio;
@@ -235,6 +240,9 @@ export function registerTournamentHandlers(): void {
         : null;
 
       if (!existing) {
+        const defaultDesabilitadas = CATEGORIAS_IBJJF
+          .filter(c => c.faixaEtaria !== 'adulto')
+          .map(c => c.id);
         const torneio: Torneio = {
           ...data,
           createdAt: data.createdAt || now,
@@ -244,6 +252,8 @@ export function registerTournamentHandlers(): void {
           areas: dedupById((data.areas ?? []).map(a => normalizeArea(a))),
           chaves: dedupById(data.chaves ?? []),
           lutasCasadas: dedupById(data.lutasCasadas ?? []),
+          categoriasDesabilitadas: data.categoriasDesabilitadas ?? defaultDesabilitadas,
+          categoriasCustomizadas: data.categoriasCustomizadas ?? [],
         };
         fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), 'utf-8');
         return { success: true, merged: false, created: 0, updated: 0, kept: 0, removed: 0 };
@@ -302,6 +312,12 @@ export function registerTournamentHandlers(): void {
         areas: areasMerge.merged,
         chaves: chavesMerge.merged,
         lutasCasadas: lutasCasadasMerge.merged,
+        categoriasDesabilitadas: incomingIsMoreRecent
+          ? (data.categoriasDesabilitadas ?? existing.categoriasDesabilitadas ?? [])
+          : (existing.categoriasDesabilitadas ?? data.categoriasDesabilitadas ?? []),
+        categoriasCustomizadas: incomingIsMoreRecent
+          ? (data.categoriasCustomizadas ?? existing.categoriasCustomizadas ?? [])
+          : (existing.categoriasCustomizadas ?? data.categoriasCustomizadas ?? []),
       };
 
       fs.writeFileSync(dest, JSON.stringify(merged, null, 2), 'utf-8');

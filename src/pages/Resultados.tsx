@@ -88,6 +88,27 @@ function getCategoriaTitulo(categoriaId: string): string {
   return categoriaLabels[categoriaId] ?? categoriaId;
 }
 
+const FAIXA_LABEL: Record<string, string> = {
+  branca: 'Branca',
+  cinza: 'Cinza',
+  amarela: 'Amarela',
+  laranja: 'Laranja',
+  verde: 'Verde',
+  'branca-adulto': 'Branca',
+  azul: 'Azul',
+  roxa: 'Roxa',
+  marrom: 'Marrom',
+  preta: 'Preta',
+};
+
+function getChaveTitulo(chave: Chave): string {
+  const base = categoriaLabels[chave.categoriaId] || chave.categoriaId;
+  if (chave.faixa) {
+    return `${base} - ${FAIXA_LABEL[chave.faixa] || chave.faixa}`;
+  }
+  return base;
+}
+
 function getTipoVitoria(luta: { finalizacao?: boolean; desclassificacao?: boolean; desempateArbitro?: boolean; desclassificadoId?: string }): { label: string; color: string; icon?: string } {
   if (luta.desclassificacao) return { label: 'Desclassificação', color: 'red', icon: '🚫' };
   if (luta.finalizacao) return { label: 'Finalização', color: 'grape', icon: '🏁' };
@@ -615,7 +636,7 @@ export function Resultados() {
                     return (
                       <Card key={chave.id} withBorder padding="md" radius="md">
                         <Stack gap="xs">
-                          <Text fw={700} size="sm">{getCategoriaTitulo(chave.categoriaId)} — {chave.totalAtletas} atleta(s){(() => { const area = getAreaDaChave(chave); return area ? ` — ${area}` : ''; })()}</Text>
+                          <Text fw={700} size="sm">{getChaveTitulo(chave)} — {chave.totalAtletas} atleta(s){(() => { const area = getAreaDaChave(chave); return area ? ` — ${area}` : ''; })()}</Text>
                           <Group gap="md" wrap="wrap">
                             <Group gap="xs">
                               <Badge color="yellow" variant="filled" size="lg">🥇 1º</Badge>
@@ -696,12 +717,12 @@ export function Resultados() {
                           onClick={() => setExpandedChaveId(isExpanded ? null : chave.id)}
                           aria-expanded={isExpanded}
                           aria-controls={`chave-body-${chave.id}`}
-                          aria-label={`${getCategoriaTitulo(chave.categoriaId)} — clique para ${isExpanded ? 'recolher' : 'expandir'}`}
+                          aria-label={`${getChaveTitulo(chave)} — clique para ${isExpanded ? 'recolher' : 'expandir'}`}
                           style={{ width: '100%' }}
                         >
                           <Group justify="space-between" wrap="wrap">
                             <Stack gap={2}>
-                              <Text fw={700} size="sm">{getCategoriaTitulo(chave.categoriaId)}</Text>
+                              <Text fw={700} size="sm">{getChaveTitulo(chave)}</Text>
                               <Text size="xs" c="dimmed">{chave.totalAtletas} atleta(s) · {chave.totalLutas} luta(s){(() => { const area = getAreaDaChave(chave); return area ? ` · ${area}` : ''; })()}</Text>
                             </Stack>
                             <Group gap="xs">

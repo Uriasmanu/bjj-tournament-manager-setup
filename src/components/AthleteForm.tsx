@@ -130,9 +130,11 @@ function categoriasFiltradas(
   return [...ibjjf, ...custom];
 }
 
-function categoriasPorGenero(genero: string, customizadas: CategoriaCustomizada[]) {
+function categoriasPorGenero(genero: string, customizadas: CategoriaCustomizada[], desabilitadas: string[]) {
+  const desabilitadasSet = new Set(desabilitadas);
   const ibjjf = CATEGORIAS_IBJJF
     .filter((c) => {
+      if (desabilitadasSet.has(c.id)) return false;
       if (genero && c.genero !== genero) return false;
       return true;
     })
@@ -265,7 +267,7 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
 
   const catOptions = useMemo(
     () => athlete
-      ? categoriasPorGenero(form.values.genero as string, customizadas)
+      ? categoriasPorGenero(form.values.genero as string, customizadas, desabilitadas)
       : categoriasFiltradas(form.values.genero as string, form.values.faixa as string, form.values.anoNascimento, desabilitadas, customizadas),
     [athlete, form.values.genero, form.values.faixa, form.values.anoNascimento, desabilitadas, customizadas]
   );

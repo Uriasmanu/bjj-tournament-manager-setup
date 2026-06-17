@@ -618,7 +618,7 @@ function shuffleArray<T>(arr: T[]): T[] {
   return a;
 }
 
-function gerarChave(categoriaId: string, atletas: Atleta[]): Chave {
+function gerarChave(categoriaId: string, atletas: Atleta[], faixa?: string): Chave {
   if (atletas.length < 2 || atletas.length > 16) {
     throw new Error('A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.');
   }
@@ -630,6 +630,7 @@ function gerarChave(categoriaId: string, atletas: Atleta[]): Chave {
   return {
     id: crypto.randomUUID(),
     categoriaId,
+    faixa,
     lutas,
     posicoesAtletas: posicoes.map(a => a.id),
     arbitroId: null,
@@ -724,17 +725,20 @@ function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16): G
       atletasIgnorados.push(a.nome);
       continue;
     }
-    const g = grupos.get(a.categoria) ?? [];
+    const key = `${a.categoria}__${a.faixa}`;
+    const g = grupos.get(key) ?? [];
     g.push(a);
-    grupos.set(a.categoria, g);
+    grupos.set(key, g);
   }
 
   const novasChaves: Chave[] = [];
   const atletasSemChave: Atleta[] = [];
   const metadados: GerarTodasResult['metadados'] = [];
 
-  for (const [categoriaId, grupo] of grupos) {
+  for (const [key, grupo] of grupos) {
     if (grupo.length === 0) continue;
+
+    const [categoriaId, faixa] = key.split('__');
 
     if (grupo.length === 1) {
       atletasSemChave.push(grupo[0]);
@@ -755,7 +759,7 @@ function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16): G
         atletasSemChave.push(sub[0]);
         continue;
       }
-      novasChaves.push(gerarChave(categoriaId, sub));
+      novasChaves.push(gerarChave(categoriaId, sub, faixa));
       chavesGeradas++;
     }
 

@@ -4,6 +4,87 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import { execSync } from "node:child_process";
+const CATEGORIAS_PESO = [
+  { peso: "galo", nome: "Galo", masculino: 57.5, feminino: 48.5 },
+  { peso: "pluma", nome: "Pluma", masculino: 64, feminino: 53.5 },
+  { peso: "pena", nome: "Pena", masculino: 70, feminino: 58.5 },
+  { peso: "leve", nome: "Leve", masculino: 76, feminino: 64 },
+  { peso: "medio", nome: "Médio", masculino: 82.3, feminino: 69 },
+  { peso: "meio-pesado", nome: "Meio-Pesado", masculino: 88.3, feminino: 74 },
+  { peso: "pesado", nome: "Pesado", masculino: 94.3, feminino: 79.3 },
+  { peso: "super-pesado", nome: "Super Pesado", masculino: 97.5, feminino: null },
+  { peso: "pesadissimo", nome: "Pesadíssimo", masculino: null, feminino: null }
+];
+const kidsLabel = {
+  "pre-mirim": "Pré-Mirim",
+  "mirim": "Mirim",
+  "infantil-a": "Infantil A",
+  "infantil-b": "Infantil B",
+  "infanto-juvenil-a": "Infanto-Juvenil A",
+  "infanto-juvenil-b": "Infanto-Juvenil B"
+};
+const KIDS_PESO_LIMITES = {
+  "pre-mirim": { galo: 14.7, pluma: 17.9, pena: 20, leve: 24, medio: 26, "meio-pesado": 29, pesado: 31.2, "super-pesado": 33.2, pesadissimo: null },
+  "mirim": { galo: 21, pluma: 24, pena: 27, leve: 30.2, medio: 33.2, "meio-pesado": 36.2, pesado: 39.3, "super-pesado": 42.3, pesadissimo: null },
+  "infantil-a": { galo: 27, pluma: 30.2, pena: 33.2, leve: 36.2, medio: 39.3, "meio-pesado": 42.3, pesado: 45.3, "super-pesado": 48.3, pesadissimo: null },
+  "infantil-b": { galo: 36.2, pluma: 40.3, pena: 44.3, leve: 48.3, medio: 52.5, "meio-pesado": 56.5, pesado: 60.5, "super-pesado": 65, pesadissimo: null },
+  "infanto-juvenil-a": { galo: 40.3, pluma: 44.3, pena: 48.3, leve: 52.5, medio: 56.5, "meio-pesado": 60.5, pesado: 65, "super-pesado": 69.5, pesadissimo: null },
+  "infanto-juvenil-b": { galo: 48.3, pluma: 52.5, pena: 56.5, leve: 60.5, medio: 65, "meio-pesado": 69.5, pesado: 74, "super-pesado": 78.5, pesadissimo: null }
+};
+function getPesoLimite(faixaEtaria, genero, cat) {
+  const kidsLimites = KIDS_PESO_LIMITES[faixaEtaria];
+  if (kidsLimites) {
+    return kidsLimites[cat.peso] ?? null;
+  }
+  const base = genero === "masculino" ? cat.masculino : cat.feminino;
+  if (cat.peso === "pesadissimo" && genero === "feminino") return null;
+  return base;
+}
+function gerarCategorias() {
+  const faixasEtarias = [
+    "pre-mirim",
+    "mirim",
+    "infantil-a",
+    "infantil-b",
+    "infanto-juvenil-a",
+    "infanto-juvenil-b",
+    "juvenil",
+    "adulto",
+    "master1",
+    "master2",
+    "master3",
+    "master4",
+    "master5",
+    "master6",
+    "master7"
+  ];
+  const generos = ["masculino", "feminino"];
+  const result = [];
+  for (const fe of faixasEtarias) {
+    const feLabel = kidsLabel[fe] || fe.charAt(0).toUpperCase() + fe.slice(1);
+    for (const gen of generos) {
+      const genLabel = gen === "masculino" ? "Masculino" : "Feminino";
+      for (const cat of CATEGORIAS_PESO) {
+        const pesoLimite = getPesoLimite(fe, gen, cat);
+        if (pesoLimite === void 0) continue;
+        result.push({
+          id: `${fe}-${gen}-${cat.peso}`,
+          nome: `${feLabel} ${genLabel} ${cat.nome}`,
+          faixaEtaria: fe,
+          genero: gen,
+          peso: cat.peso,
+          pesoMaximoKg: pesoLimite
+        });
+      }
+    }
+  }
+  return result;
+}
+const CATEGORIAS_IBJJF = gerarCategorias();
+const categoriaLabels = {};
+for (const c of CATEGORIAS_IBJJF) {
+  categoriaLabels[c.id] = c.nome;
+}
 const DATA_DIR$6 = path.join(app.getPath("userData"), "data");
 const TORNEIOS_DIR$6 = path.join(DATA_DIR$6, "torneios");
 const ATIVO_FILE = path.join(DATA_DIR$6, "torneio-ativo.json");
@@ -107,13 +188,15 @@ function normalizeArea$1(a) {
 function registerTournamentHandlers() {
   ipcMain.handle("create-tournament", (_event, data) => {
     ensureDirs();
+    const categoriasDesabilitadas = CATEGORIAS_IBJJF.filter((c) => c.faixaEtaria !== "adulto").map((c) => c.id);
     const torneio = {
       id: crypto.randomUUID(),
       nome: data.nome,
       data: data.data,
       createdAt: (/* @__PURE__ */ new Date()).toISOString(),
       updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      atletas: []
+      atletas: [],
+      categoriasDesabilitadas
     };
     fs.writeFileSync(getTorneioPath$6(torneio.id), JSON.stringify(torneio, null, 2), "utf-8");
     return torneio;
@@ -183,6 +266,7 @@ function registerTournamentHandlers() {
       const now = (/* @__PURE__ */ new Date()).toISOString();
       const existing = fs.existsSync(dest) ? JSON.parse(fs.readFileSync(dest, "utf-8")) : null;
       if (!existing) {
+        const defaultDesabilitadas = CATEGORIAS_IBJJF.filter((c) => c.faixaEtaria !== "adulto").map((c) => c.id);
         const torneio = {
           ...data,
           createdAt: data.createdAt || now,
@@ -191,7 +275,9 @@ function registerTournamentHandlers() {
           arbitros: dedupById((data.arbitros ?? []).map((a) => normalizeArbitro(a))),
           areas: dedupById((data.areas ?? []).map((a) => normalizeArea$1(a))),
           chaves: dedupById(data.chaves ?? []),
-          lutasCasadas: dedupById(data.lutasCasadas ?? [])
+          lutasCasadas: dedupById(data.lutasCasadas ?? []),
+          categoriasDesabilitadas: data.categoriasDesabilitadas ?? defaultDesabilitadas,
+          categoriasCustomizadas: data.categoriasCustomizadas ?? []
         };
         fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), "utf-8");
         return { success: true, merged: false, created: 0, updated: 0, kept: 0, removed: 0 };
@@ -224,7 +310,9 @@ function registerTournamentHandlers() {
         arbitros: arbitrosMerge.merged,
         areas: areasMerge.merged,
         chaves: chavesMerge.merged,
-        lutasCasadas: lutasCasadasMerge.merged
+        lutasCasadas: lutasCasadasMerge.merged,
+        categoriasDesabilitadas: incomingIsMoreRecent ? data.categoriasDesabilitadas ?? existing.categoriasDesabilitadas ?? [] : existing.categoriasDesabilitadas ?? data.categoriasDesabilitadas ?? [],
+        categoriasCustomizadas: incomingIsMoreRecent ? data.categoriasCustomizadas ?? existing.categoriasCustomizadas ?? [] : existing.categoriasCustomizadas ?? data.categoriasCustomizadas ?? []
       };
       fs.writeFileSync(dest, JSON.stringify(merged, null, 2), "utf-8");
       return { success: true, merged: true, ...counters };
@@ -259,87 +347,6 @@ function registerTournamentHandlers() {
   ipcMain.handle("read-file", async (_event, filePath) => {
     return fs.readFileSync(filePath, "utf-8");
   });
-}
-const CATEGORIAS_PESO = [
-  { peso: "galo", nome: "Galo", masculino: 57.5, feminino: 48.5 },
-  { peso: "pluma", nome: "Pluma", masculino: 64, feminino: 53.5 },
-  { peso: "pena", nome: "Pena", masculino: 70, feminino: 58.5 },
-  { peso: "leve", nome: "Leve", masculino: 76, feminino: 64 },
-  { peso: "medio", nome: "Médio", masculino: 82.3, feminino: 69 },
-  { peso: "meio-pesado", nome: "Meio-Pesado", masculino: 88.3, feminino: 74 },
-  { peso: "pesado", nome: "Pesado", masculino: 94.3, feminino: 79.3 },
-  { peso: "super-pesado", nome: "Super Pesado", masculino: 97.5, feminino: null },
-  { peso: "pesadissimo", nome: "Pesadíssimo", masculino: null, feminino: null }
-];
-const kidsLabel = {
-  "pre-mirim": "Pré-Mirim",
-  "mirim": "Mirim",
-  "infantil-a": "Infantil A",
-  "infantil-b": "Infantil B",
-  "infanto-juvenil-a": "Infanto-Juvenil A",
-  "infanto-juvenil-b": "Infanto-Juvenil B"
-};
-const KIDS_PESO_LIMITES = {
-  "pre-mirim": { galo: 14.7, pluma: 17.9, pena: 20, leve: 24, medio: 26, "meio-pesado": 29, pesado: 31.2, "super-pesado": 33.2, pesadissimo: null },
-  "mirim": { galo: 21, pluma: 24, pena: 27, leve: 30.2, medio: 33.2, "meio-pesado": 36.2, pesado: 39.3, "super-pesado": 42.3, pesadissimo: null },
-  "infantil-a": { galo: 27, pluma: 30.2, pena: 33.2, leve: 36.2, medio: 39.3, "meio-pesado": 42.3, pesado: 45.3, "super-pesado": 48.3, pesadissimo: null },
-  "infantil-b": { galo: 36.2, pluma: 40.3, pena: 44.3, leve: 48.3, medio: 52.5, "meio-pesado": 56.5, pesado: 60.5, "super-pesado": 65, pesadissimo: null },
-  "infanto-juvenil-a": { galo: 40.3, pluma: 44.3, pena: 48.3, leve: 52.5, medio: 56.5, "meio-pesado": 60.5, pesado: 65, "super-pesado": 69.5, pesadissimo: null },
-  "infanto-juvenil-b": { galo: 48.3, pluma: 52.5, pena: 56.5, leve: 60.5, medio: 65, "meio-pesado": 69.5, pesado: 74, "super-pesado": 78.5, pesadissimo: null }
-};
-function getPesoLimite(faixaEtaria, genero, cat) {
-  const kidsLimites = KIDS_PESO_LIMITES[faixaEtaria];
-  if (kidsLimites) {
-    return kidsLimites[cat.peso] ?? null;
-  }
-  const base = genero === "masculino" ? cat.masculino : cat.feminino;
-  if (cat.peso === "pesadissimo" && genero === "feminino") return null;
-  return base;
-}
-function gerarCategorias() {
-  const faixasEtarias = [
-    "pre-mirim",
-    "mirim",
-    "infantil-a",
-    "infantil-b",
-    "infanto-juvenil-a",
-    "infanto-juvenil-b",
-    "juvenil",
-    "adulto",
-    "master1",
-    "master2",
-    "master3",
-    "master4",
-    "master5",
-    "master6",
-    "master7"
-  ];
-  const generos = ["masculino", "feminino"];
-  const result = [];
-  for (const fe of faixasEtarias) {
-    const feLabel = kidsLabel[fe] || fe.charAt(0).toUpperCase() + fe.slice(1);
-    for (const gen of generos) {
-      const genLabel = gen === "masculino" ? "Masculino" : "Feminino";
-      for (const cat of CATEGORIAS_PESO) {
-        const pesoLimite = getPesoLimite(fe, gen, cat);
-        if (pesoLimite === void 0) continue;
-        result.push({
-          id: `${fe}-${gen}-${cat.peso}`,
-          nome: `${feLabel} ${genLabel} ${cat.nome}`,
-          faixaEtaria: fe,
-          genero: gen,
-          peso: cat.peso,
-          pesoMaximoKg: pesoLimite
-        });
-      }
-    }
-  }
-  return result;
-}
-const CATEGORIAS_IBJJF = gerarCategorias();
-const categoriaLabels = {};
-for (const c of CATEGORIAS_IBJJF) {
-  categoriaLabels[c.id] = c.nome;
 }
 const DATA_DIR$5 = path.join(app.getPath("userData"), "data");
 const TORNEIOS_DIR$5 = path.join(DATA_DIR$5, "torneios");
@@ -1473,7 +1480,7 @@ function shuffleArray(arr) {
   }
   return a;
 }
-function gerarChave(categoriaId, atletas) {
+function gerarChave(categoriaId, atletas, faixa) {
   if (atletas.length < 2 || atletas.length > 16) {
     throw new Error("A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.");
   }
@@ -1483,6 +1490,7 @@ function gerarChave(categoriaId, atletas) {
   return {
     id: crypto.randomUUID(),
     categoriaId,
+    faixa,
     lutas,
     posicoesAtletas: posicoes.map((a) => a.id),
     arbitroId: null,
@@ -1553,15 +1561,17 @@ function gerarTodasChavesHandler(torneioId, maxPorChave = 16) {
       atletasIgnorados.push(a.nome);
       continue;
     }
-    const g = grupos.get(a.categoria) ?? [];
+    const key = `${a.categoria}__${a.faixa}`;
+    const g = grupos.get(key) ?? [];
     g.push(a);
-    grupos.set(a.categoria, g);
+    grupos.set(key, g);
   }
   const novasChaves = [];
   const atletasSemChave = [];
   const metadados = [];
-  for (const [categoriaId, grupo] of grupos) {
+  for (const [key, grupo] of grupos) {
     if (grupo.length === 0) continue;
+    const [categoriaId, faixa] = key.split("__");
     if (grupo.length === 1) {
       atletasSemChave.push(grupo[0]);
       metadados.push({
@@ -1579,7 +1589,7 @@ function gerarTodasChavesHandler(torneioId, maxPorChave = 16) {
         atletasSemChave.push(sub[0]);
         continue;
       }
-      novasChaves.push(gerarChave(categoriaId, sub));
+      novasChaves.push(gerarChave(categoriaId, sub, faixa));
       chavesGeradas++;
     }
     metadados.push({

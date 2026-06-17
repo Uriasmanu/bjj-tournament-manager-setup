@@ -17,8 +17,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!--
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 -->
-### [aberto] menu categoria, tem que seguir o padrão dos outros menus, ex: atleta
-### [aberto] as categorias na lista tem que mostrar a faixa de peso na frente
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 Menu no dashbord chamado categorias, serve para habilitar e desabilitar categorias (não pode apagar ou editar as do sistema, somente habilitar de desabilitar), crar, editar e apagar categorias. Nome da categoria, faixa de peso, cor de faixa, idade, tempo de luta
@@ -396,3 +394,15 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
   - Integração com formulário de atletas (filtra desabilitadas, inclui customizadas)
 - **Arquivos criados:** `electron/categorias.ts`, `src/components/CategoriaForm.tsx`, `src/pages/CategoriasMenu.tsx`, `src/pages/AdminCategorias.tsx`, `spec/categorias-menu.md`
 - **Arquivos alterados:** `src/types/category.ts`, `src/types/tournament.ts`, `src/types/electron.d.ts`, `electron/main.ts`, `electron/preload.ts`, `src/components/AthleteForm.tsx`, `src/App.tsx`, `src/pages/Dashboard.tsx`
+
+### [resolvido] Menu categorias seguindo padrão dos outros menus
+- **Data:** 2026-06-17
+- **Problema:** O menu de categorias não seguia o padrão visual dos outros menus (ex: Atletas). Cards com border-left, hover effects, botão "Acessar" dourado.
+- **Solução:** Reescrito `CategoriasMenu.tsx` seguindo exatamente o padrão de `AthletesMenu.tsx`: welcome banner com stats (Grid 8/4), 3 cards (Categorias IBJJF, Nova Categoria Customizada, Listar Categorias Customizadas) com ícone, título, descrição e botão "Acessar". Adicionado `useDisclosure` para abrir modal de criação inline.
+- **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
+
+### [resolvido] Categorias IBJJF devem mostrar faixa de peso na frente
+- **Data:** 2026-06-17
+- **Problema:** A lista de categorias IBJJF no menu mostrava apenas o nome, sem a faixa de peso.
+- **Solução:** Adicionado badge com a faixa de peso (ex: "até 76,0 kg") ao lado do nome de cada categoria IBJJF na lista de toggles.
+- **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`

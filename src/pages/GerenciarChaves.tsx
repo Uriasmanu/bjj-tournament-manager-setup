@@ -61,6 +61,14 @@ function getChaveTitle(chave: Chave, athletes: Atleta[]): string {
     .filter((a): a is Atleta => a !== undefined);
   if (chaveAtletas.length === 0) return categoriaLabels[chave.categoriaId] || chave.categoriaId;
 
+  const faixaLabel = chave.faixa ? FAIXA_LABEL[chave.faixa] : null;
+
+  const peso = extrairPeso(chave.categoriaId);
+
+  if (faixaLabel) {
+    return `${faixaLabel} - ${peso} - ${chaveAtletas.length} atleta${chaveAtletas.length > 1 ? 's' : ''}`;
+  }
+
   const faixas = chaveAtletas.map(a => a.faixa);
   const levels = faixas.map(f => FAIXA_ORDER[f] ?? 0);
   const minFaixa = faixas[levels.indexOf(Math.min(...levels))];
@@ -69,8 +77,6 @@ function getChaveTitle(chave: Chave, athletes: Atleta[]): string {
   const beltRange = minFaixa === maxFaixa
     ? FAIXA_LABEL[minFaixa]
     : `${FAIXA_LABEL[minFaixa]} a ${FAIXA_LABEL[maxFaixa]}`;
-
-  const peso = extrairPeso(chave.categoriaId);
 
   return `${beltRange} - ${peso} - ${chaveAtletas.length} atleta${chaveAtletas.length > 1 ? 's' : ''}`;
 }

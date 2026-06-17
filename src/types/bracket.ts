@@ -30,6 +30,7 @@ export interface Luta {
 export interface Chave {
   id: string;
   categoriaId: string;
+  faixa?: string;
   lutas: Luta[];
   posicoesAtletas: string[];
   arbitroId: string | null;

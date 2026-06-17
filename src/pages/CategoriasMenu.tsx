@@ -1,12 +1,33 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Stack, Text, Group, Box, Title, Grid, Switch, Badge, TextInput, Loader, Center,
-} from '@mantine/core';
-import { IconList, IconSearch, IconChevronRight } from '@tabler/icons-react';
+import { Stack, Text, Group, Box, Title, Grid, Switch, Badge, TextInput, Loader, Center } from '@mantine/core';
+import { IconPlus, IconList, IconSearch, IconChevronRight, IconTag } from '@tabler/icons-react';
+import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { CATEGORIAS_IBJJF, type CategoriaCustomizada } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
+import { CategoriaForm } from '../components/CategoriaForm';
+
+const cards = [
+  {
+    label: 'Categorias IBJJF',
+    description: 'Habilitar ou desabilitar categorias do sistema',
+    icon: IconTag,
+    iconColor: '#1b325f',
+  },
+  {
+    label: 'Nova Categoria Customizada',
+    description: 'Criar uma nova categoria personalizada para o torneio',
+    icon: IconPlus,
+    iconColor: '#1b325f',
+  },
+  {
+    label: 'Listar Categorias Customizadas',
+    description: 'Visualizar, editar e excluir categorias personalizadas',
+    icon: IconList,
+    iconColor: '#1b325f',
+  },
+];
 
 export function CategoriasMenu() {
   const navigate = useNavigate();
@@ -14,6 +35,7 @@ export function CategoriasMenu() {
   const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
 
   const loadData = async () => {
     try {
@@ -35,21 +57,35 @@ export function CategoriasMenu() {
     }
   };
 
+  const handleSave = async (data: Omit<CategoriaCustomizada, 'id' | 'createdAt' | 'updatedAt'>): Promise<boolean> => {
+    try {
+      await window.electronAPI.saveCategoriaCustomizada(data);
+      notifications.show({ title: 'Sucesso', message: 'Categoria criada com sucesso!', color: 'green' });
+      await loadData();
+      return true;
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao criar categoria.', color: 'red' });
+      return false;
+    }
+  };
+
   const ibjjfAtivas = CATEGORIAS_IBJJF.length - desabilitadas.length;
 
   const filteredIbjjf = useMemo(() => {
-    if (!search.trim()) return CATEGORIAS_IBJJF;
-    const term = search.toLowerCase();
-    return CATEGORIAS_IBJJF.filter(c =>
-      c.nome.toLowerCase().includes(term) || c.id.toLowerCase().includes(term)
-    );
-  }, [search]);
-
-  const filteredCustom = useMemo(() => {
-    if (!search.trim()) return customizadas;
-    const term = search.toLowerCase();
-    return customizadas.filter(c => c.nome.toLowerCase().includes(term));
-  }, [search, customizadas]);
+    const desabilitadasSet = new Set(desabilitadas);
+    const list = !search.trim()
+      ? [...CATEGORIAS_IBJJF]
+      : CATEGORIAS_IBJJF.filter(c =>
+          c.nome.toLowerCase().includes(search.toLowerCase()) || c.id.toLowerCase().includes(search.toLowerCase())
+        );
+    return list.sort((a, b) => {
+      const aAtivo = !desabilitadasSet.has(a.id);
+      const bAtivo = !desabilitadasSet.has(b.id);
+      if (aAtivo && !bAtivo) return -1;
+      if (!aAtivo && bAtivo) return 1;
+      return a.nome.localeCompare(b.nome);
+    });
+  }, [search, desabilitadas]);
 
   if (loading) {
     return (
@@ -61,7 +97,7 @@ export function CategoriasMenu() {
 
   return (
     <PageLayout title="Categorias" backRoute="/admin/dashboard">
-      {/* Welcome banner + stats */}
+      {/* Welcome banner + quick stats */}
       <Box mb="xl">
         <Grid>
           <Grid.Col span={{ base: 12, lg: 8 }}>
@@ -75,45 +111,148 @@ export function CategoriasMenu() {
               }}
             >
               <Title order={4} mt="sm" style={{ color: '#1b325f', fontWeight: 800 }}>
-                Módulo de Categorias
+                Módulo de Gestão de Categorias
               </Title>
               <Text size="sm" c="dimmed" mt={4}>
-                Gerencie categorias IBJJF do sistema e crie categorias personalizadas para o torneio.
+                Opções de administração para categorias IBJJF e categorias personalizadas do torneio.
               </Text>
             </Box>
           </Grid.Col>
           <Grid.Col span={{ base: 12, lg: 4 }}>
-            <Group gap="sm" grow>
+            <Box
+              style={{
+                background: '#fff',
+                border: '1px solid #e9f2f9',
+                borderRadius: 16,
+                padding: 'clamp(16px, 2vw, 24px)',
+                height: '100%',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <Box
                 style={{
-                  background: '#fff',
-                  border: '1px solid #e9f2f9',
-                  borderRadius: 16,
-                  padding: 'clamp(12px, 2vw, 20px)',
-                  textAlign: 'center',
-                  flex: 1,
+                  width: 40,
+                  height: 40,
+                  borderRadius: '50%',
+                  background: '#e9f2f9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 8,
                 }}
               >
-                <Text fw={800} size="xl" style={{ color: '#1b325f' }}>{ibjjfAtivas}</Text>
-                <Text size="xs" fw={600} tt="uppercase" style={{ color: 'rgba(27,50,95,0.5)', letterSpacing: '1px' }}>IBJJF Ativas</Text>
+                <IconTag size={18} color="#1b325f" />
               </Box>
-              <Box
-                style={{
-                  background: '#fff',
-                  border: '1px solid #e9f2f9',
-                  borderRadius: 16,
-                  padding: 'clamp(12px, 2vw, 20px)',
-                  textAlign: 'center',
-                  flex: 1,
-                }}
-              >
-                <Text fw={800} size="xl" style={{ color: '#1b325f' }}>{customizadas.length}</Text>
-                <Text size="xs" fw={600} tt="uppercase" style={{ color: 'rgba(27,50,95,0.5)', letterSpacing: '1px' }}>Customizadas</Text>
-              </Box>
-            </Group>
+              <Text fw={800} size="xl" style={{ color: '#1b325f' }}>{ibjjfAtivas + customizadas.length}</Text>
+              <Text size="xs" fw={600} tt="uppercase" style={{ color: 'rgba(27,50,95,0.5)', letterSpacing: '1px' }}>Total</Text>
+            </Box>
           </Grid.Col>
         </Grid>
       </Box>
+
+      {/* Cards */}
+      <Stack gap="lg" maw={900} mx="auto">
+        <Group gap="lg" grow align="stretch">
+          {cards.map((card) => {
+            const Icon = card.icon;
+            const isIbjjf = card.label === 'Categorias IBJJF';
+            const isList = card.label === 'Listar Categorias Customizadas';
+
+            return (
+              <Box
+                key={card.label}
+                style={{
+                  background: '#fff',
+                  borderLeft: '5px solid #1b325f',
+                  borderRadius: 12,
+                  padding: 24,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  minHeight: 240,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-6px)';
+                  e.currentTarget.style.boxShadow = '0 12px 24px -10px rgba(27,50,95,0.2)';
+                  e.currentTarget.style.borderLeftColor = '#f26c4f';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = '';
+                  e.currentTarget.style.boxShadow = '';
+                  e.currentTarget.style.borderLeftColor = '#1b325f';
+                }}
+                onClick={() => {
+                  if (isIbjjf) {
+                    document.getElementById('ibjjf-section')?.scrollIntoView({ behavior: 'smooth' });
+                  } else if (isList) {
+                    navigate('/admin/categorias/lista');
+                  } else {
+                    openForm();
+                  }
+                }}
+              >
+                <div>
+                  <Box
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: '#e9f2f9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 20,
+                    }}
+                  >
+                    <Icon size={22} color={card.iconColor} />
+                  </Box>
+                  <Text fw={700} size="lg" style={{ color: '#1b325f' }} mb={4}>
+                    {card.label}
+                  </Text>
+                  <Text size="sm" style={{ color: 'rgba(27,50,95,0.6)', lineHeight: 1.5 }}>
+                    {card.description}
+                  </Text>
+                </div>
+                <Box
+                  mt="lg"
+                  style={{
+                    background: '#1b325f',
+                    color: '#fff',
+                    borderRadius: 12,
+                    padding: '10px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    fontWeight: 700,
+                    fontSize: 13,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#ffbc11';
+                    e.currentTarget.style.transform = 'scale(1.02)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(255,188,17,0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#1b325f';
+                    e.currentTarget.style.transform = '';
+                    e.currentTarget.style.boxShadow = '';
+                  }}
+                >
+                  <span>Acessar</span>
+                  <IconChevronRight size={12} />
+                </Box>
+              </Box>
+            );
+          })}
+        </Group>
+      </Stack>
 
       {/* Search */}
       <TextInput
@@ -121,6 +260,7 @@ export function CategoriasMenu() {
         leftSection={<IconSearch size={16} />}
         value={search}
         onChange={(e) => setSearch(e.currentTarget.value)}
+        mt="xl"
         mb="lg"
         maw={600}
         styles={{
@@ -131,88 +271,9 @@ export function CategoriasMenu() {
         }}
       />
 
-      {/* Action cards */}
-      <Group gap="lg" mb="xl" maw={900}>
-        <Box
-          style={{
-            background: '#fff',
-            borderLeft: '5px solid #1b325f',
-            borderRadius: 12,
-            padding: 24,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            minHeight: 160,
-            cursor: 'pointer',
-            flex: 1,
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-6px)';
-            e.currentTarget.style.boxShadow = '0 12px 24px -10px rgba(27,50,95,0.2)';
-            e.currentTarget.style.borderLeftColor = '#f26c4f';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = '';
-            e.currentTarget.style.boxShadow = '';
-            e.currentTarget.style.borderLeftColor = '#1b325f';
-          }}
-          onClick={() => navigate('/admin/categorias/lista')}
-        >
-          <div>
-            <Box
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                background: '#e9f2f9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 16,
-              }}
-            >
-              <IconList size={22} color="#1b325f" />
-            </Box>
-            <Text fw={700} size="lg" style={{ color: '#1b325f' }} mb={4}>
-              Categorias Customizadas
-            </Text>
-            <Text size="sm" style={{ color: 'rgba(27,50,95,0.6)', lineHeight: 1.5 }}>
-              Criar, editar e excluir categorias personalizadas para o torneio.
-            </Text>
-          </div>
-          <Box
-            mt="lg"
-            style={{
-              background: '#1b325f',
-              color: '#fff',
-              borderRadius: 12,
-              padding: '10px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-              fontWeight: 700,
-              fontSize: 13,
-              transition: 'all 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#ffbc11';
-              e.currentTarget.style.transform = 'scale(1.02)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#1b325f';
-              e.currentTarget.style.transform = '';
-            }}
-          >
-            <span>Gerenciar</span>
-            <IconChevronRight size={12} />
-          </Box>
-        </Box>
-      </Group>
-
       {/* IBJJF Categories list */}
       <Box
+        id="ibjjf-section"
         style={{
           background: '#fff',
           border: '1px solid #e9f2f9',
@@ -235,6 +296,9 @@ export function CategoriasMenu() {
         <Stack gap={0}>
           {filteredIbjjf.map((cat) => {
             const isDisabled = desabilitadas.includes(cat.id);
+            const limite = cat.pesoMaximoKg !== null
+              ? `até ${cat.pesoMaximoKg.toFixed(1).replace('.', ',')} kg`
+              : 'sem limite';
             return (
               <Group
                 key={cat.id}
@@ -247,9 +311,14 @@ export function CategoriasMenu() {
                   transition: 'opacity 0.2s',
                 }}
               >
-                <Text size="sm" fw={500} style={{ color: '#1b325f' }}>
-                  {cat.nome}
-                </Text>
+                <Group gap="sm">
+                  <Text size="sm" fw={600} style={{ color: '#1b325f', minWidth: 200 }}>
+                    {cat.nome}
+                  </Text>
+                  <Badge size="sm" variant="light" color="gray">
+                    {limite}
+                  </Badge>
+                </Group>
                 <Switch
                   size="sm"
                   checked={!isDisabled}
@@ -267,54 +336,8 @@ export function CategoriasMenu() {
         </Stack>
       </Box>
 
-      {/* Custom categories preview */}
-      {filteredCustom.length > 0 && (
-        <Box
-          mt="xl"
-          style={{
-            background: '#fff',
-            border: '1px solid #e9f2f9',
-            borderRadius: 16,
-            padding: 'clamp(16px, 2vw, 24px)',
-          }}
-        >
-          <Title order={5} mb="md" style={{ color: '#1b325f' }}>
-            Categorias Customizadas
-          </Title>
-          <Stack gap={0}>
-            {filteredCustom.map((cat) => (
-              <Group
-                key={cat.id}
-                justify="space-between"
-                py="xs"
-                px="sm"
-                style={{ borderBottom: '1px solid #f1f3f5' }}
-              >
-                <Group gap="sm">
-                  <Box
-                    style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: '50%',
-                      background: cat.corFaixa,
-                      border: '1px solid #ccc',
-                    }}
-                  />
-                  <Text size="sm" fw={500} style={{ color: '#1b325f' }}>
-                    {cat.nome}
-                  </Text>
-                  <Badge size="xs" variant="light" color="gray">
-                    {cat.pesoMinimoKg}-{cat.pesoMaximoKg} kg
-                  </Badge>
-                  <Badge size="xs" variant="light" color="gray">
-                    {cat.tempoLutaMinutos} min
-                  </Badge>
-                </Group>
-              </Group>
-            ))}
-          </Stack>
-        </Box>
-      )}
+      {/* Form modal */}
+      <CategoriaForm opened={formOpened} onClose={closeForm} onSave={handleSave} categoria={null} />
     </PageLayout>
   );
 }
