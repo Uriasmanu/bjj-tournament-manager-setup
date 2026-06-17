@@ -14,8 +14,10 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
 
+<!--
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
-
+-->
+### [aberto] tem que ser possivel escolher livremente a categoria, quando for editar o atleta
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 
@@ -364,8 +366,8 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 
 ### [resolvido] Seleção de árbitro ao criar luta casada
 - **Data:** 2026-06-16
-- **Problema:** Ao criar uma luta casada, o sistema sempre atribuía o primeiro árbitro da área (`area.arbitroIds[0]`), sem permitir escolha quando havia múltiplos árbitros.
-- **Solução:** Adicionado componente `Select` no `ModalCriarLutaCasada` que lista todos os árbitros da área quando há mais de um. Com apenas um árbitro, a seleção continua automática.
+- **Problema:** Ao criar uma luta casada, o sistema sempre atribuía o primeiro árbitro da área (`area.arbitroIds[0]`), sem permitir escolha.
+- **Solução (atualizada):** Substituído o badge estático por um componente `Select` que lista **todos** os árbitros cadastrados no torneio, permitindo busca livre. O árbitro da área é pré-selecionado, mas o usuário pode trocar para qualquer um.
 - **Arquivos alterados:** `src/components/ModalCriarLutaCasada.tsx`
 
 ### [resolvido] Permitir mesmo árbitro em múltiplas áreas com aviso

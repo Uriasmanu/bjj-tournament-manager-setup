@@ -102,25 +102,18 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
     [atletas]
   );
 
-  const arbitrosDaAreaData = useMemo(() => {
-    const ids = area.arbitroIds ?? [];
-    return ids
-      .map(id => arbitros.find(a => a.id === id))
-      .filter((a): a is Arbitro => a !== undefined)
-      .map(a => ({ value: a.id, label: `${capitalize(a.nome)} (${FAIXA_LABEL[a.faixa] ?? a.faixa})` }));
-  }, [area.arbitroIds, arbitros]);
+  const arbitrosData = useMemo(
+    () => arbitros
+      .map(a => ({ value: a.id, label: `${capitalize(a.nome)} (${FAIXA_LABEL[a.faixa] ?? a.faixa})` }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')),
+    [arbitros]
+  );
 
   const atletaA = useMemo(() => atletas.find(a => a.id === atletaAId) ?? null, [atletas, atletaAId]);
   const atletaB = useMemo(() => atletas.find(a => a.id === atletaBId) ?? null, [atletas, atletaBId]);
 
-  const arbitroAtual = useMemo(
-    () => arbitros.find(a => a.id === arbitroSelectedId) ?? null,
-    [arbitros, arbitroSelectedId]
-  );
-
-  const semArbitro = arbitrosDaAreaData.length === 0;
   const mesmoAtleta = !!(atletaAId && atletaBId && atletaAId === atletaBId);
-  const podeCriar = !!atletaAId && !!atletaBId && !!arbitroSelectedId && !mesmoAtleta && !semArbitro && !salvando;
+  const podeCriar = !!atletaAId && !!atletaBId && !!arbitroSelectedId && !mesmoAtleta && !salvando;
 
   const handleCriar = async () => {
     if (!podeCriar || !atletaA || !atletaB) return;
@@ -160,38 +153,16 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
       centered
     >
       <Stack gap="md">
-        {semArbitro && (
-          <Alert color="orange" icon={<IconAlertCircle size={18} />}>
-            Esta área não possui árbitro cadastrado. Cadastre um árbitro na área antes de criar uma Luta Casada.
-          </Alert>
-        )}
-
-        <Paper withBorder p="sm" radius="sm" bg="dark.0">
-          <Group justify="space-between">
-            <Text size="sm" fw={600}>Árbitro da Área</Text>
-            {arbitrosDaAreaData.length > 1 ? (
-              <Badge variant="filled" pr={0}>
-                {arbitroAtual ? `${capitalize(arbitroAtual.nome)} (${FAIXA_LABEL[arbitroAtual.faixa] ?? arbitroAtual.faixa})` : 'Selecionar'}
-              </Badge>
-            ) : (
-              <Badge variant="filled">
-                {arbitroAtual ? `${capitalize(arbitroAtual.nome)} (${FAIXA_LABEL[arbitroAtual.faixa] ?? arbitroAtual.faixa})` : 'Sem árbitro'}
-              </Badge>
-            )}
-          </Group>
-        </Paper>
-
-        {arbitrosDaAreaData.length > 1 && (
-          <Select
-            label="Selecionar Árbitro"
-            placeholder="Escolha o árbitro para esta luta"
-            data={arbitrosDaAreaData}
-            value={arbitroSelectedId}
-            onChange={setArbitroSelectedId}
-            searchable
-            clearable
-          />
-        )}
+        <Select
+          label="Árbitro"
+          placeholder="Buscar árbitro..."
+          data={arbitrosData}
+          value={arbitroSelectedId}
+          onChange={setArbitroSelectedId}
+          searchable
+          clearable
+          nothingFoundMessage="Nenhum árbitro encontrado"
+        />
 
         <Select
           label="Atleta A"

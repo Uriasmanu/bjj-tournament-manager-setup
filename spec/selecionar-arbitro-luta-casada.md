@@ -33,9 +33,10 @@ para que eu possa atribuir o árbitro mais adequado para cada luta.
 
 ## 4. Requisitos Funcionais
 
-- [x] RF-01: Quando a área possui mais de 1 árbitro, o modal deve exibir um `Select` para escolher o árbitro.
-- [x] RF-02: Quando a área possui apenas 1 árbitro, a seleção continua automática (sem dropdown).
-- [x] RF-03: O árbitro selecionado deve ser usado ao criar a luta casada.
+- [x] RF-01: O modal deve exibir um `Select` com todos os árbitros cadastrados no torneio.
+- [x] RF-02: O árbitro da área é pré-selecionado ao abrir o modal.
+- [x] RF-03: O usuário pode buscar e selecionar qualquer árbitro, independentemente da área.
+- [x] RF-04: O árbitro selecionado deve ser usado ao criar a luta casada.
 
 ---
 
@@ -51,7 +52,7 @@ para que eu possa atribuir o árbitro mais adequado para cada luta.
 
 - **Arquitetura geral:** Modal de criação recebe `area`, `atletas` e `arbitros` como props.
 - **Padrões em uso:** React hooks para estado, Mantine para UI.
-- **Fluxo de dados:** `area.arbitroIds` lista os árbitros da área. O modal filtra `arbitros` por esses IDs.
+- **Fluxo de dados:** `arbitros` (lista completa do torneio) é passada ao modal. O Select lista todos, com pré-seleção do primeiro árbitro da área.
 
 ---
 
@@ -78,22 +79,20 @@ para que eu possa atribuir o árbitro mais adequado para cada luta.
 
 ## 9. Criterios de Aceite
 
-- [x] CA-01: dado uma área com 2+ árbitros, quando o usuário abre o modal de luta casada, então um Select de árbitro é exibido.
-- [x] CA-02: dado uma área com 1 árbitro, quando o usuário abre o modal, então o árbitro é selecionado automaticamente.
-- [x] CA-03: quando o usuário seleciona um árbitro e cria a luta casada, então o árbitro selecionado é salvo na luta.
+- [x] CA-01: quando o usuário abre o modal de luta casada, então um Select de árbitro é exibido com todos os árbitros do torneio.
+- [x] CA-02: o árbitro da área é pré-selecionado ao abrir o modal.
+- [x] CA-03: o usuário pode buscar e selecionar qualquer árbitro usando o campo de busca do Select.
+- [x] CA-04: quando o usuário seleciona um árbitro e cria a luta casada, então o árbitro selecionado é salvo na luta.
 
 ---
 
 ## 10. Plano de Implementacao
 
 ```
-Passo 1: Adicionar estado `arbitroSelectedId` e lógica de opções
+Passo 1: Substituir badge estático por Select com todos os árbitros
+  - O que fazer: listar todos os árbitros do torneio no Select, com pré-seleção do primeiro da área
   - Arquivo(s): `src/components/ModalCriarLutaCasada.tsx`
-  - Como validar: Select exibe árbitros da área
-
-Passo 2: Atualizar UI com Select condicional
-  - Arquivo(s): `src/components/ModalCriarLutaCasada.tsx`
-  - Como validar: Select aparece apenas quando há mais de 1 árbitro
+  - Como validar: Select mostra todos os árbitros, busca funciona
 ```
 
 ---
