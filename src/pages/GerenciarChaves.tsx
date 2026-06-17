@@ -1,13 +1,14 @@
 import { Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput, NumberInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowUp, IconArrowDown, IconAward, IconSearch } from '@tabler/icons-react';
+import { IconArrowUp, IconArrowDown, IconAward, IconSearch, IconPlus } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
 import type { Chave } from '../types/bracket';
 import { categoriaLabels } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
+import { ModalCriarChaveManual } from '../components/ModalCriarChaveManual';
 
 const FAIXA_ORDER: Record<string, number> = {
   'branca': 0, 'cinza': 1, 'amarela': 2, 'laranja': 3,
@@ -56,6 +57,8 @@ function getPreviousCategoriaDown(categoriaId: string): string | null {
 }
 
 function getChaveTitle(chave: Chave, athletes: Atleta[]): string {
+  if (chave.nome) return chave.nome;
+
   const chaveAtletas = chave.posicoesAtletas
     .map(id => athletes.find(a => a.id === id))
     .filter((a): a is Atleta => a !== undefined);
@@ -144,6 +147,7 @@ export function GerenciarChaves() {
   const [viewModalOpen, setViewModalOpen] = useState(false);
 
   const [configGerarOpen, { open: openConfigGerar, close: closeConfigGerar }] = useDisclosure(false);
+  const [manualModalOpen, { open: openManualModal, close: closeManualModal }] = useDisclosure(false);
 
   const triggerRefresh = () => setRefreshKey(k => k + 1);
 
@@ -271,6 +275,12 @@ export function GerenciarChaves() {
     }
   };
 
+  const handleCriarChaveManual = (chave: Chave) => {
+    setChaves(prev => [...prev, chave]);
+    setChavesGeradas(true);
+    notifications.show({ color: 'green', title: 'Sucesso', message: `Chave manual criada com ${chave.totalAtletas} atleta(s).` });
+  };
+
   const handleRandomizar = async (chaveId: string) => {
     try {
       const updated = await window.electronAPI.randomizarChave({ chaveId });
@@ -390,9 +400,14 @@ export function GerenciarChaves() {
                   : 'Nenhuma categoria com atletas encontrada. Cadastre atletas primeiro.'}
               </Text>
               {categoriasComAtletas.size > 0 && (
-                <Button size="xl" onClick={openConfigGerar}>
-                  Gerar Chaves
-                </Button>
+                <Group>
+                  <Button size="xl" onClick={openConfigGerar}>
+                    Gerar Chaves
+                  </Button>
+                  <Button size="xl" variant="light" onClick={openManualModal} leftSection={<IconPlus size={20} />}>
+                    Criar Chave Manual
+                  </Button>
+                </Group>
               )}
             </Stack>
           </Center>
@@ -401,6 +416,7 @@ export function GerenciarChaves() {
             <Group justify="space-between" w="100%">
               <Group>
                 <Button onClick={openConfigGerar} variant="light">Gerar Novamente</Button>
+                <Button onClick={openManualModal} variant="light" leftSection={<IconPlus size={16} />}>Criar Chave Manual</Button>
               </Group>
               <Group>
                 <TextInput
@@ -665,6 +681,13 @@ export function GerenciarChaves() {
           </Group>
         </Stack>
       </Modal>
+
+      <ModalCriarChaveManual
+        opened={manualModalOpen}
+        onClose={closeManualModal}
+        atletas={athletes}
+        onCriada={handleCriarChaveManual}
+      />
     </PageLayout>
   );
 }

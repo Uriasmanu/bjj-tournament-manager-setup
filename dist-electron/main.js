@@ -2304,17 +2304,46 @@ function registerBracketHandlers() {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error("Nenhum torneio ativo");
     const torneio = loadTorneio$2(torneioId);
-    const atletas = (torneio.atletas ?? []).filter(
-      (a) => a.deletedAt == null && a.categoria === data.categoriaId && (!data.faixa || a.faixa === data.faixa)
-    );
+    let atletas;
+    let isManual = false;
+    if (data.atletaIds && data.atletaIds.length > 0) {
+      isManual = true;
+      atletas = (torneio.atletas ?? []).filter(
+        (a) => a.deletedAt == null && data.atletaIds.includes(a.id)
+      );
+      if (atletas.length !== data.atletaIds.length) {
+        throw new Error("Um ou mais atletas selecionados não foram encontrados.");
+      }
+      const chavesExistentes = torneio.chaves ?? [];
+      const emChaveIds = /* @__PURE__ */ new Set();
+      for (const c of chavesExistentes) {
+        for (const id of c.posicoesAtletas) {
+          emChaveIds.add(id);
+        }
+      }
+      const duplicados = atletas.filter((a) => emChaveIds.has(a.id));
+      if (duplicados.length > 0) {
+        throw new Error(`Atleta(s) já em outra chave: ${duplicados.map((a) => a.nome).join(", ")}`);
+      }
+    } else {
+      atletas = (torneio.atletas ?? []).filter(
+        (a) => a.deletedAt == null && a.categoria === data.categoriaId && (!data.faixa || a.faixa === data.faixa)
+      );
+    }
     if (atletas.length < 2 || atletas.length > 16) {
-      throw new Error("A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.");
+      throw new Error("A chave precisa ter entre 2 e 16 atletas.");
     }
     const chaves = torneio.chaves ?? [];
-    if (chaves.some((c) => c.categoriaId === data.categoriaId && (!data.faixa || c.faixa === data.faixa))) {
-      throw new Error("Chave já existe para esta categoria/faixa.");
+    if (!isManual) {
+      if (chaves.some((c) => c.categoriaId === data.categoriaId && (!data.faixa || c.faixa === data.faixa))) {
+        throw new Error("Chave já existe para esta categoria/faixa.");
+      }
     }
-    const chave = gerarChave(data.categoriaId, atletas, data.faixa);
+    const categoriaId = isManual ? "manual" : data.categoriaId;
+    const chave = gerarChave(categoriaId, atletas, data.faixa);
+    if (isManual && data.nome) {
+      chave.nome = data.nome;
+    }
     torneio.chaves = [...chaves, chave];
     for (const a of torneio.atletas ?? []) {
       if (chave.posicoesAtletas.includes(a.id)) {

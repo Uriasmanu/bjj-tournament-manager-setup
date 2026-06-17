@@ -31,6 +31,7 @@ export interface Chave {
   id: string;
   categoriaId: string;
   faixa?: string;
+  nome?: string;
   lutas: Luta[];
   posicoesAtletas: string[];
   arbitroId: string | null;

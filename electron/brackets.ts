@@ -1598,24 +1598,58 @@ export function registerBracketHandlers(): void {
     return gerarTodasChavesHandler(torneioId, max, faixas, categorias);
   });
 
-  ipcMain.handle('gerar-chave', (_event, data: { categoriaId: string; faixa?: string }): Chave => {
+  ipcMain.handle('gerar-chave', (_event, data: { categoriaId: string; faixa?: string; atletaIds?: string[]; nome?: string }): Chave => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error('Nenhum torneio ativo');
     const torneio = loadTorneio(torneioId);
-    const atletas = (torneio.atletas ?? []).filter((a: Atleta) =>
-      a.deletedAt == null && a.categoria === data.categoriaId && (!data.faixa || a.faixa === data.faixa)
-    );
+
+    let atletas: Atleta[];
+    let isManual = false;
+
+    if (data.atletaIds && data.atletaIds.length > 0) {
+      // Manual key: use provided athlete IDs directly
+      isManual = true;
+      atletas = (torneio.atletas ?? []).filter((a: Atleta) =>
+        a.deletedAt == null && data.atletaIds!.includes(a.id)
+      );
+      if (atletas.length !== data.atletaIds.length) {
+        throw new Error('Um ou mais atletas selecionados não foram encontrados.');
+      }
+      // Check athletes are not already in another key
+      const chavesExistentes = torneio.chaves ?? [];
+      const emChaveIds = new Set<string>();
+      for (const c of chavesExistentes) {
+        for (const id of c.posicoesAtletas) {
+          emChaveIds.add(id);
+        }
+      }
+      const duplicados = atletas.filter(a => emChaveIds.has(a.id));
+      if (duplicados.length > 0) {
+        throw new Error(`Atleta(s) já em outra chave: ${duplicados.map(a => a.nome).join(', ')}`);
+      }
+    } else {
+      // Automatic key: filter by category/faixa
+      atletas = (torneio.atletas ?? []).filter((a: Atleta) =>
+        a.deletedAt == null && a.categoria === data.categoriaId && (!data.faixa || a.faixa === data.faixa)
+      );
+    }
 
     if (atletas.length < 2 || atletas.length > 16) {
-      throw new Error('A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.');
+      throw new Error('A chave precisa ter entre 2 e 16 atletas.');
     }
 
     const chaves = torneio.chaves ?? [];
-    if (chaves.some(c => c.categoriaId === data.categoriaId && (!data.faixa || c.faixa === data.faixa))) {
-      throw new Error('Chave já existe para esta categoria/faixa.');
+    if (!isManual) {
+      if (chaves.some(c => c.categoriaId === data.categoriaId && (!data.faixa || c.faixa === data.faixa))) {
+        throw new Error('Chave já existe para esta categoria/faixa.');
+      }
     }
 
-    const chave = gerarChave(data.categoriaId, atletas, data.faixa);
+    const categoriaId = isManual ? 'manual' : data.categoriaId;
+    const chave = gerarChave(categoriaId, atletas, data.faixa);
+    if (isManual && data.nome) {
+      chave.nome = data.nome;
+    }
     torneio.chaves = [...chaves, chave];
 
     // Mark emChave on athletes in this chave
