@@ -17,7 +17,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!--
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 -->
-### [aberto] em Criar Chave Manual tem que mostrar somente atletas que estão sem chave. Exemplo, se eu deletar uma chave os atletas dessa chave voltam a ter  "emChave": false
+### [aberto] quando clico para criar chave manual, ele não esta aparecendo na tela, preciso sair e entrar para que a chave apareça
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
