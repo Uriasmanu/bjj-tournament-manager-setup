@@ -18,7 +18,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 -->
 ### [aberto] em Criar Chave Manual tem que mostrar somente atletas que estão sem chave. Exemplo, se eu deletar uma chave os atletas dessa chave voltam a ter  "emChave": false
-
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
@@ -401,6 +400,12 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** O menu de categorias não seguia o padrão visual dos outros menus (ex: Atletas). Cards com border-left, hover effects, botão "Acessar" dourado.
 - **Solução:** Reescrito `CategoriasMenu.tsx` seguindo exatamente o padrão de `AthletesMenu.tsx`: welcome banner com stats (Grid 8/4), 3 cards (Categorias IBJJF, Nova Categoria Customizada, Listar Categorias Customizadas) com ícone, título, descrição e botão "Acessar". Adicionado `useDisclosure` para abrir modal de criação inline.
 - **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
+
+### [resolvido] Criar Chave Manual deve mostrar apenas atletas sem chave
+- **Data:** 2026-06-17
+- **Problema:** O modal `ModalCriarChaveManual` listava todos os atletas disponíveis, incluindo os que já estavam em chaves geradas (`emChave: true`). Isso permitia adicionar atletas que já tinham chave a uma nova chave manual.
+- **Solução:** Adicionado filtro `!a.emChave` no `atletasData` do modal, tornando invisíveis os atletas que já possuem chave. Ao deletar uma chave, o backend já limpa `emChave` dos atletas (via `removeAthleteFromChaves` + `delete-chave`), então eles voltam a aparecer no modal automaticamente.
+- **Arquivos alterados:** `src/components/ModalCriarChaveManual.tsx`
 
 ### [resolvido] Import de atleta deve reconhecer categorias customizadas
 - **Data:** 2026-06-17

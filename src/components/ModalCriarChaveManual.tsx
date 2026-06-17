@@ -44,7 +44,7 @@ export function ModalCriarChaveManual({ opened, onClose, atletas, onCriada }: Mo
 
   const atletasData = useMemo(
     () => atletas
-      .filter(a => !selectedIds.includes(a.id))
+      .filter(a => !a.emChave && !selectedIds.includes(a.id))
       .map(a => ({
         value: a.id,
         label: `${capitalize(a.nome)} — ${FAIXA_LABEL[a.faixa] ?? a.faixa} · ${a.pesoKg.toFixed(1)}kg · ${categoriaLabels[a.categoria] || a.categoria}`,
