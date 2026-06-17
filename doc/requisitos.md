@@ -328,6 +328,19 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 - **Normalização retroativa (`normalizeChave`):** Ao carregar, defaults: `categoriaId=''`, `arbitroId=null`, `totalRodadas` computado do maior `luta.rodada`, `updatedAt` gerado com `new Date().toISOString()` se ausente (legado).
 - **`updatedAt` em Luta e Chave:** Ambos os campos são obrigatórios no tipo `Luta` e `Chave`. São populados no momento da criação (`criarLuta`, `gerarChave`), no registro de resultado (`registrarResultadoHandler` — todas as lutas da chave e a própria chave recebem `updatedAt = now`), na randomização (`randomizarChaveHandler`), na atribuição de árbitro (`atribuirArbitroHandler`), na limpeza de rodadas futuras (`clearWinnerFromLaterRounds`) e na importação (`importChavesFromFile`).
 
+### 3.11.2. Geração Manual de Chaves (Implementado)
+
+- **Botão "Criar Chave Manual":** Disponível na tela "Gerenciar Chaves" tanto antes quanto depois da geração automática. Abre modal de criação manual.
+- **Modal `ModalCriarChaveManual`:** Similar ao `ModalCriarLutaCasada`, mas adaptado para N atletas:
+  - Campo "Nome da Chave" (opcional) — se vazio, gera nome automático baseado nos atletas selecionados (ex: "Chave Manual — Atleta A, Atleta B, ...").
+  - `Select` pesquisável para adicionar atletas (lista todos os atletas não selecionados).
+  - Lista de atletas selecionados em cards com faixa, peso, equipe, categoria e botão de remoção.
+  - Validação: mínimo 2 atletas, máximo 16, sem atletas duplicados, sem atletas já em outra chave.
+- **Persistência:** Chave criada via IPC `gerar-chave` com `categoriaId: 'manual'` e campo `nome` preenchido. Campo `nome` adicionado ao tipo `Chave` (opcional).
+- **Handler `gerar-chave`:** Aceita parâmetros opcionais `atletaIds?: string[]` e `nome?: string`. Quando `atletaIds` é fornecido, bypassa o filtro de categoria e usa os IDs diretamente. Verifica se atletas já estão em outra chave.
+- **Exibição:** `getChaveTitle` retorna `chave.nome` quando presente. Chave manual pode ser embaralhada, visualizada e ter árbitro atribuído (mesmo fluxo das chaves automáticas).
+- **Spec:** `spec/geracao-manual-chaves.md`
+
 ### 3.12. Importação de Chaves
 
 - **Formato:** Array JSON de objetos `Chave`. Cada chave deve conter `categoriaId` (string) e `lutas` (array) — `id` é opcional.

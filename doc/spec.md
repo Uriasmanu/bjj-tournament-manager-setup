@@ -17,13 +17,12 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!--
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 -->
-### [aberto] em Configurar Geração de Chaves não precisa dos filtros, é uma regra interna que é categoria e cor de faixa sempre
 
 ### [aberto] import de atleta tem que reconhecer categoria customizada
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
-Opção de gerar chaves manualmente tambem, parecido com o que tem para luta casada, porem em vez de só 2 atletas, pode colocar quantos quiser, só dar um nome para a chave ou o sistema coloca um nome coerente
+
 
 
 # Guia de Spec para Implementação de Features
@@ -402,6 +401,19 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** O menu de categorias não seguia o padrão visual dos outros menus (ex: Atletas). Cards com border-left, hover effects, botão "Acessar" dourado.
 - **Solução:** Reescrito `CategoriasMenu.tsx` seguindo exatamente o padrão de `AthletesMenu.tsx`: welcome banner com stats (Grid 8/4), 3 cards (Categorias IBJJF, Nova Categoria Customizada, Listar Categorias Customizadas) com ícone, título, descrição e botão "Acessar". Adicionado `useDisclosure` para abrir modal de criação inline.
 - **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
+
+### [feature] Geração Manual de Chaves
+- **Data:** 2026-06-17
+- **Descrição:** Implementada opção de criar chaves manualmente, selecionando atletas livremente (sem seguir separação automática por faixa/categoria). Similar ao fluxo de luta casada, mas com N atletas (2-16).
+- **Funcionalidades:**
+  - Botão "Criar Chave Manual" na tela Gerenciar Chaves (acessível antes e depois da geração automática)
+  - Modal com campo de nome (opcional, geração automática se vazio), MultiSelect de atletas, cards de preview com faixa/peso/equipe/categoria
+  - Validação: mínimo 2 atletas, máximo 16, sem duplicatas, sem atletas já em outra chave
+  - Chave criada com `categoriaId: 'manual'` e nome personalizado
+  - Badge "Manual" na listagem (via `getChaveTitle` usando `chave.nome`)
+  - Chave manual pode ser embaralhada, visualizada e ter árbitro atribuído
+- **Arquivos criados:** `src/components/ModalCriarChaveManual.tsx`, `spec/geracao-manual-chaves.md`
+- **Arquivos alterados:** `electron/brackets.ts`, `electron/preload.ts`, `src/types/electron.d.ts`, `src/types/bracket.ts`, `src/pages/GerenciarChaves.tsx`
 
 ### [resolvido] Filtros UI removidos — geração por faixa/categoria é regra interna
 - **Data:** 2026-06-17

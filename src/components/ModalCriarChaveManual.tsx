@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Stack, Select, Group, Button, Text, Paper, Badge, Alert, TextInput, ActionIcon, Divider } from '@mantine/core';
-import { IconAlertCircle, IconCheck, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconAlertCircle, IconPlus, IconTrash } from '@tabler/icons-react';
 import type { Atleta } from '../types/athlete';
 import type { Chave } from '../types/bracket';
 import { categoriaLabels } from '../types/category';
