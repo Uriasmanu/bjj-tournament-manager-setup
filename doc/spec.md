@@ -17,7 +17,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!--
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 -->
-### [aberto] a geração da chave tem que se filtrar por cor de faixa e categoria
+### [aberto] em Configurar Geração de Chaves não precisa dos filtros, é uma regra interna que é categoria e cor de faixa sempre
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
