@@ -21,7 +21,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
-
+Opção de gerar chaves manualmente tambem
 
 
 # Guia de Spec para Implementação de Features
@@ -400,6 +400,12 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** O menu de categorias não seguia o padrão visual dos outros menus (ex: Atletas). Cards com border-left, hover effects, botão "Acessar" dourado.
 - **Solução:** Reescrito `CategoriasMenu.tsx` seguindo exatamente o padrão de `AthletesMenu.tsx`: welcome banner com stats (Grid 8/4), 3 cards (Categorias IBJJF, Nova Categoria Customizada, Listar Categorias Customizadas) com ícone, título, descrição e botão "Acessar". Adicionado `useDisclosure` para abrir modal de criação inline.
 - **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
+
+### [resolvido] Filtros UI removidos — geração por faixa/categoria é regra interna
+- **Data:** 2026-06-17
+- **Problema:** Os `MultiSelect` de filtro de faixa e categoria adicionados ao modal "Configurar Geração de Chaves" não são necessários. A separação por categoria e cor de faixa é uma regra interna do sistema que sempre deve ser aplicada automaticamente, sem necessidade de filtros manuais no UI.
+- **Solução:** Removidos os dois `MultiSelect` ("Filtrar por faixa" e "Filtrar por categoria"), o state `filterFaixas`/`filterCategorias` e a passagem de parâmetros de filtro nos handlers `handleGerarTodas`/`handleGerarNovamente`. Mantidas as correções no backend (`gerar-chave` filtra por faixa, `gerarTodasChavesHandler` aceita filtros opcionais para compatibilidade). UI volta ao formato original com apenas "Máximo de atletas por chave".
+- **Arquivos alterados:** `src/pages/GerenciarChaves.tsx`
 
 ### [resolvido] Geração de chaves deve filtrar por cor de faixa e categoria
 - **Data:** 2026-06-17

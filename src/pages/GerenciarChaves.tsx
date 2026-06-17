@@ -1,4 +1,4 @@
-import { Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput, NumberInput, MultiSelect } from '@mantine/core';
+import { Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput, NumberInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
 import { IconArrowUp, IconArrowDown, IconAward, IconSearch } from '@tabler/icons-react';
@@ -139,8 +139,6 @@ export function GerenciarChaves() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [maxAtletas, setMaxAtletas] = useState<number | string>('');
-  const [filterFaixas, setFilterFaixas] = useState<string[]>([]);
-  const [filterCategorias, setFilterCategorias] = useState<string[]>([]);
 
   const [viewChave, setViewChave] = useState<Chave | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -240,9 +238,7 @@ export function GerenciarChaves() {
     closeConfigGerar();
     try {
       const max = typeof maxAtletas === 'number' && maxAtletas >= 2 ? maxAtletas : undefined;
-      const faixas = filterFaixas.length > 0 ? filterFaixas : undefined;
-      const categorias = filterCategorias.length > 0 ? filterCategorias : undefined;
-      const result = await window.electronAPI.gerarTodasChaves(max, faixas, categorias) as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
+      const result = await window.electronAPI.gerarTodasChaves(max) as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
       setChaves(result.chaves);
       setAtletasSemChave(result.atletasSemChave ?? []);
       setChavesGeradas(true);
@@ -261,9 +257,7 @@ export function GerenciarChaves() {
     closeConfigGerar();
     try {
       const max = typeof maxAtletas === 'number' && maxAtletas >= 2 ? maxAtletas : undefined;
-      const faixas = filterFaixas.length > 0 ? filterFaixas : undefined;
-      const categorias = filterCategorias.length > 0 ? filterCategorias : undefined;
-      const result = await window.electronAPI.gerarTodasChaves(max, faixas, categorias) as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
+      const result = await window.electronAPI.gerarTodasChaves(max) as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
       setChaves(result.chaves);
       setAtletasSemChave(result.atletasSemChave ?? []);
       const qtd = result.chaves.length;
@@ -657,39 +651,11 @@ export function GerenciarChaves() {
             max={16}
             step={1}
           />
-          <MultiSelect
-            label="Filtrar por faixa"
-            description="Gerar chaves apenas para atletas com estas faixas (deixe vazio para todas)"
-            data={Object.entries(FAIXA_LABEL).map(([value, label]) => ({ value, label }))}
-            value={filterFaixas}
-            onChange={setFilterFaixas}
-            placeholder="Todas as faixas"
-            clearable
-          />
-          <MultiSelect
-            label="Filtrar por categoria"
-            description="Gerar chaves apenas para estas categorias (deixe vazio para todas)"
-            data={Array.from(categoriasComAtletas).map(catId => ({
-              value: catId,
-              label: categoriaLabels[catId] || catId,
-            }))}
-            value={filterCategorias}
-            onChange={setFilterCategorias}
-            placeholder="Todas as categorias"
-            searchable
-            clearable
-          />
           <Text size="xs" c="dimmed">
-            {(() => {
-              const filterParts: string[] = [];
-              if (filterFaixas.length > 0) filterParts.push(`${filterFaixas.length} faixa(s)`);
-              if (filterCategorias.length > 0) filterParts.push(`${filterCategorias.length} categoria(s)`);
-              const filterText = filterParts.length > 0 ? ` (${filterParts.join(', ')})` : '';
-              if (typeof maxAtletas !== 'number' || maxAtletas < 2) {
-                return `O sistema distribuirá os atletas${filterText} em chaves com no máximo 16 atletas cada (padrão).`;
-              }
-              return `O sistema distribuirá os atletas${filterText} em chaves com no máximo ${maxAtletas} atletas cada.`;
-            })()}
+            {typeof maxAtletas !== 'number' || maxAtletas < 2
+              ? `O sistema distribuirá os ${totalAtletas} atletas em chaves com no máximo 16 atletas cada (padrão).`
+              : `O sistema distribuirá os ${totalAtletas} atletas em chaves com no máximo ${maxAtletas} atletas cada.`
+            }
           </Text>
           <Group justify="flex-end">
             <Button variant="light" onClick={closeConfigGerar}>Cancelar</Button>

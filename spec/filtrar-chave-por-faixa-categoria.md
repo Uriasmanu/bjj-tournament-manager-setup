@@ -1,5 +1,7 @@
 # Spec: Filtrar Geração de Chaves por Cor de Faixa e Categoria
 
+> **Atualização (2026-06-17):** Filtros UI foram removidos — a separação por faixa/categoria é regra interna sempre aplicada. Apenas as correções backend permanecem.
+
 ---
 
 ## 1. Contexto e Objetivo
@@ -28,15 +30,9 @@ para gerar chaves seletivamente sem misturar faixas diferentes.
 
 ## 3. Requisitos Funcionais
 
-- [ ] RF-01: O modal de configuração de geração exibe um `MultiSelect` "Filtrar por faixa" com todas as 9 faixas disponíveis (branca, cinza, amarela, laranja, verde, azul, roxa, marrom, preta).
-- [ ] RF-02: O modal de configuração de geração exibe um `MultiSelect` "Filtrar por categoria" com todas as categorias que possuem atletas cadastrados.
-- [ ] RF-03: Ao deixar os filtros vazios, o sistema gera chaves para todas as faixas e categorias (comportamento legado preservado).
-- [ ] RF-04: Ao selecionar faixas, apenas atletas com aquelas faixas são incluídos na geração.
-- [ ] RF-05: Ao selecionar categorias, apenas atletas daquelas categorias são incluídos na geração.
-- [ ] RF-06: Filtros de faixa e categoria funcionam de forma combinada (interseção).
-- [ ] RF-07: O handler `gerar-chave` (IPC individual) aceita parâmetro opcional `faixa?` e filtra atletas por ela antes de gerar a chave.
-- [ ] RF-08: O handler `gerar-todas-chaves` (IPC bulk) aceita arrays opcionais `faixas?` e `categorias?` e filtra atletas antes do agrupamento.
-- [ ] RF-09: O texto informativo no modal reflete os filtros selecionados.
+- [x] RF-07: O handler `gerar-chave` (IPC individual) aceita parâmetro opcional `faixa?` e filtra atletas por ela antes de gerar a chave.
+- [x] RF-08: O handler `gerar-todas-chaves` (IPC bulk) aceita arrays opcionais `faixas?` e `categorias?` e filtra atletas antes do agrupamento (parâmetros mantidos para compatibilidade).
+- [ ] ~~RF-01 a RF-06, RF-09:~~ Removidos — filtros UI não são necessários, a separação é regra interna sempre aplicada automaticamente pelo backend.
 
 ---
 
@@ -62,7 +58,7 @@ para gerar chaves seletivamente sem misturar faixas diferentes.
 | `electron/brackets.ts` | Modificar | Adicionar parâmetros `faixas?` e `categorias?` ao `gerarTodasChavesHandler` e `faixa?` ao handler `gerar-chave` |
 | `electron/preload.ts` | Modificar | Atualizar assinatura de `gerarTodasChaves` e `gerarChave` |
 | `src/types/electron.d.ts` | Modificar | Atualizar tipos das funções IPC |
-| `src/pages/GerenciarChaves.tsx` | Modificar | Adicionar `MultiSelect` de faixa e categoria ao modal de configuração, state e passagem de parâmetros |
+| `src/pages/GerenciarChaves.tsx` | ~~Modificar~~ | ~~Adicionar `MultiSelect` de faixa e categoria~~ Removido — filtros UI não necessários |
 
 ---
 
