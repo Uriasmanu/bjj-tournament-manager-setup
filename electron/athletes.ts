@@ -178,7 +178,11 @@ function importAthletesFromFile(torneioId: string, filePath: string): { imported
     throw new Error('Arquivo inválido: o conteúdo deve ser um array de atletas.')
   }
 
+  const torneio = loadTorneio(torneioId)
   const categoriasValidas = new Set(CATEGORIAS_IBJJF.map(c => c.id))
+  for (const c of (torneio.categoriasCustomizadas ?? [])) {
+    categoriasValidas.add(c.id)
+  }
 
   for (const a of incoming) {
     if (!a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg || !a.genero || !a.categoria) {
@@ -189,7 +193,6 @@ function importAthletesFromFile(torneioId: string, filePath: string): { imported
     }
   }
 
-  const torneio = loadTorneio(torneioId)
   const current = torneio.atletas ?? []
   let imported = 0
   let skipped = 0

@@ -18,7 +18,8 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 -->
 
-### [aberto] import de atleta tem que reconhecer categoria customizada
+### [aberto] se eu apagar em atletas, ele tem que sair de Chaves Geradas 
+<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
@@ -401,6 +402,12 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** O menu de categorias não seguia o padrão visual dos outros menus (ex: Atletas). Cards com border-left, hover effects, botão "Acessar" dourado.
 - **Solução:** Reescrito `CategoriasMenu.tsx` seguindo exatamente o padrão de `AthletesMenu.tsx`: welcome banner com stats (Grid 8/4), 3 cards (Categorias IBJJF, Nova Categoria Customizada, Listar Categorias Customizadas) com ícone, título, descrição e botão "Acessar". Adicionado `useDisclosure` para abrir modal de criação inline.
 - **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
+
+### [resolvido] Import de atleta deve reconhecer categorias customizadas
+- **Data:** 2026-06-17
+- **Problema:** O handler `import-athletes` (`electron/athletes.ts:importAthletesFromFile`) validava o campo `categoria` apenas contra `CATEGORIAS_IBJJF`. Atletas com categorias customizadas (`custom-<uuid>`) eram rejeitados com erro "categoria não reconhecida".
+- **Solução:** Movido `loadTorneio` antes da validação de categorias e adicionados os IDs de `torneio.categoriasCustomizadas` ao `Set` de categorias válidas. Agora tanto categorias IBJJF quanto customizadas são aceitas na importação.
+- **Arquivos alterados:** `electron/athletes.ts`
 
 ### [feature] Geração Manual de Chaves
 - **Data:** 2026-06-17

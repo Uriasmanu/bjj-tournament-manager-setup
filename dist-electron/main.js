@@ -505,7 +505,11 @@ function importAthletesFromFile(torneioId, filePath) {
   if (!Array.isArray(incoming)) {
     throw new Error("Arquivo inválido: o conteúdo deve ser um array de atletas.");
   }
+  const torneio = loadTorneio$5(torneioId);
   const categoriasValidas = new Set(CATEGORIAS_IBJJF.map((c) => c.id));
+  for (const c of torneio.categoriasCustomizadas ?? []) {
+    categoriasValidas.add(c.id);
+  }
   for (const a of incoming) {
     if (!a.nome || !a.equipe || !a.faixa || !a.anoNascimento || !a.pesoKg || !a.genero || !a.categoria) {
       throw new Error(`Atleta inválido no arquivo: "${a.nome || "sem nome"}" — campos obrigatórios ausentes (categoria, genero).`);
@@ -514,7 +518,6 @@ function importAthletesFromFile(torneioId, filePath) {
       throw new Error(`Atleta inválido no arquivo: "${a.nome}" — categoria "${a.categoria}" não reconhecida.`);
     }
   }
-  const torneio = loadTorneio$5(torneioId);
   const current = torneio.atletas ?? [];
   let imported = 0;
   let skipped = 0;
