@@ -21,7 +21,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
-Opção de gerar chaves manualmente tambem
+Opção de gerar chaves manualmente tambem, parecido com o que tem para luta casada, porem em vez de só 2 atletas, pode colocar quantos quiser, só dar um nome para a chave ou o sistema coloca um nome coerente
 
 
 # Guia de Spec para Implementação de Features
