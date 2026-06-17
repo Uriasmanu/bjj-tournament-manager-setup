@@ -278,6 +278,10 @@ export function GerenciarChaves() {
   const handleCriarChaveManual = (chave: Chave) => {
     setChaves(prev => [...prev, chave]);
     setChavesGeradas(true);
+    // Update emChave on athletes in the new key
+    setAthletes(prev => prev.map(a =>
+      chave.posicoesAtletas.includes(a.id) ? { ...a, emChave: true } : a
+    ));
     notifications.show({ color: 'green', title: 'Sucesso', message: `Chave manual criada com ${chave.totalAtletas} atleta(s).` });
   };
 
