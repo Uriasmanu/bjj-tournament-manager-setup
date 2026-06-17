@@ -712,9 +712,16 @@ interface GerarTodasResult {
   atletasSemChave: Atleta[];
 }
 
-function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16): GerarTodasResult {
+function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16, faixas?: string[], categorias?: string[]): GerarTodasResult {
   const torneio = loadTorneio(torneioId);
-  const atletas = (torneio.atletas ?? []).filter((a: Atleta) => a.deletedAt == null);
+  let atletas = (torneio.atletas ?? []).filter((a: Atleta) => a.deletedAt == null);
+
+  if (faixas && faixas.length > 0) {
+    atletas = atletas.filter(a => faixas.includes(a.faixa));
+  }
+  if (categorias && categorias.length > 0) {
+    atletas = atletas.filter(a => categorias.includes(a.categoria));
+  }
 
   torneio.chaves = [];
 
@@ -1584,29 +1591,31 @@ function registrarResultadoHandler(
 }
 
 export function registerBracketHandlers(): void {
-  ipcMain.handle('gerar-todas-chaves', (_event, maxPorChave?: number): GerarTodasResult => {
+  ipcMain.handle('gerar-todas-chaves', (_event, maxPorChave?: number, faixas?: string[], categorias?: string[]): GerarTodasResult => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error('Nenhum torneio ativo');
     const max = (maxPorChave && maxPorChave >= 2 && maxPorChave <= 16) ? maxPorChave : 16;
-    return gerarTodasChavesHandler(torneioId, max);
+    return gerarTodasChavesHandler(torneioId, max, faixas, categorias);
   });
 
-  ipcMain.handle('gerar-chave', (_event, data: { categoriaId: string }): Chave => {
+  ipcMain.handle('gerar-chave', (_event, data: { categoriaId: string; faixa?: string }): Chave => {
     const torneioId = getActiveTournamentId();
     if (!torneioId) throw new Error('Nenhum torneio ativo');
     const torneio = loadTorneio(torneioId);
-    const atletas = (torneio.atletas ?? []).filter((a: Atleta) => a.deletedAt == null && a.categoria === data.categoriaId);
+    const atletas = (torneio.atletas ?? []).filter((a: Atleta) =>
+      a.deletedAt == null && a.categoria === data.categoriaId && (!data.faixa || a.faixa === data.faixa)
+    );
 
     if (atletas.length < 2 || atletas.length > 16) {
       throw new Error('A categoria precisa ter entre 2 e 16 atletas para gerar uma chave.');
     }
 
     const chaves = torneio.chaves ?? [];
-    if (chaves.some(c => c.categoriaId === data.categoriaId)) {
-      throw new Error('Chave já existe para esta categoria.');
+    if (chaves.some(c => c.categoriaId === data.categoriaId && (!data.faixa || c.faixa === data.faixa))) {
+      throw new Error('Chave já existe para esta categoria/faixa.');
     }
 
-    const chave = gerarChave(data.categoriaId, atletas);
+    const chave = gerarChave(data.categoriaId, atletas, data.faixa);
     torneio.chaves = [...chaves, chave];
 
     // Mark emChave on athletes in this chave

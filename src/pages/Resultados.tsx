@@ -44,7 +44,7 @@ import { formatarDuracao } from '../utils/format';
 
 const FAIXA_LABEL: Record<string, string> = {
   'branca': 'Branca', 'cinza': 'Cinza', 'amarela': 'Amarela', 'laranja': 'Laranja',
-  'verde': 'Verde', 'azul': 'Azul', 'roxa': 'Roxa', 'marrom': 'Marrom', 'preta': 'Preta',
+  'verde': 'Verde', 'branca-adulto': 'Branca', 'azul': 'Azul', 'roxa': 'Roxa', 'marrom': 'Marrom', 'preta': 'Preta',
 };
 
 function capitalize(s: string): string {
@@ -87,19 +87,6 @@ function getPerdedoresSemifinal(chave: Chave): string[] {
 function getCategoriaTitulo(categoriaId: string): string {
   return categoriaLabels[categoriaId] ?? categoriaId;
 }
-
-const FAIXA_LABEL: Record<string, string> = {
-  branca: 'Branca',
-  cinza: 'Cinza',
-  amarela: 'Amarela',
-  laranja: 'Laranja',
-  verde: 'Verde',
-  'branca-adulto': 'Branca',
-  azul: 'Azul',
-  roxa: 'Roxa',
-  marrom: 'Marrom',
-  preta: 'Preta',
-};
 
 function getChaveTitulo(chave: Chave): string {
   const base = categoriaLabels[chave.categoriaId] || chave.categoriaId;

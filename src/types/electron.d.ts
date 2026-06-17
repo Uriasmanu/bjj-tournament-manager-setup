@@ -53,8 +53,8 @@ interface ElectronAPI {
   loadDeletedArbitros: () => Promise<Arbitro[]>;
   importArbitros: () => Promise<{ imported: number; skipped: number }>;
   exportArbitros: () => Promise<void>;
-  gerarTodasChaves: (maxAtletas?: number) => Promise<{ chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] }>;
-  gerarChave: (data: { categoriaId: string }) => Promise<Chave>;
+  gerarTodasChaves: (maxAtletas?: number, faixas?: string[], categorias?: string[]) => Promise<{ chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] }>;
+  gerarChave: (data: { categoriaId: string; faixa?: string }) => Promise<Chave>;
   loadChaves: () => Promise<Chave[]>;
   loadChavePorCategoria: (categoriaId: string) => Promise<Chave | null>;
   randomizarChave: (data: { chaveId: string }) => Promise<Chave>;

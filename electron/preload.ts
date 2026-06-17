@@ -70,9 +70,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('import-arbitros'),
   exportArbitros: () =>
     ipcRenderer.invoke('export-arbitros'),
-  gerarTodasChaves: (maxAtletas?: number) =>
-    ipcRenderer.invoke('gerar-todas-chaves', maxAtletas),
-  gerarChave: (data: { categoriaId: string }) =>
+  gerarTodasChaves: (maxAtletas?: number, faixas?: string[], categorias?: string[]) =>
+    ipcRenderer.invoke('gerar-todas-chaves', maxAtletas, faixas, categorias),
+  gerarChave: (data: { categoriaId: string; faixa?: string }) =>
     ipcRenderer.invoke('gerar-chave', data),
   loadChaves: () =>
     ipcRenderer.invoke('load-chaves'),
