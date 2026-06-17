@@ -7,11 +7,13 @@ import { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteAr
 import { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas } from './areas'
 import { registerBracketHandlers } from './brackets'
 import { loadLutasCasadas, loadDeletedLutasCasadas, loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada, deleteLutasCasadas, permanentlyDeleteLutaCasada, permanentlyDeleteLutasCasadas, restoreLutaCasada, restoreLutasCasadas } from './lutasCasadas'
+import { loadCategorias, toggleCategoria, saveCategoriaCustomizada, updateCategoriaCustomizada, deleteCategoriaCustomizada } from './categorias'
 import { checkActivation, validatePassword, activateLicense, getActivationInfo } from './activation'
 import type { AreaLuta } from '../src/types/area'
 import type { Atleta } from '../src/types/athlete'
 import type { Arbitro } from '../src/types/referee'
 import type { LutaCasada } from '../src/types/lutaCasada'
+import type { CategoriaCustomizada } from '../src/types/category'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -304,6 +306,38 @@ function registerActivationHandlers(): void {
   })
 }
 
+function registerCategoriaHandlers(): void {
+  ipcMain.handle('load-categorias', (): { desabilitadas: string[]; customizadas: CategoriaCustomizada[] } => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return loadCategorias(torneioId)
+  })
+
+  ipcMain.handle('toggle-categoria', (_event, categoriaId: string): string[] => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return toggleCategoria(torneioId, categoriaId)
+  })
+
+  ipcMain.handle('save-categoria-customizada', (_event, data: Omit<CategoriaCustomizada, 'id' | 'createdAt' | 'updatedAt'>): CategoriaCustomizada => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return saveCategoriaCustomizada(torneioId, data)
+  })
+
+  ipcMain.handle('update-categoria-customizada', (_event, data: CategoriaCustomizada): CategoriaCustomizada => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return updateCategoriaCustomizada(torneioId, data)
+  })
+
+  ipcMain.handle('delete-categoria-customizada', (_event, categoriaId: string): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return deleteCategoriaCustomizada(torneioId, categoriaId)
+  })
+}
+
 function registerLutasCasadasHandlers(): void {
   ipcMain.handle('load-lutas-casadas', (): LutaCasada[] => {
     const torneioId = getActiveTournamentId()
@@ -379,6 +413,7 @@ app.whenReady().then(() => {
   registerBracketHandlers()
   registerAreaHandlers()
   registerLutasCasadasHandlers()
+  registerCategoriaHandlers()
   registerActivationHandlers()
   createWindow()
 })

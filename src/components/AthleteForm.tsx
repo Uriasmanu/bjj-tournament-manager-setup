@@ -1,9 +1,9 @@
 import { Modal, TextInput, NumberInput, Select, Button, Group, Stack, Box, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { IconUserPlus } from '@tabler/icons-react';
 import type { Atleta, Faixa } from '../types/athlete';
-import { CATEGORIAS_IBJJF } from '../types/category';
+import { CATEGORIAS_IBJJF, type CategoriaCustomizada } from '../types/category';
 
 const COLORS = {
   c1: '#092b5a',
@@ -64,7 +64,13 @@ function calcularIdade(anoNascimento: number): number {
   return anoAtual - anoNascimento;
 }
 
-function categoriasFiltradas(genero: string, faixa: string, anoNascimento: string | number) {
+function categoriasFiltradas(
+  genero: string,
+  faixa: string,
+  anoNascimento: string | number,
+  desabilitadas: string[],
+  customizadas: CategoriaCustomizada[]
+) {
   const idade = anoNascimento ? calcularIdade(Number(anoNascimento)) : 0;
 
   let faixaEtariaMatch: string | null = null;
@@ -85,9 +91,11 @@ function categoriasFiltradas(genero: string, faixa: string, anoNascimento: strin
   else if (idade >= 61) faixaEtariaMatch = 'master7';
 
   const faixaNormalizada = faixa === 'branca-adulto' ? 'branca' : faixa;
+  const desabilitadasSet = new Set(desabilitadas);
 
-  return CATEGORIAS_IBJJF
+  const ibjjf = CATEGORIAS_IBJJF
     .filter((c) => {
+      if (desabilitadasSet.has(c.id)) return false;
       if (genero && c.genero !== genero) return false;
       if (faixaEtariaMatch && c.faixaEtaria !== faixaEtariaMatch) return false;
       if (faixaNormalizada && c.faixaMinima) {
@@ -107,10 +115,23 @@ function categoriasFiltradas(genero: string, faixa: string, anoNascimento: strin
         label: `${c.nome} (${limite})`,
       };
     });
+
+  const custom = customizadas
+    .filter((c) => {
+      if (genero && c.genero !== genero) return false;
+      if (faixaEtariaMatch && c.faixaEtaria !== faixaEtariaMatch) return false;
+      return true;
+    })
+    .map((c) => ({
+      value: c.id,
+      label: `${c.nome} (${c.pesoMinimoKg}-${c.pesoMaximoKg} kg, ${c.tempoLutaMinutos} min)`,
+    }));
+
+  return [...ibjjf, ...custom];
 }
 
-function categoriasPorGenero(genero: string) {
-  return CATEGORIAS_IBJJF
+function categoriasPorGenero(genero: string, customizadas: CategoriaCustomizada[]) {
+  const ibjjf = CATEGORIAS_IBJJF
     .filter((c) => {
       if (genero && c.genero !== genero) return false;
       return true;
@@ -124,6 +145,18 @@ function categoriasPorGenero(genero: string) {
         label: `${c.nome} (${limite})`,
       };
     });
+
+  const custom = customizadas
+    .filter((c) => {
+      if (genero && c.genero !== genero) return false;
+      return true;
+    })
+    .map((c) => ({
+      value: c.id,
+      label: `${c.nome} (${c.pesoMinimoKg}-${c.pesoMaximoKg} kg, ${c.tempoLutaMinutos} min)`,
+    }));
+
+  return [...ibjjf, ...custom];
 }
 
 function agruparCategorias(data: { value: string; label: string }[]) {
@@ -148,6 +181,9 @@ interface AthleteFormProps {
 }
 
 export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormProps) {
+  const [desabilitadas, setDesabilitadas] = useState<string[]>([]);
+  const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
+
   const form = useForm({
     initialValues: {
       nome: '',
@@ -218,11 +254,20 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
     if (saved) onClose();
   };
 
+  useEffect(() => {
+    if (opened) {
+      window.electronAPI.loadCategorias().then((data) => {
+        setDesabilitadas(data.desabilitadas);
+        setCustomizadas(data.customizadas);
+      }).catch(() => {});
+    }
+  }, [opened]);
+
   const catOptions = useMemo(
     () => athlete
-      ? categoriasPorGenero(form.values.genero as string)
-      : categoriasFiltradas(form.values.genero as string, form.values.faixa as string, form.values.anoNascimento),
-    [athlete, form.values.genero, form.values.faixa, form.values.anoNascimento]
+      ? categoriasPorGenero(form.values.genero as string, customizadas)
+      : categoriasFiltradas(form.values.genero as string, form.values.faixa as string, form.values.anoNascimento, desabilitadas, customizadas),
+    [athlete, form.values.genero, form.values.faixa, form.values.anoNascimento, desabilitadas, customizadas]
   );
 
   const catGrouped = useMemo(() => agruparCategorias(catOptions), [catOptions]);

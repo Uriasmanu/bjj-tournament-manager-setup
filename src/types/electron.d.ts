@@ -4,6 +4,7 @@ import type { Atleta } from './athlete';
 import type { Arbitro } from './referee';
 import type { Chave, PlacarLuta } from './bracket';
 import type { LutaCasada } from './lutaCasada';
+import type { CategoriaCustomizada } from './category';
 
 declare global {
   interface Window {
@@ -96,6 +97,11 @@ interface ElectronAPI {
   permanentlyDeleteLutasCasadas: (ids: string[]) => Promise<void>;
   restoreLutaCasada: (lutaCasadaId: string) => Promise<void>;
   restoreLutasCasadas: (ids: string[]) => Promise<void>;
+  loadCategorias: () => Promise<{ desabilitadas: string[]; customizadas: CategoriaCustomizada[] }>;
+  toggleCategoria: (categoriaId: string) => Promise<string[]>;
+  saveCategoriaCustomizada: (data: Omit<CategoriaCustomizada, 'id' | 'createdAt' | 'updatedAt'>) => Promise<CategoriaCustomizada>;
+  updateCategoriaCustomizada: (data: CategoriaCustomizada) => Promise<CategoriaCustomizada>;
+  deleteCategoriaCustomizada: (categoriaId: string) => Promise<void>;
 }
 
 interface ActivationAPI {

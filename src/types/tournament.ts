@@ -3,6 +3,7 @@ import type { Atleta } from './athlete';
 import type { Arbitro } from './referee';
 import type { Chave } from './bracket';
 import type { LutaCasada } from './lutaCasada';
+import type { CategoriaCustomizada } from './category';
 
 export interface Torneio {
   id: string;
@@ -16,6 +17,8 @@ export interface Torneio {
   chaves?: Chave[];
   areas?: AreaLuta[];
   lutasCasadas?: LutaCasada[];
+  categoriasDesabilitadas?: string[];
+  categoriasCustomizadas?: CategoriaCustomizada[];
 }
 
 export interface CreateTorneioInput {

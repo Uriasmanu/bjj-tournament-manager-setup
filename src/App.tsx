@@ -26,6 +26,8 @@ import { PlacarLuta } from './pages/PlacarLuta';
 import { PlacarLutaCasada } from './pages/PlacarLutaCasada';
 import { Resultados } from './pages/Resultados';
 import { AdminLutasCasadas } from './pages/AdminLutasCasadas';
+import { CategoriasMenu } from './pages/CategoriasMenu';
+import { AdminCategorias } from './pages/AdminCategorias';
 import { ActivationScreen } from './components/ActivationScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TournamentModeProvider } from './utils/TournamentModeContext';
@@ -57,6 +59,8 @@ function MainApp() {
           <Route path="/admin/areas" element={<AreaGuard><AreasMenu /></AreaGuard>} />
           <Route path="/admin/areas/lista" element={<AreaGuard><AdminAreas /></AreaGuard>} />
           <Route path="/admin/lutas-casadas" element={<AreaGuard><AdminLutasCasadas /></AreaGuard>} />
+          <Route path="/admin/categorias" element={<AreaGuard><CategoriasMenu /></AreaGuard>} />
+          <Route path="/admin/categorias/lista" element={<AreaGuard><AdminCategorias /></AreaGuard>} />
         </Routes>
         </TournamentModeProvider>
       </ErrorBoundary>

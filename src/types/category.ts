@@ -183,3 +183,46 @@ export function classificarCategoria(atleta: ClassificarInput): CategoriaIBJJF |
 
   return encontrarCategoriaPorPeso(faixaEtaria, atleta.genero, atleta.pesoKg);
 }
+
+export interface CategoriaCustomizada {
+  id: string;
+  nome: string;
+  faixaEtaria: FaixaEtaria;
+  genero: 'masculino' | 'feminino';
+  pesoMinimoKg: number;
+  pesoMaximoKg: number;
+  corFaixa: string;
+  tempoLutaMinutos: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const FAIXA_ETARIA_LABELS: Record<FaixaEtaria, string> = {
+  'pre-mirim': 'Pré-Mirim (4-5)',
+  'mirim': 'Mirim (6-7)',
+  'infantil-a': 'Infantil A (8-9)',
+  'infantil-b': 'Infantil B (10-11)',
+  'infanto-juvenil-a': 'Infanto-Juvenil A (12-13)',
+  'infanto-juvenil-b': 'Infanto-Juvenil B (14-15)',
+  'juvenil': 'Juvenil (16-17)',
+  'adulto': 'Adulto (18-29)',
+  'master1': 'Master 1 (30-35)',
+  'master2': 'Master 2 (36-40)',
+  'master3': 'Master 3 (41-45)',
+  'master4': 'Master 4 (46-50)',
+  'master5': 'Master 5 (51-55)',
+  'master6': 'Master 6 (56-60)',
+  'master7': 'Master 7 (61+)',
+};
+
+export const COR_FAIXA_OPTIONS = [
+  { value: '#ffffff', label: 'Branca', color: '#ffffff' },
+  { value: '#9e9e9e', label: 'Cinza', color: '#9e9e9e' },
+  { value: '#fdd835', label: 'Amarela', color: '#fdd835' },
+  { value: '#ff9800', label: 'Laranja', color: '#ff9800' },
+  { value: '#4caf50', label: 'Verde', color: '#4caf50' },
+  { value: '#1e88e5', label: 'Azul', color: '#1e88e5' },
+  { value: '#7b1fa2', label: 'Roxa', color: '#7b1fa2' },
+  { value: '#5d4037', label: 'Marrom', color: '#5d4037' },
+  { value: '#212121', label: 'Preta', color: '#212121' },
+];

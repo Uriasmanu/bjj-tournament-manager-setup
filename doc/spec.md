@@ -17,9 +17,13 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!--
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 -->
+### [aberto] menu categoria, tem que seguir o padrão dos outros menus, ex: atleta
+### [aberto] as categorias na lista tem que mostrar a faixa de peso na frente
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 Menu no dashbord chamado categorias, serve para habilitar e desabilitar categorias (não pode apagar ou editar as do sistema, somente habilitar de desabilitar), crar, editar e apagar categorias. Nome da categoria, faixa de peso, cor de faixa, idade, tempo de luta
+
+**Status:** Implementado (2026-06-17)
 
 
 # Guia de Spec para Implementação de Features
@@ -381,3 +385,14 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Solução:** Criada função `categoriasPorGenero()` que filtra apenas por gênero. No modo edição (`athlete` presente), usa-se `categoriasPorGenero` em vez de `categoriasFiltradas`, permitindo escolha livre entre todas as categorias do gênero. Modo criação mantém o filtro completo.
 - **Arquivos alterados:** `src/components/AthleteForm.tsx`
 - **Spec:** `spec/escolher-categoria-livre.md`
+
+### [feature] Menu de Categorias no Dashboard
+- **Data:** 2026-06-17
+- **Descrição:** Implementado menu "Categorias" no Dashboard para gerenciar categorias do torneio.
+- **Funcionalidades:**
+  - Habilitar/desabilitar categorias IBJJF do sistema (toggle switch)
+  - Criar, editar e excluir categorias personalizadas
+  - Campos: nome, faixa etária, gênero, peso mínimo/máximo, cor da faixa, tempo de luta
+  - Integração com formulário de atletas (filtra desabilitadas, inclui customizadas)
+- **Arquivos criados:** `electron/categorias.ts`, `src/components/CategoriaForm.tsx`, `src/pages/CategoriasMenu.tsx`, `src/pages/AdminCategorias.tsx`, `spec/categorias-menu.md`
+- **Arquivos alterados:** `src/types/category.ts`, `src/types/tournament.ts`, `src/types/electron.d.ts`, `electron/main.ts`, `electron/preload.ts`, `src/components/AthleteForm.tsx`, `src/App.tsx`, `src/pages/Dashboard.tsx`

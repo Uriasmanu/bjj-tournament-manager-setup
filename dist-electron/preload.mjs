@@ -64,7 +64,12 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   permanentlyDeleteLutaCasada: (lutaCasadaId) => electron.ipcRenderer.invoke("permanently-delete-luta-casada", lutaCasadaId),
   permanentlyDeleteLutasCasadas: (ids) => electron.ipcRenderer.invoke("permanently-delete-lutas-casadas", ids),
   restoreLutaCasada: (lutaCasadaId) => electron.ipcRenderer.invoke("restore-luta-casada", lutaCasadaId),
-  restoreLutasCasadas: (ids) => electron.ipcRenderer.invoke("restore-lutas-casadas", ids)
+  restoreLutasCasadas: (ids) => electron.ipcRenderer.invoke("restore-lutas-casadas", ids),
+  loadCategorias: () => electron.ipcRenderer.invoke("load-categorias"),
+  toggleCategoria: (categoriaId) => electron.ipcRenderer.invoke("toggle-categoria", categoriaId),
+  saveCategoriaCustomizada: (data) => electron.ipcRenderer.invoke("save-categoria-customizada", data),
+  updateCategoriaCustomizada: (data) => electron.ipcRenderer.invoke("update-categoria-customizada", data),
+  deleteCategoriaCustomizada: (categoriaId) => electron.ipcRenderer.invoke("delete-categoria-customizada", categoriaId)
 });
 electron.contextBridge.exposeInMainWorld("activation", {
   check: () => electron.ipcRenderer.invoke("check-activation"),

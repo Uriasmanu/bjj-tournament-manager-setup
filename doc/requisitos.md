@@ -1441,6 +1441,21 @@ bjj-tournament-manager-setup/
 ├── spec.md                  ← Diagnóstico histórico (bug uncontrolled → controlled)
 └── spec-correção.md         ← Análise da correção (form em deps do useEffect)
 ```
+
+### 3.16. Menu de Categorias (Implementado)
+
+- **Acesso:** O card "Categorias" no Dashboard navega para `/admin/categorias`.
+- **Sidebar:** O item "Categorias" aparece na seção "Gestão e Dados" da sidebar do Dashboard.
+- **Funcionalidades:**
+  - **Categorias IBJJF do Sistema:** Lista todas as ~151 categorias IBJJF com toggle enable/disable. Categorias desabilitadas não aparecem no Select de atletas. O estado é persistido no JSON do torneio (`categoriasDesabilitadas: string[]`).
+  - **Categorias Customizadas:** CRUD completo (criar, editar, excluir). Campos: nome, faixa etária, gênero, peso mínimo/máximo (kg), cor da faixa, tempo de luta (minutos). Persistidas no JSON do torneio (`categoriasCustomizadas: CategoriaCustomizada[]`).
+  - **Busca:** Campo de busca filtra categorias por nome em tempo real.
+  - **Estatísticas:** Exibe total de categorias IBJJF ativas e total de customizadas.
+- **Tela de gerenciamento (`/admin/categorias/lista`):** Tabela CRUD de categorias customizadas com ações de editar e excluir.
+- **Integração com Atletas:** O `AthleteForm` carrega categorias desabilitadas e customizadas ao abrir. No modo criação, filtra por gênero + idade + faixa. No modo edição, filtra apenas por gênero. Categorias customizadas são exibidas com faixa de peso e tempo de luta no label.
+- **Tipos:** `CategoriaCustomizada` com campos: `id` (prefixo `custom-`), `nome`, `faixaEtaria`, `genero`, `pesoMinimoKg`, `pesoMaximoKg`, `corFaixa`, `tempoLutaMinutos`, `createdAt`, `updatedAt`.
+- **Auto-fix retroativo:** Torneios legados sem `categoriasDesabilitadas` ou `categoriasCustomizadas` recebem arrays vazios via `?? []` ao carregar.
+
 cores que gosto:
 
 cores

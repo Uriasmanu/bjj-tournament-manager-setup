@@ -3,6 +3,7 @@ import type { Torneio } from '../src/types/tournament'
 import type { AreaLuta } from '../src/types/area'
 import type { PlacarLuta } from '../src/types/bracket'
 import type { LutaCasada } from '../src/types/lutaCasada'
+import type { CategoriaCustomizada } from '../src/types/category'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   createTournament: (data: { nome: string; data: string }) =>
@@ -142,6 +143,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('restore-luta-casada', lutaCasadaId),
   restoreLutasCasadas: (ids: string[]) =>
     ipcRenderer.invoke('restore-lutas-casadas', ids),
+  loadCategorias: () =>
+    ipcRenderer.invoke('load-categorias'),
+  toggleCategoria: (categoriaId: string) =>
+    ipcRenderer.invoke('toggle-categoria', categoriaId),
+  saveCategoriaCustomizada: (data: Omit<CategoriaCustomizada, 'id' | 'createdAt' | 'updatedAt'>) =>
+    ipcRenderer.invoke('save-categoria-customizada', data),
+  updateCategoriaCustomizada: (data: CategoriaCustomizada) =>
+    ipcRenderer.invoke('update-categoria-customizada', data),
+  deleteCategoriaCustomizada: (categoriaId: string) =>
+    ipcRenderer.invoke('delete-categoria-customizada', categoriaId),
 })
 
 contextBridge.exposeInMainWorld('activation', {
