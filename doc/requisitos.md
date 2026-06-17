@@ -149,7 +149,7 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 - **Layout em colunas:** os campos `Gênero` (`Select`) e `Peso (kg)` (`NumberInput`) são renderizados **lado a lado** dentro de um `<Group grow gap="md">` (Mantine), ocupando larguras equivalentes. A ordem é `[Gênero, Peso]` (esquerda → direita). Demais campos (Nome, Equipe, Faixa, Categoria, Ano de Nascimento) permanecem em linhas separadas (ver `spec/athlete-form-peso-genero-lado-a-lado.md`).
 - Nome e equipe são obrigatórios (mínimo 2 caracteres) e armazenados em minúsculo (`.trim().toLowerCase()` no submit).
 - Gênero é obrigatório: `Select` com opções `Masculino` / `Feminino`.
-- Categoria IBJJF é obrigatória: `Select` populado com `CATEGORIAS_IBJJF`, filtrado dinamicamente por faixa etária (calculada da idade), gênero e faixa do atleta. O label de cada opção exibe o limite de peso, ex.: `"Adulto Masculino Leve (até 76,0 kg)"`.
+- Categoria IBJJF é obrigatória: `Select` populado com `CATEGORIAS_IBJJF`. Na **criação**, filtra dinamicamente por faixa etária (calculada da idade), gênero e faixa do atleta. Na **edição**, filtra apenas por gênero, permitindo ao administrador escolher livremente entre todas as categorias do gênero selecionado. O label de cada opção exibe o limite de peso, ex.: `"Adulto Masculino Leve (até 76,0 kg)"`.
 - Peso deve estar entre 1 e 300 kg.
 - Faixa segue enum: infantil (branca, cinza, amarela, laranja, verde) e adulto (branca-adulto, azul, roxa, marrom, preta). O valor `branca-adulto` é mapeado para `branca` na persistência.
 - Ano de nascimento entre 1920 e ano atual.

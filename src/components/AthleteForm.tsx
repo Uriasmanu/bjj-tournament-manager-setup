@@ -109,6 +109,23 @@ function categoriasFiltradas(genero: string, faixa: string, anoNascimento: strin
     });
 }
 
+function categoriasPorGenero(genero: string) {
+  return CATEGORIAS_IBJJF
+    .filter((c) => {
+      if (genero && c.genero !== genero) return false;
+      return true;
+    })
+    .map((c) => {
+      const limite = c.pesoMaximoKg !== null
+        ? `até ${c.pesoMaximoKg.toFixed(1).replace('.', ',')} kg`
+        : 'sem limite';
+      return {
+        value: c.id,
+        label: `${c.nome} (${limite})`,
+      };
+    });
+}
+
 function agruparCategorias(data: { value: string; label: string }[]) {
   const grupos: Record<string, { value: string; label: string }[]> = {};
   for (const item of data) {
@@ -202,8 +219,10 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
   };
 
   const catOptions = useMemo(
-    () => categoriasFiltradas(form.values.genero as string, form.values.faixa as string, form.values.anoNascimento),
-    [form.values.genero, form.values.faixa, form.values.anoNascimento]
+    () => athlete
+      ? categoriasPorGenero(form.values.genero as string)
+      : categoriasFiltradas(form.values.genero as string, form.values.faixa as string, form.values.anoNascimento),
+    [athlete, form.values.genero, form.values.faixa, form.values.anoNascimento]
   );
 
   const catGrouped = useMemo(() => agruparCategorias(catOptions), [catOptions]);

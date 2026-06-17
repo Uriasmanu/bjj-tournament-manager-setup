@@ -17,10 +17,9 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!--
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 -->
-### [aberto] tem que ser possivel escolher livremente a categoria, quando for editar o atleta
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
-
+Menu no dashbord chamado categorias, serve para habilitar e desabilitar categorias (não pode apagar ou editar as do sistema, somente habilitar de desabilitar), crar, editar e apagar categorias. Nome da categoria, faixa de peso, cor de faixa, idade, tempo de luta
 
 
 # Guia de Spec para Implementação de Features
@@ -375,3 +374,10 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** O sistema bloqueava a atribuição de um árbitro a mais de uma área, impedindo o uso compartilhado de árbitros entre áreas.
 - **Solução:** Removida a validação de exclusão mútua no backend (`checkRefereeNotInUse` → `checkRefereesExist`). No frontend (`AreaForm`), removido o filtro que ocultava árbitros já usados e adicionado alerta visual quando um árbitro selecionado já está atribuído a outra área, exibindo o nome da área conflitante.
 - **Arquivos alterados:** `electron/areas.ts`, `src/components/AreaForm.tsx`
+
+### [resolvido] Escolher categoria livremente ao editar atleta
+- **Data:** 2026-06-17
+- **Problema:** Ao editar um atleta, o Select de categoria filtrava por gênero + idade + faixa, impedindo o administrador de atribuir manualmente uma categoria diferente.
+- **Solução:** Criada função `categoriasPorGenero()` que filtra apenas por gênero. No modo edição (`athlete` presente), usa-se `categoriasPorGenero` em vez de `categoriasFiltradas`, permitindo escolha livre entre todas as categorias do gênero. Modo criação mantém o filtro completo.
+- **Arquivos alterados:** `src/components/AthleteForm.tsx`
+- **Spec:** `spec/escolher-categoria-livre.md`
