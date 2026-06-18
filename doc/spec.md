@@ -17,7 +17,12 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!--
 ### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
 -->
-### [aberto] quando clico para criar chave manual, ele não esta aparecendo na tela, preciso sair e entrar para que a chave apareça
+### [aberto] Quando tento atualizar o nome do atleta ele tenta criar um novo atleta
+### [aberto] Gerar pdf das lutas casadas e das chaves de luta, no pdf das chaves, tem que mostrar até os cards futuros em formato de chave de luta vertical, com os cards de progressão da esquerda para a direita
+### [aberto] no menu de lutas casadas, pode se editar e criar luta casada
+### [aberto] As listas devem ser atualizadas visualmenten assim que um novo item é adidionado, exemplo na lista de atleta, adicionei um atleta mas a lista não atualizou até que eu tivesse saido e entrado novamente na lista
+### [aberto] Em categorias, alem da faixa de peso, exiba o tempo de luta tambem
+### [aberto] As categorias padões, não precisam ser por faixa, e sim faixa de peso e idade, veja se realmente exitem 270 ou se esta repetindo de forma incorreta. Tambem não precisa ser separado por feminino e masculino, internamente o sistema tem que entende o filtro, exemplo, categoria é adulto - 50 a 53kg, o atleta tem faixa branca e é homem, entao quando for gerar as chaves automaticas ele fica junto com os atletas da mesma categoria, faixa e genero
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
