@@ -1,14 +1,16 @@
 import { Text, Button, Group, Loader, Center, Stack, Table, Badge, ActionIcon, Checkbox, TextInput, Switch, Modal, Select } from '@mantine/core';
-import { IconTrash, IconSearch, IconRestore, IconArrowsCross, IconPlus, IconPencil } from '@tabler/icons-react';
+import { IconTrash, IconSearch, IconRestore, IconArrowsCross, IconPlus, IconPencil, IconFileDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '../components/PageLayout';
 import { ModalCriarLutaCasada } from '../components/ModalCriarLutaCasada';
+import { gerarPdfLutasCasadas } from '../utils/pdfGenerator';
 import type { LutaCasada } from '../types/lutaCasada';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
 import type { AreaLuta } from '../types/area';
+import type { Torneio } from '../types/tournament';
 
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -41,6 +43,7 @@ export function AdminLutasCasadas() {
   const [areas, setAreas] = useState<AreaLuta[]>([]);
   const [atletas, setAtletas] = useState<Atleta[]>([]);
   const [arbitros, setArbitros] = useState<Arbitro[]>([]);
+  const [torneio, setTorneio] = useState<Torneio | null>(null);
 
   const loadList = async () => {
     setLoading(true);
@@ -73,6 +76,7 @@ export function AdminLutasCasadas() {
     window.electronAPI.loadAreas().then((a) => setAreas(a as AreaLuta[])).catch(() => {});
     window.electronAPI.loadAthletes().then((a) => setAtletas(a as Atleta[])).catch(() => {});
     window.electronAPI.loadArbitros().then((a) => setArbitros(a as Arbitro[])).catch(() => {});
+    window.electronAPI.getActiveTournament().then((t) => setTorneio(t)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDeleted]);
 
@@ -204,13 +208,26 @@ export function AdminLutasCasadas() {
         </Group>
         <Group>
           {!showDeleted && (
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={() => setCreateModalOpen(true)}
-              style={{ backgroundColor: '#1b325f', color: '#fff' }}
-            >
-              Nova Luta Casada
-            </Button>
+            <>
+              <Button
+                leftSection={<IconFileDownload size={16} />}
+                variant="outline"
+                onClick={() => {
+                  const nomeTorneio = torneio?.nome || 'Torneio';
+                  gerarPdfLutasCasadas(lutas, nomeTorneio, arbitros);
+                }}
+                disabled={lutas.length === 0}
+              >
+                Gerar PDF
+              </Button>
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={() => setCreateModalOpen(true)}
+                style={{ backgroundColor: '#1b325f', color: '#fff' }}
+              >
+                Nova Luta Casada
+              </Button>
+            </>
           )}
           <Text fw={800} size="xl" style={{ color: '#1b325f' }}>
             {showDeleted ? 'Lutas Casadas Deletadas' : 'Lutas Casadas'}

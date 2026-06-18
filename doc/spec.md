@@ -14,11 +14,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
 
-### [aberto] Gerar pdf das lutas casadas e das chaves de luta, no pdf das chaves, tem que mostrar até os cards futuros em formato de chave de luta vertical, com os cards de progressão da esquerda para a direita
-### [aberto] no menu de lutas casadas, tem que esta o botao de gerar pdf da lista de lutas casadas
-
-### [aberto] As categorias padões, não precisam ser por faixa, e sim faixa de peso e idade, veja se realmente exitem 270 ou se esta repetindo de forma incorreta. Tambem não precisa ser separado por feminino e masculino, internamente o sistema tem que entende o filtro, exemplo, categoria é adulto - 50 a 53kg, o atleta tem faixa branca e é homem, entao quando for gerar as chaves automaticas ele fica junto com os atletas da mesma categoria, faixa e genero. Revise as categorias, pois não é para ter 270
-
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 
@@ -366,6 +361,20 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 
 ## Histórico de Correções
 
+### [resolvido] PDF lutas casadas exibia ID do árbitro em vez do nome
+- **Data:** 2026-06-18
+- **Problema:** O PDF de lutas casadas exibia o `arbitroId` diretamente, sem resolver para o nome do árbitro.
+- **Solução:** Adicionado parâmetro `arbitros` na função `gerarPdfLutasCasadas` e criada função `getNomeArbitro` para resolver o nome. Atualizadas chamadas em `AdminLutasCasadas.tsx` e `Resultados.tsx`.
+- **Arquivos alterados:** `src/utils/pdfGenerator.ts`, `src/pages/AdminLutasCasadas.tsx`, `src/pages/Resultados.tsx`
+- **Spec:** `spec/pdf-lutas-casadas-chaves.md`
+
+### [resolvido] PDF chaves não exibia formato de bracket
+- **Data:** 2026-06-18
+- **Problema:** O PDF de chaves exibia as lutas em formato de tabela simples, sem mostrar a estrutura visual do bracket.
+- **Solução:** Reescrita a função `gerarPdfChaves` para exibir bracket vertical com rodadas sequenciais. Adicionadas funções auxiliares `createBracketRow` e `getRoundLabel`. Vencedores são destacados em negrito.
+- **Arquivos alterados:** `src/utils/pdfGenerator.ts`
+- **Spec:** `spec/pdf-lutas-casadas-chaves.md`
+
 ### [resolvido] Seleção de árbitro ao criar luta casada
 - **Data:** 2026-06-16
 - **Problema:** Ao criar uma luta casada, o sistema sempre atribuía o primeiro árbitro da área (`area.arbitroIds[0]`), sem permitir escolha.
@@ -467,8 +476,8 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 ### [resolvido] Gerar PDF das lutas casadas e das chaves de luta
 - **Data:** 2026-06-18
 - **Problema:** Não existia funcionalidade de gerar PDF para lutas casadas nem para chaves de luta.
-- **Solução:** Criado `src/utils/pdfGenerator.ts` com funções `gerarPdfLutasCasadas` e `gerarPdfChaves`. Adicionados botões "Gerar PDF" nas abas "Chaves" e "Lutas Casadas" da tela de Resultados, e no cabeçalho da tela de Gerenciar Chaves. O PDF das chaves mostra bracket vertical com rodadas da esquerda para a direita.
-- **Arquivos alterados:** `src/utils/pdfGenerator.ts` (criado), `src/pages/Resultados.tsx`, `src/pages/GerenciarChaves.tsx`
+- **Solução:** Criado `src/utils/pdfGenerator.ts` com funções `gerarPdfLutasCasadas` e `gerarPdfChaves` (usando pdfmake). Adicionados botões "Gerar PDF" nas abas "Chaves" e "Lutas Casadas" da tela de Resultados, no cabeçalho da tela de Gerenciar Chaves, e no menu de Lutas Casadas (`AdminLutasCasadas.tsx`). O PDF das chaves mostra bracket vertical com rodadas da esquerda para a direita.
+- **Arquivos alterados:** `src/utils/pdfGenerator.ts` (criado), `src/pages/Resultados.tsx`, `src/pages/GerenciarChaves.tsx`, `src/pages/AdminLutasCasadas.tsx`
 
 ### [resolvido] Editar e criar luta casada no menu de lutas casadas
 - **Data:** 2026-06-18

@@ -1476,9 +1476,9 @@ bjj-tournament-manager-setup/
 
 ### 3.13. Geração de PDF
 
-- **Lutas Casadas:** A tela de Resultados possui botão "Gerar PDF Lutas Casadas" na aba "Lutas Casadas". O PDF lista todas as lutas casadas do torneio com: nome dos atletas, status, vencedor e placar.
-- **Chaves de Luta:** A tela de Resultados e a tela de Gerenciar Chaves possuem botão "Gerar PDF Chaves". O PDF mostra cada chave em formato de bracket vertical, com rodadas da esquerda para a direita, incluindo cards vazios para rodadas futuras.
-- **Formato:** PDFs gerados via jsPDF, salvos automaticamente no dispositivo do usuário.
+- **Lutas Casadas:** A tela de Resultados (aba "Lutas Casadas") e o menu de Lutas Casadas (`AdminLutasCasadas`) possuem botão "Gerar PDF". O PDF lista todas as lutas casadas do torneio com: nome dos atletas, status, vencedor, placar e **nome do árbitro** (resolvido a partir do ID).
+- **Chaves de Luta:** A tela de Resultados e a tela de Gerenciar Chaves possuem botão "Gerar PDF Chaves". O PDF mostra cada chave em formato de bracket vertical, com rodadas da esquerda para a direita, incluindo cards vazios para rodadas futuras. Vencedores são destacados em negrito.
+- **Formato:** PDFs gerados via pdfmake, salvos automaticamente no dispositivo do usuário.
 
 ### 3.14. Edição e Criação de Lutas Casadas no Menu
 

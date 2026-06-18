@@ -815,7 +815,7 @@ export function Resultados() {
                     size="sm"
                     variant="light"
                     leftSection={<IconFileDownload size={16} />}
-                    onClick={() => gerarPdfLutasCasadas(lutasCasadas, torneio.nome || `Torneio ${torneio.data}`)}
+                    onClick={() => gerarPdfLutasCasadas(lutasCasadas, torneio.nome || `Torneio ${torneio.data}`, arbitros)}
                   >
                     Gerar PDF Lutas Casadas
                   </Button>
