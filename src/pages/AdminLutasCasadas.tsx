@@ -2,9 +2,9 @@ import { Text, Button, Group, Loader, Center, Stack, Table, Badge, ActionIcon, C
 import { IconTrash, IconSearch, IconRestore, IconArrowsCross, IconPlus, IconPencil, IconFileDownload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '../components/PageLayout';
 import { ModalCriarLutaCasada } from '../components/ModalCriarLutaCasada';
+import { ModalEditarLutaCasada } from '../components/ModalEditarLutaCasada';
 import { gerarPdfLutasCasadas } from '../utils/pdfGenerator';
 import type { LutaCasada } from '../types/lutaCasada';
 import type { Atleta } from '../types/athlete';
@@ -29,7 +29,6 @@ function statusBadge(status: string) {
 }
 
 export function AdminLutasCasadas() {
-  const navigate = useNavigate();
   const [lutas, setLutas] = useState<LutaCasada[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -39,6 +38,8 @@ export function AdminLutasCasadas() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkPermanentOpen, setBulkPermanentOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingLuta, setEditingLuta] = useState<LutaCasada | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
   const [areas, setAreas] = useState<AreaLuta[]>([]);
   const [atletas, setAtletas] = useState<Atleta[]>([]);
@@ -160,7 +161,15 @@ export function AdminLutasCasadas() {
   };
 
   const handleEdit = (luta: LutaCasada) => {
-    navigate(`/admin/placar/luta-casada/${luta.areaId}/${luta.id}`);
+    setEditingLuta(luta);
+    setEditModalOpen(true);
+  };
+
+  const handleEditSaved = (_lutaAtualizada: LutaCasada) => {
+    setEditModalOpen(false);
+    setEditingLuta(null);
+    notifications.show({ title: 'Sucesso', message: 'Luta casada atualizada com sucesso!', color: 'green' });
+    loadList();
   };
 
   const getNome = (l: LutaCasada, side: 'A' | 'B'): string => {
@@ -467,6 +476,15 @@ export function AdminLutasCasadas() {
           />
         );
       })()}
+
+      <ModalEditarLutaCasada
+        opened={editModalOpen}
+        onClose={() => { setEditModalOpen(false); setEditingLuta(null); }}
+        luta={editingLuta}
+        atletas={atletas}
+        arbitros={arbitros}
+        onSalvo={handleEditSaved}
+      />
     </PageLayout>
   );
 }

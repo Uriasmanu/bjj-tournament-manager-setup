@@ -13,12 +13,19 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] O editar luta casada serve para trocar o oponente ou o arbitro
+
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
+
+### [resolvido] Editar luta casada deve permitir trocar oponente ou árbitro
+- **Data:** 2026-06-18
+- **Problema:** O botão "Editar" na listagem de lutas casadas navegava para o placar da luta, não permitindo alterar os atletas ou árbitro.
+- **Solução:** Criado componente `ModalEditarLutaCasada` que permite editar atleta A, atleta B e árbitro de uma luta casada existente. Atualizado `handleEdit` em `AdminLutasCasadas.tsx` para abrir o modal em vez de navegar para o placar.
+- **Arquivos criados:** `src/components/ModalEditarLutaCasada.tsx`
+- **Arquivos alterados:** `src/pages/AdminLutasCasadas.tsx`
 
 # Guia de Spec para Implementação de Features
 
