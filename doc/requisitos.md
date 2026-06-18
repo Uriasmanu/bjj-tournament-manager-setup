@@ -1474,6 +1474,22 @@ bjj-tournament-manager-setup/
 - **Refresh ao focar janela:** Todas as páginas de listagem (Dashboard, Árbitros, Áreas, Categorias, Equipes, Placar, Resultados) escutam o evento `focus` do `window` e re-buscam dados do backend. Isso garante que as listas estejam sempre atualizadas quando o usuário retorna à janela após adicionar, editar ou excluir itens em outra página.
 - **Sem necessidade de navegação extra:** O usuário não precisa sair e entrar novamente na página para ver mudanças refletidas.
 
+### 3.13. Geração de PDF
+
+- **Lutas Casadas:** A tela de Resultados possui botão "Gerar PDF Lutas Casadas" na aba "Lutas Casadas". O PDF lista todas as lutas casadas do torneio com: nome dos atletas, status, vencedor e placar.
+- **Chaves de Luta:** A tela de Resultados e a tela de Gerenciar Chaves possuem botão "Gerar PDF Chaves". O PDF mostra cada chave em formato de bracket vertical, com rodadas da esquerda para a direita, incluindo cards vazios para rodadas futuras.
+- **Formato:** PDFs gerados via jsPDF, salvos automaticamente no dispositivo do usuário.
+
+### 3.14. Edição e Criação de Lutas Casadas no Menu
+
+- **Criação:** O menu de lutas casadas (`AdminLutasCasadas`) possui botão "Nova Luta Casada" que abre modal com seletor de área e formulário de criação (reutiliza `ModalCriarLutaCasada`).
+- **Edição:** Cada linha da tabela possui botão "Editar" (ícone de lápis) que navega para o placar da luta casada correspondente (`/admin/placar/luta-casada/:areaId/:lutaCasadaId`).
+
+### 3.15. Geração de Chaves - Separação por Categoria
+
+- **Agrupamento por categoria:** Na geração em massa (`gerarTodasChavesHandler`), os atletas são agrupados apenas por categoria (idade + peso + gênero), sem separação por cor de faixa. Todos os atletas da mesma categoria compartilham a mesma chave.
+- **Cor da faixa:** A cor da faixa é um atributo do atleta, mas não é utilizada como critério de separação de chaves na geração em massa.
+
 cores que gosto:
 
 cores

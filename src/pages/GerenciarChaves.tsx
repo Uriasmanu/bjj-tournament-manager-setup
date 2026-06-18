@@ -1,13 +1,14 @@
 import { Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput, NumberInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowUp, IconArrowDown, IconAward, IconSearch, IconPlus, IconTrash } from '@tabler/icons-react';
+import { IconArrowUp, IconArrowDown, IconAward, IconSearch, IconPlus, IconTrash, IconFileDownload } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
 import type { Chave } from '../types/bracket';
 import { categoriaLabels, getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
+import { gerarPdfChaves } from '../utils/pdfGenerator';
 import { ModalCriarChaveManual } from '../components/ModalCriarChaveManual';
 
 const FAIXA_ORDER: Record<string, number> = {
@@ -447,6 +448,16 @@ export function GerenciarChaves() {
                 />
                 <Button onClick={handleImportarChaves} variant="light">Importar Chaves</Button>
                 <Button onClick={handleExportarChaves} variant="light">Exportar Chaves</Button>
+                <Button
+                  variant="light"
+                  leftSection={<IconFileDownload size={16} />}
+                  onClick={() => {
+                    const nomeTorneio = 'Torneio';
+                    gerarPdfChaves(chaves, athletes, nomeTorneio);
+                  }}
+                >
+                  Gerar PDF
+                </Button>
               </Group>
             </Group>
 

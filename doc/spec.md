@@ -15,12 +15,15 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 -->
 
 ### [aberto] Gerar pdf das lutas casadas e das chaves de luta, no pdf das chaves, tem que mostrar até os cards futuros em formato de chave de luta vertical, com os cards de progressão da esquerda para a direita
+<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ### [aberto] no menu de lutas casadas, pode se editar e criar luta casada
+<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ### [aberto] As listas devem ser atualizadas visualmenten assim que um novo item é adidionado, exemplo na lista de atleta, adicionei um atleta mas a lista não atualizou até que eu tivesse saido e entrado novamente na lista
-<!-- SOLUCIONADO: ver HistÓrico de Correções abaixo -->
+<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ### [aberto] Em categorias, alem da faixa de peso, exiba o tempo de luta tambem
-<!-- SOLUCIONADO: ver HistÓrico de Correções abaixo -->
+<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ### [aberto] As categorias padões, não precisam ser por faixa, e sim faixa de peso e idade, veja se realmente exitem 270 ou se esta repetindo de forma incorreta. Tambem não precisa ser separado por feminino e masculino, internamente o sistema tem que entende o filtro, exemplo, categoria é adulto - 50 a 53kg, o atleta tem faixa branca e é homem, entao quando for gerar as chaves automaticas ele fica junto com os atletas da mesma categoria, faixa e genero
+<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ### [aberto] Em lista de atletas, a categoria customizada esta aparecendo com CUSTOM-3EF3438A-F8A1-4E6D-9580-F55BB9B96A8B em vez do nome da categoria
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
@@ -467,3 +470,21 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** A lista de categorias IBJJF no menu mostrava apenas o nome, sem a faixa de peso.
 - **Solução:** Adicionado badge com a faixa de peso (ex: "até 76,0 kg") ao lado do nome de cada categoria IBJJF na lista de toggles.
 - **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
+
+### [resolvido] Gerar PDF das lutas casadas e das chaves de luta
+- **Data:** 2026-06-18
+- **Problema:** Não existia funcionalidade de gerar PDF para lutas casadas nem para chaves de luta.
+- **Solução:** Criado `src/utils/pdfGenerator.ts` com funções `gerarPdfLutasCasadas` e `gerarPdfChaves`. Adicionados botões "Gerar PDF" nas abas "Chaves" e "Lutas Casadas" da tela de Resultados, e no cabeçalho da tela de Gerenciar Chaves. O PDF das chaves mostra bracket vertical com rodadas da esquerda para a direita.
+- **Arquivos alterados:** `src/utils/pdfGenerator.ts` (criado), `src/pages/Resultados.tsx`, `src/pages/GerenciarChaves.tsx`
+
+### [resolvido] Editar e criar luta casada no menu de lutas casadas
+- **Data:** 2026-06-18
+- **Problema:** O menu de lutas casadas (`AdminLutasCasadas`) apenas listava e permitia excluir/restaurar. Não era possível criar novas lutas casadas nem editar/acompanhar as existentes.
+- **Solução:** Adicionado botão "Nova Luta Casada" que abre modal com seletor de área e reutiliza `ModalCriarLutaCasada`. Adicionado botão "Editar" (ícone de lápis) por linha que navega para o placar da luta casada correspondente.
+- **Arquivos alterados:** `src/pages/AdminLutasCasadas.tsx`
+
+### [resolvido] Categorias padrão - remover separação por faixa na geração de chaves
+- **Data:** 2026-06-18
+- **Problema:** A geração de chaves em massa (`gerarTodasChavesHandler`) agrupava atletas por `${categoria}__${faixa}`, criando chaves separadas para cada cor de faixa dentro da mesma categoria. O usuário quer que atletas da mesma categoria (idade + peso + gênero) compartilhem a mesma chave, sem separação por cor de faixa.
+- **Solução:** Alterada a chave de agrupamento de `${a.categoria}__${a.faixa}` para apenas `a.categoria` em `electron/brackets.ts`. Agora todos os atletas da mesma categoria são agrupados em uma única chave.
+- **Arquivos alterados:** `electron/brackets.ts`

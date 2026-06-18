@@ -1606,7 +1606,7 @@ function gerarTodasChavesHandler(torneioId, maxPorChave = 16, faixas, categorias
       atletasIgnorados.push(a.nome);
       continue;
     }
-    const key = `${a.categoria}__${a.faixa}`;
+    const key = a.categoria;
     const g = grupos.get(key) ?? [];
     g.push(a);
     grupos.set(key, g);
@@ -1614,9 +1614,8 @@ function gerarTodasChavesHandler(torneioId, maxPorChave = 16, faixas, categorias
   const novasChaves = [];
   const atletasSemChave = [];
   const metadados = [];
-  for (const [key, grupo] of grupos) {
+  for (const [categoriaId, grupo] of grupos) {
     if (grupo.length === 0) continue;
-    const [categoriaId, faixa] = key.split("__");
     if (grupo.length === 1) {
       atletasSemChave.push(grupo[0]);
       metadados.push({
@@ -1634,7 +1633,7 @@ function gerarTodasChavesHandler(torneioId, maxPorChave = 16, faixas, categorias
         atletasSemChave.push(sub[0]);
         continue;
       }
-      novasChaves.push(gerarChave(categoriaId, sub, faixa));
+      novasChaves.push(gerarChave(categoriaId, sub));
       chavesGeradas++;
     }
     metadados.push({

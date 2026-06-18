@@ -1,9 +1,14 @@
-import { Text, Button, Group, Loader, Center, Stack, Table, Badge, ActionIcon, Checkbox, TextInput, Switch, Modal } from '@mantine/core';
-import { IconTrash, IconSearch, IconRestore, IconArrowsCross } from '@tabler/icons-react';
+import { Text, Button, Group, Loader, Center, Stack, Table, Badge, ActionIcon, Checkbox, TextInput, Switch, Modal, Select } from '@mantine/core';
+import { IconTrash, IconSearch, IconRestore, IconArrowsCross, IconPlus, IconPencil } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageLayout } from '../components/PageLayout';
+import { ModalCriarLutaCasada } from '../components/ModalCriarLutaCasada';
 import type { LutaCasada } from '../types/lutaCasada';
+import type { Atleta } from '../types/athlete';
+import type { Arbitro } from '../types/referee';
+import type { AreaLuta } from '../types/area';
 
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -22,6 +27,7 @@ function statusBadge(status: string) {
 }
 
 export function AdminLutasCasadas() {
+  const navigate = useNavigate();
   const [lutas, setLutas] = useState<LutaCasada[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -30,6 +36,11 @@ export function AdminLutasCasadas() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkPermanentOpen, setBulkPermanentOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const [areas, setAreas] = useState<AreaLuta[]>([]);
+  const [atletas, setAtletas] = useState<Atleta[]>([]);
+  const [arbitros, setArbitros] = useState<Arbitro[]>([]);
 
   const loadList = async () => {
     setLoading(true);
@@ -59,6 +70,9 @@ export function AdminLutasCasadas() {
 
   useEffect(() => {
     loadList();
+    window.electronAPI.loadAreas().then((a) => setAreas(a as AreaLuta[])).catch(() => {});
+    window.electronAPI.loadAthletes().then((a) => setAtletas(a as Atleta[])).catch(() => {});
+    window.electronAPI.loadArbitros().then((a) => setArbitros(a as Arbitro[])).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDeleted]);
 
@@ -134,6 +148,17 @@ export function AdminLutasCasadas() {
     }
   };
 
+  const handleLutaCasadaCriada = (_luta: LutaCasada) => {
+    setCreateModalOpen(false);
+    setSelectedAreaId(null);
+    notifications.show({ title: 'Sucesso', message: 'Luta casada criada com sucesso!', color: 'green' });
+    loadList();
+  };
+
+  const handleEdit = (luta: LutaCasada) => {
+    navigate(`/admin/placar/luta-casada/${luta.areaId}/${luta.id}`);
+  };
+
   const getNome = (l: LutaCasada, side: 'A' | 'B'): string => {
     const snapshot = side === 'A' ? l.atletaASnapshot : l.atletaBSnapshot;
     const id = side === 'A' ? l.atletaAId : l.atletaBId;
@@ -178,6 +203,15 @@ export function AdminLutasCasadas() {
           />
         </Group>
         <Group>
+          {!showDeleted && (
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => setCreateModalOpen(true)}
+              style={{ backgroundColor: '#1b325f', color: '#fff' }}
+            >
+              Nova Luta Casada
+            </Button>
+          )}
           <Text fw={800} size="xl" style={{ color: '#1b325f' }}>
             {showDeleted ? 'Lutas Casadas Deletadas' : 'Lutas Casadas'}
           </Text>
@@ -218,7 +252,7 @@ export function AdminLutasCasadas() {
             <Text fw={700} size="lg" style={{ color: '#1b325f' }}>
               {showDeleted ? 'Nenhuma luta casada na lixeira' : 'Nenhuma luta casada'}
             </Text>
-            <Text size="sm" c="dimmed">Crie lutas casadas pelo placar em uma área.</Text>
+        <Text size="sm" c="dimmed">Crie lutas casadas pelo menu acima.</Text>
           </Stack>
         </Center>
       ) : filteredLutas.length === 0 ? (
@@ -311,14 +345,25 @@ export function AdminLutasCasadas() {
                               </ActionIcon>
                             </>
                           ) : (
-                            <ActionIcon
-                              variant="subtle"
-                              color="red"
-                              onClick={() => handleDelete(l)}
-                              aria-label={`Excluir luta casada`}
-                            >
-                              <IconTrash size={18} />
-                            </ActionIcon>
+                            <>
+                              <ActionIcon
+                                variant="subtle"
+                                color="blue"
+                                onClick={() => handleEdit(l)}
+                                aria-label={`Editar luta casada`}
+                                title="Editar"
+                              >
+                                <IconPencil size={18} />
+                              </ActionIcon>
+                              <ActionIcon
+                                variant="subtle"
+                                color="red"
+                                onClick={() => handleDelete(l)}
+                                aria-label={`Excluir luta casada`}
+                              >
+                                <IconTrash size={18} />
+                              </ActionIcon>
+                            </>
                           )}
                         </Group>
                       </Table.Td>
@@ -367,6 +412,44 @@ export function AdminLutasCasadas() {
           </Button>
         </Group>
       </Modal>
+
+      <Modal
+        opened={createModalOpen}
+        onClose={() => { setCreateModalOpen(false); setSelectedAreaId(null); }}
+        title="Nova Luta Casada"
+        centered
+        size="md"
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">Selecione a área para criar a luta casada:</Text>
+          <Select
+            placeholder="Selecione uma área"
+            data={areas.map(a => ({ value: a.id, label: a.nome }))}
+            value={selectedAreaId}
+            onChange={setSelectedAreaId}
+            searchable
+            clearable
+          />
+          <Group justify="flex-end">
+            <Button variant="outline" onClick={() => { setCreateModalOpen(false); setSelectedAreaId(null); }}>Cancelar</Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      {selectedAreaId && (() => {
+        const area = areas.find(a => a.id === selectedAreaId);
+        if (!area) return null;
+        return (
+          <ModalCriarLutaCasada
+            opened={true}
+            onClose={() => { setSelectedAreaId(null); }}
+            area={area}
+            atletas={atletas}
+            arbitros={arbitros}
+            onCriada={handleLutaCasadaCriada}
+          />
+        );
+      })()}
     </PageLayout>
   );
 }

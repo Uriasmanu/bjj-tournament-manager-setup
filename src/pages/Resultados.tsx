@@ -29,6 +29,7 @@ import {
   IconChevronDown,
   IconSearch,
   IconX,
+  IconFileDownload,
 } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -37,6 +38,7 @@ import type { Atleta } from '../types/athlete';
 import type { Chave, Luta, PlacarLuta } from '../types/bracket';
 import type { Arbitro } from '../types/referee';
 import type { AreaLuta } from '../types/area';
+import { gerarPdfLutasCasadas, gerarPdfChaves } from '../utils/pdfGenerator';
 import type { LutaCasada } from '../types/lutaCasada';
 import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
@@ -201,6 +203,7 @@ function LutaResumoCard({
   horarioTermino,
   isCasada,
   statusBadge,
+  customizadas,
 }: {
   chaveOrigem?: string;
   ordem?: number;
@@ -220,6 +223,7 @@ function LutaResumoCard({
   horarioTermino?: string;
   isCasada?: boolean;
   statusBadge?: { label: string; color: string };
+  customizadas?: CategoriaCustomizada[];
 }) {
   const tipoVitoria = getTipoVitoria({ finalizacao, desclassificacao, desempateArbitro, desclassificadoId });
   const vencedorIdEfetivo = vencedorId;
@@ -280,6 +284,7 @@ function LutaResumoCard({
             lado="A"
             vencedor={aVenceu}
             desclassificado={aDesclassificado}
+            customizadas={customizadas}
           />
           <Stack gap={2} align="center" style={{ minWidth: 90 }}>
             <Text size="xs" c="dimmed" fw={700}>PLACAR</Text>
@@ -298,6 +303,7 @@ function LutaResumoCard({
             lado="B"
             vencedor={bVenceu}
             desclassificado={bDesclassificado}
+            customizadas={customizadas}
           />
         </Group>
 
@@ -669,6 +675,14 @@ export function Resultados() {
             ) : (
               <Stack gap="md">
                 <Group gap="md" align="center" wrap="wrap" w="100%">
+                  <Button
+                    size="sm"
+                    variant="light"
+                    leftSection={<IconFileDownload size={16} />}
+                    onClick={() => gerarPdfChaves(chaves, atletas, torneio.nome || `Torneio ${torneio.data}`)}
+                  >
+                    Gerar PDF Chaves
+                  </Button>
                   <TextInput
                     leftSection={<IconSearch size={16} />}
                     placeholder="Buscar por categoria ou atleta"
@@ -775,6 +789,7 @@ export function Resultados() {
                                     horarioInicio={l.horarioInicio}
                                     horarioTermino={l.horarioTermino}
                                     statusBadge={statusBadge}
+                                    customizadas={customizadas}
                                   />
                                 );
                               })}
@@ -796,6 +811,14 @@ export function Resultados() {
             ) : (
               <Stack gap="md">
                 <Group gap="md" align="center" wrap="wrap" w="100%">
+                  <Button
+                    size="sm"
+                    variant="light"
+                    leftSection={<IconFileDownload size={16} />}
+                    onClick={() => gerarPdfLutasCasadas(lutasCasadas, torneio.nome || `Torneio ${torneio.data}`)}
+                  >
+                    Gerar PDF Lutas Casadas
+                  </Button>
                   <TextInput
                     leftSection={<IconSearch size={16} />}
                     placeholder="Buscar por nome do atleta"
@@ -871,6 +894,7 @@ export function Resultados() {
                             horarioTermino={luta.dataFinalizacao ?? undefined}
                             isCasada
                             statusBadge={statusBadge}
+                            customizadas={customizadas}
                           />
                         );
                       })}
