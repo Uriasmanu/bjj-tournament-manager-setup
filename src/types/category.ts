@@ -128,6 +128,15 @@ for (const c of CATEGORIAS_IBJJF) {
   categoriaLabels[c.id] = c.nome;
 }
 
+export function getCategoriaLabel(categoriaId: string, customizadas?: CategoriaCustomizada[]): string {
+  if (categoriaLabels[categoriaId]) return categoriaLabels[categoriaId];
+  if (customizadas) {
+    const custom = customizadas.find(c => c.id === categoriaId);
+    if (custom) return custom.nome;
+  }
+  return categoriaId;
+}
+
 function calcularFaixaEtaria(idade: number): FaixaEtaria | null {
   if (idade >= 4 && idade <= 5) return 'pre-mirim';
   if (idade >= 6 && idade <= 7) return 'mirim';

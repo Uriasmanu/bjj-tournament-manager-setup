@@ -4,7 +4,7 @@ import { IconPlus, IconFileUpload, IconFileCode, IconSearch, IconPencil, IconTra
 import { notifications } from '@mantine/notifications';
 import { useEffect, useState, useMemo } from 'react';
 import type { Atleta, Faixa } from '../types/athlete';
-import { categoriaLabels } from '../types/category';
+import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import { AthleteForm } from '../components/AthleteForm';
 import { PageLayout } from '../components/PageLayout';
 
@@ -59,6 +59,7 @@ export function AdminAthletes() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
+  const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
   const [permanentOpened, { open: openPermanent, close: closePermanent }] = useDisclosure(false);
 
@@ -70,12 +71,14 @@ export function AdminAthletes() {
   const loadAll = async () => {
     setError(false);
     try {
-      const [active, deleted] = await Promise.all([
+      const [active, deleted, catData] = await Promise.all([
         window.electronAPI.loadAthletes(),
         window.electronAPI.loadDeletedAthletes(),
+        window.electronAPI.loadCategorias(),
       ]);
       setActiveAthletes(active.sort((a, b) => a.nome.localeCompare(b.nome)));
       setDeletedAthletes(deleted.sort((a, b) => a.nome.localeCompare(b.nome)));
+      setCustomizadas(catData.customizadas);
       setSelectedIds([]);
     } catch {
       setError(true);
@@ -91,7 +94,7 @@ export function AdminAthletes() {
       result = result.filter(a =>
         a.nome.toLowerCase().includes(q) ||
         (a.equipe && a.equipe.toLowerCase().includes(q)) ||
-        (categoriaLabels[a.categoria] || a.categoria).toLowerCase().includes(q)
+        (getCategoriaLabel(a.categoria, customizadas)).toLowerCase().includes(q)
       );
     }
     if (beltFilter) {
@@ -578,7 +581,7 @@ export function AdminAthletes() {
                       </Table.Td>
                       <Table.Td>
                         <Badge variant="light" color="blue" size="sm" styles={{ root: { fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' } }}>
-                          {categoriaLabels[a.categoria] || a.categoria}
+                          {getCategoriaLabel(a.categoria, customizadas)}
                         </Badge>
                       </Table.Td>
                       <Table.Td style={{ textAlign: 'center' }}>

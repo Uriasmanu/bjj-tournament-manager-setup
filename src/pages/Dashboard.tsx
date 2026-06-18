@@ -229,11 +229,16 @@ export function Dashboard() {
   }, []);
 
   useEffect(() => {
-    window.electronAPI.getActiveTournament().then((t) => {
-      setTorneio(t);
-      setLoading(false);
-    });
-    window.activation.getInfo().then(setActivationInfo).catch(() => setActivationInfo(null));
+    const fetchData = () => {
+      window.electronAPI.getActiveTournament().then((t) => {
+        setTorneio(t);
+        setLoading(false);
+      });
+      window.activation.getInfo().then(setActivationInfo).catch(() => setActivationInfo(null));
+    };
+    fetchData();
+    window.addEventListener('focus', fetchData);
+    return () => window.removeEventListener('focus', fetchData);
   }, []);
 
   const formatDate = (isoDate: string) => dayjs(isoDate).format('DD/MM/YYYY');

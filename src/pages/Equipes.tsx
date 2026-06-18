@@ -28,6 +28,10 @@ export function Equipes() {
   useEffect(() => {
     loadAthletes();
   }, []);
+  useEffect(() => {
+    window.addEventListener('focus', loadAthletes);
+    return () => window.removeEventListener('focus', loadAthletes);
+  }, []);
 
   const equipeCounts = useMemo(() => {
     const counts: Record<string, number> = {};

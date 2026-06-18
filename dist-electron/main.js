@@ -393,14 +393,25 @@ function saveAthlete(torneioId, athlete) {
   const torneio = loadTorneio$5(torneioId);
   const list = torneio.atletas ?? [];
   const now = (/* @__PURE__ */ new Date()).toISOString();
-  const data = {
-    ...athlete,
-    id: athlete.id || crypto.randomUUID(),
-    createdAt: athlete.createdAt || now,
-    updatedAt: now,
-    deletedAt: null
-  };
-  list.push(data);
+  const existingIndex = list.findIndex((a) => a.id === athlete.id);
+  if (existingIndex !== -1) {
+    const previous = list[existingIndex];
+    list[existingIndex] = {
+      ...athlete,
+      createdAt: previous.createdAt,
+      deletedAt: previous.deletedAt ?? null,
+      updatedAt: now
+    };
+  } else {
+    const data = {
+      ...athlete,
+      id: athlete.id || crypto.randomUUID(),
+      createdAt: athlete.createdAt || now,
+      updatedAt: now,
+      deletedAt: null
+    };
+    list.push(data);
+  }
   torneio.atletas = list;
   torneio.updatedAt = now;
   saveTorneio$5(torneio);

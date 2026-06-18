@@ -15,31 +15,36 @@ export function PlacarMenu() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      window.electronAPI.loadAreas(),
-      window.electronAPI.loadChaves(),
-    ]).then(([areasData, chavesData]) => {
-      const loadedAreas = areasData as AreaLuta[];
-      const chaves = chavesData as Chave[];
-      setAreas(loadedAreas);
+    const fetchData = () => {
+      Promise.all([
+        window.electronAPI.loadAreas(),
+        window.electronAPI.loadChaves(),
+      ]).then(([areasData, chavesData]) => {
+        const loadedAreas = areasData as AreaLuta[];
+        const chaves = chavesData as Chave[];
+        setAreas(loadedAreas);
 
-      let latestTs = '';
-      let latestAreaId: string | null = null;
+        let latestTs = '';
+        let latestAreaId: string | null = null;
 
-      for (const chave of chaves) {
-        for (const luta of chave.lutas) {
-          const ts = luta.horarioTermino || luta.horarioInicio || '';
-          if (ts > latestTs) {
-            latestTs = ts;
-            const area = loadedAreas.find(a => a.arbitroIds.includes(chave.arbitroId ?? ''));
-            if (area) latestAreaId = area.id;
+        for (const chave of chaves) {
+          for (const luta of chave.lutas) {
+            const ts = luta.horarioTermino || luta.horarioInicio || '';
+            if (ts > latestTs) {
+              latestTs = ts;
+              const area = loadedAreas.find(a => a.arbitroIds.includes(chave.arbitroId ?? ''));
+              if (area) latestAreaId = area.id;
+            }
           }
         }
-      }
 
-      setSelectedArea(latestAreaId);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+        setSelectedArea(latestAreaId);
+        setLoading(false);
+      }).catch(() => setLoading(false));
+    };
+    fetchData();
+    window.addEventListener('focus', fetchData);
+    return () => window.removeEventListener('focus', fetchData);
   }, []);
 
   if (loading) {

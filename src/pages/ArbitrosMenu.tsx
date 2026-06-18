@@ -39,6 +39,10 @@ export function ArbitrosMenu() {
   };
 
   useEffect(() => { loadArbitros(); }, []);
+  useEffect(() => {
+    window.addEventListener('focus', loadArbitros);
+    return () => window.removeEventListener('focus', loadArbitros);
+  }, []);
 
   const handleNew = () => { openForm(); };
 

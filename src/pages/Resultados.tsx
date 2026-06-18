@@ -38,7 +38,7 @@ import type { Chave, Luta, PlacarLuta } from '../types/bracket';
 import type { Arbitro } from '../types/referee';
 import type { AreaLuta } from '../types/area';
 import type { LutaCasada } from '../types/lutaCasada';
-import { categoriaLabels } from '../types/category';
+import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
 import { formatarDuracao } from '../utils/format';
 
@@ -84,12 +84,12 @@ function getPerdedoresSemifinal(chave: Chave): string[] {
     .map(l => (l.vencedorId === l.atletaAId ? l.atletaBId : l.atletaAId));
 }
 
-function getCategoriaTitulo(categoriaId: string): string {
-  return categoriaLabels[categoriaId] ?? categoriaId;
+function getCategoriaTitulo(categoriaId: string, customizadas?: CategoriaCustomizada[]): string {
+  return getCategoriaLabel(categoriaId, customizadas);
 }
 
-function getChaveTitulo(chave: Chave): string {
-  const base = categoriaLabels[chave.categoriaId] || chave.categoriaId;
+function getChaveTitulo(chave: Chave, customizadas?: CategoriaCustomizada[]): string {
+  const base = getCategoriaLabel(chave.categoriaId, customizadas);
   if (chave.faixa) {
     return `${base} - ${FAIXA_LABEL[chave.faixa] || chave.faixa}`;
   }
@@ -136,12 +136,13 @@ type AtletaResumo = {
   categoria: string;
 };
 
-function AtletaInfo({ resumo, lado, vencedor, desclassificado, compacto }: {
+function AtletaInfo({ resumo, lado, vencedor, desclassificado, compacto, customizadas }: {
   resumo: AtletaResumo;
   lado: 'A' | 'B';
   vencedor: boolean;
   desclassificado: boolean;
   compacto?: boolean;
+  customizadas?: CategoriaCustomizada[];
 }) {
   const faixaLabel = FAIXA_LABEL[resumo.faixa] ?? resumo.faixa;
   const textDecoration = desclassificado ? 'line-through' : 'none';
@@ -173,7 +174,7 @@ function AtletaInfo({ resumo, lado, vencedor, desclassificado, compacto }: {
           <Badge size="xs" variant="light">{faixaLabel}</Badge>
           <Badge size="xs" variant="light" color="dark">{resumo.pesoKg.toFixed(1)}kg</Badge>
           {resumo.categoria && (
-            <Text size="xs" c="dimmed">{getCategoriaTitulo(resumo.categoria)}</Text>
+            <Text size="xs" c="dimmed">{getCategoriaTitulo(resumo.categoria, customizadas)}</Text>
           )}
         </Group>
       )}
@@ -328,12 +329,21 @@ export function Resultados() {
   const [buscaEquipes, setBuscaEquipes] = useState<string>('');
   const [buscaArbitros, setBuscaArbitros] = useState<string>('');
   const [buscaAtletas, setBuscaAtletas] = useState<string>('');
+  const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
 
   useEffect(() => {
-    window.electronAPI.getActiveTournament().then((t) => {
-      setTorneio(t);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+    const fetchData = () => {
+      window.electronAPI.getActiveTournament().then((t) => {
+        setTorneio(t);
+        setLoading(false);
+      }).catch(() => setLoading(false));
+      window.electronAPI.loadCategorias().then((data) => {
+        setCustomizadas(data.customizadas);
+      }).catch(() => {});
+    };
+    fetchData();
+    window.addEventListener('focus', fetchData);
+    return () => window.removeEventListener('focus', fetchData);
   }, []);
 
   const atletas = useMemo<Atleta[]>(() => torneio?.atletas ?? [], [torneio]);
@@ -421,7 +431,7 @@ export function Resultados() {
   const chavesFiltradas = useMemo(() => {
     const termo = buscaChaves.trim().toLowerCase();
     const list = !termo ? chaves : chaves.filter(c => {
-      const categoria = getCategoriaTitulo(c.categoriaId).toLowerCase();
+      const categoria = getCategoriaTitulo(c.categoriaId, customizadas).toLowerCase();
       if (categoria.includes(termo)) return true;
       return c.lutas.some(l => {
         const nomeA = getAtletaNome(l.atletaAId).toLowerCase();
@@ -623,7 +633,7 @@ export function Resultados() {
                     return (
                       <Card key={chave.id} withBorder padding="md" radius="md">
                         <Stack gap="xs">
-                          <Text fw={700} size="sm">{getChaveTitulo(chave)} — {chave.totalAtletas} atleta(s){(() => { const area = getAreaDaChave(chave); return area ? ` — ${area}` : ''; })()}</Text>
+                           <Text fw={700} size="sm">{getChaveTitulo(chave, customizadas)} — {chave.totalAtletas} atleta(s){(() => { const area = getAreaDaChave(chave); return area ? ` — ${area}` : ''; })()}</Text>
                           <Group gap="md" wrap="wrap">
                             <Group gap="xs">
                               <Badge color="yellow" variant="filled" size="lg">🥇 1º</Badge>
@@ -704,12 +714,12 @@ export function Resultados() {
                           onClick={() => setExpandedChaveId(isExpanded ? null : chave.id)}
                           aria-expanded={isExpanded}
                           aria-controls={`chave-body-${chave.id}`}
-                          aria-label={`${getChaveTitulo(chave)} — clique para ${isExpanded ? 'recolher' : 'expandir'}`}
+                           aria-label={`${getChaveTitulo(chave, customizadas)} — clique para ${isExpanded ? 'recolher' : 'expandir'}`}
                           style={{ width: '100%' }}
                         >
                           <Group justify="space-between" wrap="wrap">
                             <Stack gap={2}>
-                              <Text fw={700} size="sm">{getChaveTitulo(chave)}</Text>
+                               <Text fw={700} size="sm">{getChaveTitulo(chave, customizadas)}</Text>
                               <Text size="xs" c="dimmed">{chave.totalAtletas} atleta(s) · {chave.totalLutas} luta(s){(() => { const area = getAreaDaChave(chave); return area ? ` · ${area}` : ''; })()}</Text>
                             </Stack>
                             <Group gap="xs">
@@ -748,7 +758,7 @@ export function Resultados() {
                                 return (
                                   <LutaResumoCard
                                     key={l.id}
-                                    chaveOrigem={getCategoriaTitulo(chave.categoriaId)}
+                                     chaveOrigem={getCategoriaTitulo(chave.categoriaId, customizadas)}
                                     ordem={l.ordem}
                                     rodada={l.rodada}
                                     atletaA={a}
@@ -1069,10 +1079,10 @@ export function Resultados() {
                               <Table.Td><Text tt="capitalize" size="sm">{a.equipe || '—'}</Text></Table.Td>
                               <Table.Td><Badge size="sm" variant="light">{FAIXA_LABEL[a.faixa] ?? a.faixa}</Badge></Table.Td>
                               <Table.Td style={{ textAlign: 'right' }}>{a.pesoKg.toFixed(1)}</Table.Td>
-                              <Table.Td><Text size="sm">{getCategoriaTitulo(a.categoria)}</Text></Table.Td>
+                               <Table.Td><Text size="sm">{getCategoriaTitulo(a.categoria, customizadas)}</Text></Table.Td>
                               <Table.Td>
                                 {chave ? (
-                                  <Text size="sm">{getCategoriaTitulo(chave.categoriaId)}</Text>
+                                   <Text size="sm">{getCategoriaTitulo(chave.categoriaId, customizadas)}</Text>
                                 ) : (
                                   <Text size="sm" c="dimmed">—</Text>
                                 )}

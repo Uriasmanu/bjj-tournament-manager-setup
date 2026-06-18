@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
 import type { Chave } from '../types/bracket';
-import { categoriaLabels } from '../types/category';
+import { categoriaLabels, getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
 import { ModalCriarChaveManual } from '../components/ModalCriarChaveManual';
 
@@ -56,13 +56,13 @@ function getPreviousCategoriaDown(categoriaId: string): string | null {
   return categoriaLabels[novaId] ? novaId : null;
 }
 
-function getChaveTitle(chave: Chave, athletes: Atleta[]): string {
+function getChaveTitle(chave: Chave, athletes: Atleta[], customizadas?: CategoriaCustomizada[]): string {
   if (chave.nome) return chave.nome;
 
   const chaveAtletas = chave.posicoesAtletas
     .map(id => athletes.find(a => a.id === id))
     .filter((a): a is Atleta => a !== undefined);
-  if (chaveAtletas.length === 0) return categoriaLabels[chave.categoriaId] || chave.categoriaId;
+  if (chaveAtletas.length === 0) return getCategoriaLabel(chave.categoriaId, customizadas);
 
   const faixaLabel = chave.faixa ? FAIXA_LABEL[chave.faixa] : null;
 
@@ -148,13 +148,14 @@ export function GerenciarChaves() {
 
   const [configGerarOpen, { open: openConfigGerar, close: closeConfigGerar }] = useDisclosure(false);
   const [manualModalOpen, { open: openManualModal, close: closeManualModal }] = useDisclosure(false);
+  const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
 
   const triggerRefresh = () => setRefreshKey(k => k + 1);
 
   const sortedChaves = useMemo(() => {
     return [...chaves].sort((a, b) => {
-      const titleA = getChaveTitle(a, athletes);
-      const titleB = getChaveTitle(b, athletes);
+      const titleA = getChaveTitle(a, athletes, customizadas);
+      const titleB = getChaveTitle(b, athletes, customizadas);
       return titleA.localeCompare(titleB);
     });
   }, [chaves, athletes]);
@@ -163,7 +164,7 @@ export function GerenciarChaves() {
     if (!searchQuery.trim()) return sortedChaves;
     const q = searchQuery.toLowerCase().trim();
     return sortedChaves.filter(chave =>
-      getChaveTitle(chave, athletes).toLowerCase().includes(q)
+      getChaveTitle(chave, athletes, customizadas).toLowerCase().includes(q)
     );
   }, [sortedChaves, athletes, searchQuery]);
 
@@ -182,7 +183,8 @@ export function GerenciarChaves() {
       window.electronAPI.loadAthletes(),
       window.electronAPI.loadChaves(),
       window.electronAPI.loadArbitros(),
-    ]).then(([a, c, r]) => {
+      window.electronAPI.loadCategorias(),
+    ]).then(([a, c, r, catData]) => {
       const chavesList = c as Chave[];
       const athletesList = a as Atleta[];
       setAthletes(athletesList);
@@ -190,6 +192,7 @@ export function GerenciarChaves() {
       const arbitrosList = r as Arbitro[];
       arbitrosList.sort((a, b) => a.nome.localeCompare(b.nome));
       setArbitros(arbitrosList);
+      setCustomizadas(catData.customizadas);
       setChavesGeradas(chavesList.length > 0);
 
       // Mark emChave and compute solo athletes
@@ -338,7 +341,7 @@ export function GerenciarChaves() {
     try {
       const updated = { ...atleta, categoria: novaCategoria, updatedAt: new Date().toISOString() };
       await window.electronAPI.updateAthlete(updated);
-      notifications.show({ color: 'green', title: 'Categoria alterada', message: `${atleta.nome} movido para ${categoriaLabels[novaCategoria] || novaCategoria}.` });
+      notifications.show({ color: 'green', title: 'Categoria alterada', message: `${atleta.nome} movido para ${getCategoriaLabel(novaCategoria, customizadas)}.` });
       triggerRefresh();
     } catch (err: unknown) {
       notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao alterar categoria' });
@@ -354,7 +357,7 @@ export function GerenciarChaves() {
     try {
       const updated = { ...atleta, categoria: novaCategoria, updatedAt: new Date().toISOString() };
       await window.electronAPI.updateAthlete(updated);
-      notifications.show({ color: 'green', title: 'Categoria alterada', message: `${atleta.nome} movido para ${categoriaLabels[novaCategoria] || novaCategoria}.` });
+      notifications.show({ color: 'green', title: 'Categoria alterada', message: `${atleta.nome} movido para ${getCategoriaLabel(novaCategoria, customizadas)}.` });
       triggerRefresh();
     } catch (err: unknown) {
       notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao alterar categoria' });
@@ -365,7 +368,7 @@ export function GerenciarChaves() {
     notifications.show({
       color: 'blue',
       title: 'W.O. declarado',
-      message: `${atleta.nome} declarado campeão por W.O. na categoria ${categoriaLabels[atleta.categoria] || atleta.categoria}.`,
+      message: `${atleta.nome} declarado campeão por W.O. na categoria ${getCategoriaLabel(atleta.categoria, customizadas)}.`,
     });
   };
 
@@ -461,7 +464,7 @@ export function GerenciarChaves() {
                     <Card key={chave.id} withBorder shadow="sm" padding="md" radius="md">
                       <Stack gap="xs">
                         <Group justify="space-between" wrap="nowrap">
-                          <Text fw={700} size="sm">{getChaveTitle(chave, athletes)}</Text>
+                          <Text fw={700} size="sm">{getChaveTitle(chave, athletes, customizadas)}</Text>
                           <Tooltip label="Excluir chave">
                             <Button
                               size="compact-xs"
@@ -534,11 +537,11 @@ export function GerenciarChaves() {
                             <Text size="xs" c="dimmed" style={{ textTransform: 'capitalize' }}>{at.equipe}</Text>
                           )}
                           <Text size="xs" c="dimmed">
-                            {categoriaLabels[at.categoria] || at.categoria}
+                            {getCategoriaLabel(at.categoria, customizadas)}
                           </Text>
                           <Group gap="xs" mt="xs">
                             {prevCat ? (
-                              <Tooltip label={`${categoriaLabels[prevCat] || prevCat} (${prevCount} atleta${prevCount !== 1 ? 's' : ''})`}>
+                              <Tooltip label={`${getCategoriaLabel(prevCat, customizadas)} (${prevCount} atleta${prevCount !== 1 ? 's' : ''})`}>
                                 <Button
                                   size="compact-xs"
                                   variant={prevCount > 0 ? "filled" : "light"}
@@ -563,7 +566,7 @@ export function GerenciarChaves() {
                               </Tooltip>
                             )}
                             {nextCat ? (
-                              <Tooltip label={`${categoriaLabels[nextCat] || nextCat} (${nextCount} atleta${nextCount !== 1 ? 's' : ''})`}>
+                              <Tooltip label={`${getCategoriaLabel(nextCat, customizadas)} (${nextCount} atleta${nextCount !== 1 ? 's' : ''})`}>
                                 <Button
                                   size="compact-xs"
                                   variant={nextCount > 0 ? "filled" : "light"}
@@ -611,7 +614,7 @@ export function GerenciarChaves() {
       <Modal
         opened={viewModalOpen}
         onClose={() => { setViewModalOpen(false); setViewChave(null); }}
-        title={viewChave ? getChaveTitle(viewChave, athletes) : 'Chave'}
+        title={viewChave ? getChaveTitle(viewChave, athletes, customizadas) : 'Chave'}
         size="lg"
       >
         {viewChave && (

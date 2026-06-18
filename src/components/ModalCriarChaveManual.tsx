@@ -3,7 +3,7 @@ import { Modal, Stack, Select, Group, Button, Text, Paper, Badge, Alert, TextInp
 import { IconAlertCircle, IconPlus, IconTrash } from '@tabler/icons-react';
 import type { Atleta } from '../types/athlete';
 import type { Chave } from '../types/bracket';
-import { categoriaLabels } from '../types/category';
+import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 
 const FAIXA_LABEL: Record<string, string> = {
   'branca': 'Branca', 'cinza': 'Cinza', 'amarela': 'Amarela', 'laranja': 'Laranja',
@@ -33,6 +33,13 @@ export function ModalCriarChaveManual({ opened, onClose, atletas, onCriada }: Mo
   const [nomeChave, setNomeChave] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
+
+  useEffect(() => {
+    window.electronAPI.loadCategorias().then((data) => {
+      setCustomizadas(data.customizadas);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (opened) {
@@ -47,10 +54,10 @@ export function ModalCriarChaveManual({ opened, onClose, atletas, onCriada }: Mo
       .filter(a => !a.emChave && !selectedIds.includes(a.id))
       .map(a => ({
         value: a.id,
-        label: `${capitalize(a.nome)} — ${FAIXA_LABEL[a.faixa] ?? a.faixa} · ${a.pesoKg.toFixed(1)}kg · ${categoriaLabels[a.categoria] || a.categoria}`,
+        label: `${capitalize(a.nome)} — ${FAIXA_LABEL[a.faixa] ?? a.faixa} · ${a.pesoKg.toFixed(1)}kg · ${getCategoriaLabel(a.categoria, customizadas)}`,
       }))
       .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')),
-    [atletas, selectedIds]
+    [atletas, selectedIds, customizadas]
   );
 
   const selectedAtletas = useMemo(
@@ -145,7 +152,7 @@ export function ModalCriarChaveManual({ opened, onClose, atletas, onCriada }: Mo
                         {atleta.equipe ? capitalize(atleta.equipe) : '—'}
                       </Text>
                       <Text size="xs" c="dimmed">
-                        {categoriaLabels[atleta.categoria] || atleta.categoria}
+                        {getCategoriaLabel(atleta.categoria, customizadas)}
                       </Text>
                     </Group>
                     <ActionIcon

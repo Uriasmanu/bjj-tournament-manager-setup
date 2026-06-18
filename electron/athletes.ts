@@ -56,14 +56,25 @@ function saveAthlete(torneioId: string, athlete: Atleta): Atleta[] {
   const torneio = loadTorneio(torneioId)
   const list = torneio.atletas ?? []
   const now = new Date().toISOString()
-  const data: Atleta = {
-    ...athlete,
-    id: athlete.id || crypto.randomUUID(),
-    createdAt: athlete.createdAt || now,
-    updatedAt: now,
-    deletedAt: null,
+  const existingIndex = list.findIndex(a => a.id === athlete.id)
+  if (existingIndex !== -1) {
+    const previous = list[existingIndex]
+    list[existingIndex] = {
+      ...athlete,
+      createdAt: previous.createdAt,
+      deletedAt: previous.deletedAt ?? null,
+      updatedAt: now,
+    }
+  } else {
+    const data: Atleta = {
+      ...athlete,
+      id: athlete.id || crypto.randomUUID(),
+      createdAt: athlete.createdAt || now,
+      updatedAt: now,
+      deletedAt: null,
+    }
+    list.push(data)
   }
-  list.push(data)
   torneio.atletas = list
   torneio.updatedAt = now
   saveTorneio(torneio)

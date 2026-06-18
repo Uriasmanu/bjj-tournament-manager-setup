@@ -33,6 +33,10 @@ export function AreasMenu() {
   };
 
   useEffect(() => { loadAreas(); }, []);
+  useEffect(() => {
+    window.addEventListener('focus', loadAreas);
+    return () => window.removeEventListener('focus', loadAreas);
+  }, []);
 
   const handleNew = () => { openForm(); };
 

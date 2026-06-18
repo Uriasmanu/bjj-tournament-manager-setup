@@ -1,7 +1,8 @@
 import { Table, ActionIcon, Group, Badge, Checkbox } from '@mantine/core';
 import { IconPencil, IconTrash, IconMars, IconVenus } from '@tabler/icons-react';
+import { useState, useEffect } from 'react';
 import type { Atleta } from '../types/athlete';
-import { categoriaLabels } from '../types/category';
+import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 
 const faixaLabels: Record<string, string> = {
   branca: 'Branca',
@@ -28,6 +29,14 @@ interface AthleteTableProps {
 }
 
 export function AthleteTable({ athletes, onEdit, onDelete, selectedIds = [], onSelectionChange }: AthleteTableProps) {
+  const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
+
+  useEffect(() => {
+    window.electronAPI.loadCategorias().then((data) => {
+      setCustomizadas(data.customizadas);
+    }).catch(() => {});
+  }, []);
+
   const sortedAthletes = [...athletes].sort((a, b) => a.nome.localeCompare(b.nome));
   const allSelected = athletes.length > 0 && selectedIds.length === athletes.length;
 
@@ -96,7 +105,7 @@ export function AthleteTable({ athletes, onEdit, onDelete, selectedIds = [], onS
               <Table.Td>{faixaLabels[a.faixa] || a.faixa}</Table.Td>
               <Table.Td>
                 <Badge variant="light" color="blue" size="sm" style={{ maxWidth: 180 }}>
-                  {categoriaLabels[a.categoria] || a.categoria}
+                  {getCategoriaLabel(a.categoria, customizadas)}
                 </Badge>
               </Table.Td>
               <Table.Td>{calcularIdade(a.anoNascimento)}</Table.Td>

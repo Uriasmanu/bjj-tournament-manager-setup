@@ -4,9 +4,30 @@ import { Stack, Text, Group, Box, Title, Grid, Switch, Badge, TextInput, Loader,
 import { IconPlus, IconList, IconSearch, IconChevronRight, IconTag } from '@tabler/icons-react';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
-import { CATEGORIAS_IBJJF, type CategoriaCustomizada } from '../types/category';
+import { CATEGORIAS_IBJJF, type CategoriaCustomizada, type FaixaEtaria } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
 import { CategoriaForm } from '../components/CategoriaForm';
+
+function tempoLutaFaixaEtaria(faixaEtaria: FaixaEtaria): string {
+  switch (faixaEtaria) {
+    case 'pre-mirim': return '2 min';
+    case 'mirim': return '2 min';
+    case 'infantil-a':
+    case 'infantil-b': return '3 min';
+    case 'infanto-juvenil-a':
+    case 'infanto-juvenil-b': return '4 min';
+    case 'juvenil': return '5 min';
+    case 'adulto': return '5-10 min';
+    case 'master1':
+    case 'master2':
+    case 'master3':
+    case 'master4':
+    case 'master5':
+    case 'master6':
+    case 'master7': return '5-7 min';
+    default: return '5 min';
+  }
+}
 
 const cards = [
   {
@@ -47,6 +68,10 @@ export function CategoriasMenu() {
   };
 
   useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    window.addEventListener('focus', loadData);
+    return () => window.removeEventListener('focus', loadData);
+  }, []);
 
   const handleToggle = async (categoriaId: string) => {
     try {
@@ -317,6 +342,9 @@ export function CategoriasMenu() {
                   </Text>
                   <Badge size="sm" variant="light" color="gray">
                     {limite}
+                  </Badge>
+                  <Badge size="sm" variant="light" color="blue">
+                    {tempoLutaFaixaEtaria(cat.faixaEtaria)}
                   </Badge>
                 </Group>
                 <Switch

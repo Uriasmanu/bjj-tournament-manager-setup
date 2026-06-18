@@ -5,7 +5,7 @@ import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
 import type { AreaLuta } from '../types/area';
 import type { LutaCasada, AtletaSnapshot } from '../types/lutaCasada';
-import { categoriaLabels } from '../types/category';
+import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 
 const FAIXA_LABEL: Record<string, string> = {
   'branca': 'Branca', 'cinza': 'Cinza', 'amarela': 'Amarela', 'laranja': 'Laranja',
@@ -27,16 +27,13 @@ function atletaToSnapshot(atleta: Atleta): AtletaSnapshot {
   };
 }
 
-function getCategoriaLabel(categoriaId: string): string {
-  return categoriaLabels[categoriaId] ?? categoriaId;
-}
-
 interface AtletaCardProps {
   label: string;
   atleta: Atleta | null;
+  customizadas?: CategoriaCustomizada[];
 }
 
-function AtletaCard({ label, atleta }: AtletaCardProps) {
+function AtletaCard({ label, atleta, customizadas }: AtletaCardProps) {
   return (
     <Paper withBorder p="sm" radius="sm" bg="var(--mantine-color-gray-0)">
       <Group justify="space-between" mb={4}>
@@ -60,7 +57,7 @@ function AtletaCard({ label, atleta }: AtletaCardProps) {
           </Group>
           <Group gap="xs">
             <Text size="xs" c="dimmed">Categoria:</Text>
-            <Text size="xs">{getCategoriaLabel(atleta.categoria)}</Text>
+            <Text size="xs">{getCategoriaLabel(atleta.categoria, customizadas)}</Text>
           </Group>
         </Stack>
       ) : (
@@ -85,6 +82,13 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
   const [arbitroSelectedId, setArbitroSelectedId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
+
+  useEffect(() => {
+    window.electronAPI.loadCategorias().then((data) => {
+      setCustomizadas(data.customizadas);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (opened) {
@@ -187,8 +191,8 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
         />
 
         <Group grow align="stretch">
-          <AtletaCard label="Atleta A" atleta={atletaA} />
-          <AtletaCard label="Atleta B" atleta={atletaB} />
+          <AtletaCard label="Atleta A" atleta={atletaA} customizadas={customizadas} />
+          <AtletaCard label="Atleta B" atleta={atletaB} customizadas={customizadas} />
         </Group>
 
         {mesmoAtleta && (

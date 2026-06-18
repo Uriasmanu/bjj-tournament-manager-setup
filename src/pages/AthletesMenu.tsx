@@ -57,8 +57,14 @@ export function AthletesMenu() {
       return false;
     }
     try {
-      await window.electronAPI.saveAthlete(athlete);
-      notifications.show({ title: 'Sucesso', message: 'Atleta cadastrado com sucesso!', color: 'green' });
+      const isEdit = athletes.some(a => a.id === athlete.id);
+      if (isEdit) {
+        await window.electronAPI.updateAthlete(athlete);
+        notifications.show({ title: 'Sucesso', message: 'Atleta atualizado com sucesso!', color: 'green' });
+      } else {
+        await window.electronAPI.saveAthlete(athlete);
+        notifications.show({ title: 'Sucesso', message: 'Atleta cadastrado com sucesso!', color: 'green' });
+      }
       await loadAthletes();
       return true;
     } catch {

@@ -14,21 +14,20 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
 
-<!--
-### [aberto] em Nova Luta Casada ainda não esta deixando eu escolher livremente entre os arbitros cadastrados. O comportamento seria ter um x no nome do arbitro que esta na area, quando eu clicar, aparecer as opções de outros arbitros
--->
-### [aberto] Quando tento atualizar o nome do atleta ele tenta criar um novo atleta
 ### [aberto] Gerar pdf das lutas casadas e das chaves de luta, no pdf das chaves, tem que mostrar até os cards futuros em formato de chave de luta vertical, com os cards de progressão da esquerda para a direita
 ### [aberto] no menu de lutas casadas, pode se editar e criar luta casada
 ### [aberto] As listas devem ser atualizadas visualmenten assim que um novo item é adidionado, exemplo na lista de atleta, adicionei um atleta mas a lista não atualizou até que eu tivesse saido e entrado novamente na lista
+<!-- SOLUCIONADO: ver HistÓrico de Correções abaixo -->
 ### [aberto] Em categorias, alem da faixa de peso, exiba o tempo de luta tambem
+<!-- SOLUCIONADO: ver HistÓrico de Correções abaixo -->
 ### [aberto] As categorias padões, não precisam ser por faixa, e sim faixa de peso e idade, veja se realmente exitem 270 ou se esta repetindo de forma incorreta. Tambem não precisa ser separado por feminino e masculino, internamente o sistema tem que entende o filtro, exemplo, categoria é adulto - 50 a 53kg, o atleta tem faixa branca e é homem, entao quando for gerar as chaves automaticas ele fica junto com os atletas da mesma categoria, faixa e genero
 ### [aberto] Em lista de atletas, a categoria customizada esta aparecendo com CUSTOM-3EF3438A-F8A1-4E6D-9580-F55BB9B96A8B em vez do nome da categoria
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 
-
+## Historico de correçoes
+<!-- Passe para cá os itens corrigidos -->
 
 # Guia de Spec para Implementação de Features
 
@@ -405,6 +404,24 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Data:** 2026-06-17
 - **Problema:** O menu de categorias não seguia o padrão visual dos outros menus (ex: Atletas). Cards com border-left, hover effects, botão "Acessar" dourado.
 - **Solução:** Reescrito `CategoriasMenu.tsx` seguindo exatamente o padrão de `AthletesMenu.tsx`: welcome banner com stats (Grid 8/4), 3 cards (Categorias IBJJF, Nova Categoria Customizada, Listar Categorias Customizadas) com ícone, título, descrição e botão "Acessar". Adicionado `useDisclosure` para abrir modal de criação inline.
+- **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
+
+### [resolvido] Atualizar nome do atleta cria novo atleta
+- **Data:** 2026-06-18
+- **Problema:** Ao tentar atualizar o nome de um atleta, o sistema tentava criar um novo atleta. O backend `saveAthlete` não tinha proteção contra duplicatas — sempre fazia `push` na lista.
+- **Solução:** Adicionado guard no backend `saveAthlete` que verifica se o ID já existe na lista. Se existir, atualiza em vez de criar duplicata. Também atualizado `AthletesMenu.tsx` para usar `updateAthlete` quando o atleta já existe.
+- **Arquivos alterados:** `electron/athletes.ts`, `src/pages/AthletesMenu.tsx`
+
+### [resolvido] Listas não atualizam visualmente ao adicionar itens
+- **Data:** 2026-06-18
+- **Problema:** As listas (Dashboard, Árbitros, Áreas, Categorias, Equipes, Placar, Resultados) carregavam dados apenas no mount do componente e nunca atualizavam. O usuário precisava sair e entrar novamente para ver novos itens.
+- **Solução:** Adicionado `window.addEventListener('focus', ...)` em todas as páginas afetadas para re-buscar dados quando o usuário retorna à janela. Isso garante que as listas estejam sempre atualizadas sem necessidade de navegação extra.
+- **Arquivos alterados:** `src/pages/Dashboard.tsx`, `src/pages/ArbitrosMenu.tsx`, `src/pages/AreasMenu.tsx`, `src/pages/CategoriasMenu.tsx`, `src/pages/Equipes.tsx`, `src/pages/PlacarMenu.tsx`, `src/pages/Resultados.tsx`
+
+### [resolvido] Categorias devem exibir tempo de luta
+- **Data:** 2026-06-18
+- **Problema:** A lista de categorias IBJJF no menu mostrava apenas o nome e a faixa de peso, sem informar o tempo de luta.
+- **Solução:** Adicionado badge azul com o tempo de luta (ex: "5-10 min") ao lado de cada categoria IBJJF, calculado com base na faixa etária. Categorias customizadas já exibiam o tempo na tabela.
 - **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
 
 ### [resolvido] Criar Chave Manual deve mostrar apenas atletas sem chave

@@ -8,8 +8,8 @@ import type { Chave } from '../types/bracket';
 import type { AreaLuta } from '../types/area';
 import type { Arbitro } from '../types/referee';
 import type { Atleta } from '../types/athlete';
+import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import type { LutaCasada } from '../types/lutaCasada';
-import { categoriaLabels } from '../types/category';
 
 const FAIXA_ORDER: Record<string, number> = {
   'branca': 0, 'cinza': 1, 'amarela': 2, 'laranja': 3,
@@ -34,11 +34,11 @@ function extrairPeso(categoriaId: string): string {
   return PESO_LABEL[parts.slice(genIndex + 1).join('-')] || categoriaId;
 }
 
-function getChaveTitle(chave: Chave, athletes: Atleta[]): string {
+function getChaveTitle(chave: Chave, athletes: Atleta[], customizadas?: CategoriaCustomizada[]): string {
   const chaveAtletas = chave.posicoesAtletas
     .map(id => athletes.find(a => a.id === id))
     .filter((a): a is Atleta => a !== undefined);
-  if (chaveAtletas.length === 0) return categoriaLabels[chave.categoriaId] || chave.categoriaId;
+  if (chaveAtletas.length === 0) return getCategoriaLabel(chave.categoriaId, customizadas);
 
   const faixaLabel = chave.faixa ? FAIXA_LABEL[chave.faixa] : null;
   const peso = extrairPeso(chave.categoriaId);
@@ -68,6 +68,7 @@ export function PlacarChaves() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [modalLutaCasadaOpen, setModalLutaCasadaOpen] = useState(false);
+  const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
 
   useEffect(() => {
     if (!areaId) return;
@@ -77,13 +78,15 @@ export function PlacarChaves() {
       window.electronAPI.loadArbitros(),
       window.electronAPI.loadAthletes(),
       window.electronAPI.loadLutasCasadasPorArea(areaId),
-    ]).then(([areas, ch, arb, ath, lutas]) => {
+      window.electronAPI.loadCategorias(),
+    ]).then(([areas, ch, arb, ath, lutas, catData]) => {
       const found = (areas as AreaLuta[]).find(a => a.id === areaId);
       setArea(found ?? null);
       setChaves(ch);
       setArbitros(arb as Arbitro[]);
       setAthletes(ath as Atleta[]);
       setLutasCasadas(lutas as LutaCasada[]);
+      setCustomizadas(catData.customizadas);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [areaId]);
@@ -119,7 +122,7 @@ export function PlacarChaves() {
     if (!searchQuery.trim()) return sortedChaves;
     const q = searchQuery.toLowerCase().trim();
     return sortedChaves.filter(chave =>
-      getChaveTitle(chave, athletes).toLowerCase().includes(q)
+      getChaveTitle(chave, athletes, customizadas).toLowerCase().includes(q)
     );
   }, [sortedChaves, athletes, searchQuery]);
 
@@ -218,7 +221,7 @@ export function PlacarChaves() {
                     </Badge>
                   )}
                   <Stack gap="xs">
-                    <Text fw={700} size="sm">{getChaveTitle(chave, athletes)}</Text>
+                     <Text fw={700} size="sm">{getChaveTitle(chave, athletes, customizadas)}</Text>
                     <Group gap={4}>
                       <Badge size="sm" color="blue">{chave.totalLutas} luta(s)</Badge>
                       <Badge size="sm" color="green">Gerada</Badge>

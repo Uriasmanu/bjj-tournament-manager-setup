@@ -163,7 +163,7 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 - **Torneio ativo obrigatório:** Para cadastrar, editar, excluir ou importar atletas, é necessário que haja um torneio ativo. Caso contrário, o handler IPC lança erro `"Nenhum torneio ativo"` exibido como notificação vermelha.
 - **Sincronia imediata:** Qualquer operação CRUD sobre atletas lê e escreve diretamente no arquivo JSON do torneio ativo (`torneios/{id}.json`), atualizando o timestamp `updatedAt` do torneio.
 - **Auto-fix silencioso ao carregar (`loadAthletes`):** Se um atleta carregado do JSON estiver sem `id`, `createdAt` ou `updatedAt`, esses campos são gerados automaticamente (`crypto.randomUUID()` para `id`, `new Date().toISOString()` para timestamps). Se alguma correção for aplicada, o arquivo do torneio é reescrito silenciosamente.
-- **`saveAthlete` — auto-geração:** Se o atleta enviado não possuir `id`, um novo UUID é gerado (`crypto.randomUUID()`). Se não possuir `createdAt`, o timestamp atual é atribuído. `updatedAt` é sempre substituído pelo timestamp atual.
+- **`saveAthlete` — auto-geração e proteção contra duplicatas:** Se o atleta enviado não possuir `id`, um novo UUID é gerado (`crypto.randomUUID()`). Se não possuir `createdAt`, o timestamp atual é atribuído. `updatedAt` é sempre substituído pelo timestamp atual. Se o `id` já existir na lista, o atleta é atualizado em vez de inserido (proteção contra duplicatas).
 - **`updateAthlete` — substituição completa:** A atualização substitui o objeto do atleta por completo no índice correspondente (não é uma mesclagem parcial). Preserva `createdAt` e `deletedAt` do item anterior; atualiza `updatedAt`.
 - **Exclusão sem verificação de chaves:** A exclusão de atletas (`deleteAthlete`, `deleteAthletes`) não verifica se o atleta está alocado em alguma chave — o atleta pode ser removido mesmo estando em uma chave.
 - **Soft delete (`deleteAthlete`/`deleteAthletes`):** em vez de remover fisicamente do JSON, a operação seta `deletedAt = new Date().toISOString()` no item e atualiza `updatedAt` do torneio. Itens com `deletedAt != null` ficam ocultos de `loadAthletes` e de todas as listagens do app. O `updatedAt` do torneio também é atualizado.
@@ -1460,7 +1460,7 @@ bjj-tournament-manager-setup/
 - **Acesso:** O card "Categorias" no Dashboard navega para `/admin/categorias`.
 - **Sidebar:** O item "Categorias" aparece na seção "Gestão e Dados" da sidebar do Dashboard.
 - **Funcionalidades:**
-  - **Categorias IBJJF do Sistema:** Lista todas as ~151 categorias IBJJF com toggle enable/disable. Categorias desabilitadas não aparecem no Select de atletas. O estado é persistido no JSON do torneio (`categoriasDesabilitadas: string[]`).
+  - **Categorias IBJJF do Sistema:** Lista todas as ~151 categorias IBJJF com toggle enable/disable. Categorias desabilitadas não aparecem no Select de atletas. O estado é persistido no JSON do torneio (`categoriasDesabilitadas: string[]`). Cada linha exibe nome, faixa de peso e tempo de luta (calculado pela faixa etária).
   - **Categorias Customizadas:** CRUD completo (criar, editar, excluir). Campos: nome, faixa etária, gênero, peso mínimo/máximo (kg), cor da faixa, tempo de luta (minutos). Persistidas no JSON do torneio (`categoriasCustomizadas: CategoriaCustomizada[]`).
   - **Busca:** Campo de busca filtra categorias por nome em tempo real.
   - **Estatísticas:** Exibe total de categorias IBJJF ativas e total de customizadas.
@@ -1468,6 +1468,11 @@ bjj-tournament-manager-setup/
 - **Integração com Atletas:** O `AthleteForm` carrega categorias desabilitadas e customizadas ao abrir. No modo criação, filtra por gênero + idade + faixa. No modo edição, filtra apenas por gênero. Categorias customizadas são exibidas com faixa de peso e tempo de luta no label.
 - **Tipos:** `CategoriaCustomizada` com campos: `id` (prefixo `custom-`), `nome`, `faixaEtaria`, `genero`, `pesoMinimoKg`, `pesoMaximoKg`, `corFaixa`, `tempoLutaMinutos`, `createdAt`, `updatedAt`.
 - **Auto-fix retroativo:** Torneios legados sem `categoriasDesabilitadas` ou `categoriasCustomizadas` recebem arrays vazios via `?? []` ao carregar.
+
+### 3.12. Atualização Automática de Listas
+
+- **Refresh ao focar janela:** Todas as páginas de listagem (Dashboard, Árbitros, Áreas, Categorias, Equipes, Placar, Resultados) escutam o evento `focus` do `window` e re-buscam dados do backend. Isso garante que as listas estejam sempre atualizadas quando o usuário retorna à janela após adicionar, editar ou excluir itens em outra página.
+- **Sem necessidade de navegação extra:** O usuário não precisa sair e entrar novamente na página para ver mudanças refletidas.
 
 cores que gosto:
 
