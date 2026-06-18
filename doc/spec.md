@@ -13,7 +13,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-
+### [aberto] O editar luta casada serve para trocar o oponente ou o arbitro
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 
