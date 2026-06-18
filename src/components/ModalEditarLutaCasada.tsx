@@ -124,13 +124,13 @@ export function ModalEditarLutaCasada({ opened, onClose, luta, atletas, arbitros
     setErro(null);
     try {
       const lutaAtualizada: LutaCasada = await window.electronAPI.updateLutaCasada({
-        id: luta.id,
-        areaId: luta.areaId,
+        ...luta,
         arbitroId: arbitroSelectedId,
         atletaAId: atletaA.id,
         atletaBId: atletaB.id,
         atletaASnapshot: atletaToSnapshot(atletaA),
         atletaBSnapshot: atletaToSnapshot(atletaB),
+        updatedAt: new Date().toISOString(),
       });
       onSalvo(lutaAtualizada);
       onClose();
