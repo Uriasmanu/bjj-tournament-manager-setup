@@ -15,17 +15,10 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 -->
 
 ### [aberto] Gerar pdf das lutas casadas e das chaves de luta, no pdf das chaves, tem que mostrar até os cards futuros em formato de chave de luta vertical, com os cards de progressão da esquerda para a direita
-<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
-### [aberto] no menu de lutas casadas, pode se editar e criar luta casada
-<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
-### [aberto] As listas devem ser atualizadas visualmenten assim que um novo item é adidionado, exemplo na lista de atleta, adicionei um atleta mas a lista não atualizou até que eu tivesse saido e entrado novamente na lista
-<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
-### [aberto] Em categorias, alem da faixa de peso, exiba o tempo de luta tambem
-<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
-### [aberto] As categorias padões, não precisam ser por faixa, e sim faixa de peso e idade, veja se realmente exitem 270 ou se esta repetindo de forma incorreta. Tambem não precisa ser separado por feminino e masculino, internamente o sistema tem que entende o filtro, exemplo, categoria é adulto - 50 a 53kg, o atleta tem faixa branca e é homem, entao quando for gerar as chaves automaticas ele fica junto com os atletas da mesma categoria, faixa e genero
-<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
-### [aberto] Em lista de atletas, a categoria customizada esta aparecendo com CUSTOM-3EF3438A-F8A1-4E6D-9580-F55BB9B96A8B em vez do nome da categoria
-<!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
+### [aberto] no menu de lutas casadas, tem que esta o botao de gerar pdf da lista de lutas casadas
+
+### [aberto] As categorias padões, não precisam ser por faixa, e sim faixa de peso e idade, veja se realmente exitem 270 ou se esta repetindo de forma incorreta. Tambem não precisa ser separado por feminino e masculino, internamente o sistema tem que entende o filtro, exemplo, categoria é adulto - 50 a 53kg, o atleta tem faixa branca e é homem, entao quando for gerar as chaves automaticas ele fica junto com os atletas da mesma categoria, faixa e genero. Revise as categorias, pois não é para ter 270
+
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
 
