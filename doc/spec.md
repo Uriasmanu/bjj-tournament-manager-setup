@@ -23,6 +23,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ### [aberto] As listas devem ser atualizadas visualmenten assim que um novo item é adidionado, exemplo na lista de atleta, adicionei um atleta mas a lista não atualizou até que eu tivesse saido e entrado novamente na lista
 ### [aberto] Em categorias, alem da faixa de peso, exiba o tempo de luta tambem
 ### [aberto] As categorias padões, não precisam ser por faixa, e sim faixa de peso e idade, veja se realmente exitem 270 ou se esta repetindo de forma incorreta. Tambem não precisa ser separado por feminino e masculino, internamente o sistema tem que entende o filtro, exemplo, categoria é adulto - 50 a 53kg, o atleta tem faixa branca e é homem, entao quando for gerar as chaves automaticas ele fica junto com os atletas da mesma categoria, faixa e genero
+### [aberto] Em lista de atletas, a categoria customizada esta aparecendo com CUSTOM-3EF3438A-F8A1-4E6D-9580-F55BB9B96A8B em vez do nome da categoria
 <!-- SOLUCIONADO: ver Histórico de Correções abaixo -->
 ## Feature
 <!-- Dedicado a informações do que é esperado da feature -->
