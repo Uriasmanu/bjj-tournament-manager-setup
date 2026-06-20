@@ -14,14 +14,48 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
 ### [aberto] Veja se a biblioteca de pdf é a ideal para fazer "desenhos", pois os pdfs estão muito simples, sómenete o de luta casada esta tudo bem ser simpl, o resto tem que ser revisado (esse em aberto é somente para trocar a biblioteca sem alterar os pdfs)
-### [aberto] em criação de chave manual eu posso colocar quem eu quiser, independente de faixa, categoria
 ### [aberto] O pdf das chaves de lutas tem que exibir o desenho dos backet igual tem em placar
-### [aberto] Editar chave em geração de chaves, pode ser trocada a area de luta (icone de editar do lado de apagar, abre a tela de visualizar)
-### [aberto] Craves criada manualmente, tem que receber o emChave tambem
-### [aberto] lutas casadas, pode ter a area de luta editada igual tem em chave de luta
-## Feature
-### [aberto] pdf de resultados esta muito simples, tem que mostrar em formato de tabela e tem que colocar cada aba em uma pagina do pdf
+### [aberto] Não é para ter 270 categorias, é para ter apenas as categorias a baixo (remova todas as infantis, juvenis e master):
+Masculino (Adulto)
+Existem 9 categorias de peso, além do Absoluto (peso livre):
 
+Galo: Até 57,5 kg
+
+Pluma: Até 64,0 kg
+
+Pena: Até 70,0 kg
+
+Leve: Até 76,0 kg
+
+Médio: Até 82,3 kg
+
+Meio-Pesado: Até 88,3 kg
+
+Pesado: Até 94,3 kg
+
+Super-Pesado: Até 100,5 kg
+
+Pesadíssimo: Acima de 100,5 kg
+Absoluto (peso livre)
+
+Feminino (Adulto)
+Existem 7 categorias de peso, além do :
+
+Galo: Até 48,5 kg
+
+Pluma: Até 53,5 kg
+
+Pena: Até 58,5 kg
+
+Leve: Até 64,0 kg
+
+Médio: Até 69,0 kg
+
+Meio-Pesado: Até 74,0 kg
+
+Pesado: Acima de 74,0 kg
+
+Absoluto (peso livre)
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
 
@@ -509,3 +543,33 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Solução:** Adicionada resolução de área nos cards de chave (exibe nome da área ao lado do árbitro). Adicionado seletor de "Área de Luta" (Select pesquisável, clearable) no modal de visualização de chave. Ao selecionar uma nova área, o sistema atribui automaticamente o primeiro árbitro da área à chave. Ao limpar, remove o árbitro.
 - **Arquivos alterados:** `src/pages/GerenciarChaves.tsx`
 - **Spec:** `spec/trocar-area-chave.md`
+
+### [resolvido] Chaves manuais já recebem emChave (item obsoleto)
+- **Data:** 2026-06-20
+- **Problema:** O item "[aberto] Craves criada manualmente, tem que receber o emChave tambem" estava desatualizado.
+- **Solução:** O código já implementa corretamente o `emChave = true` para atletas em chaves manuais, tanto no backend (`electron/brackets.ts:1653-1658`) quanto no frontend (`GerenciarChaves.tsx:329-331`). Item removido da lista de problemas abertos.
+- **Arquivos:** `electron/brackets.ts`, `src/pages/GerenciarChaves.tsx`
+
+### [feature] Ícone de editar ao lado de excluir em chaves
+- **Data:** 2026-06-20
+- **Problema:** Na tela "Gerenciar Chaves", o card de cada chave só exibia botão "Excluir". Não havia ícone de editar para acessar rapidamente a visualização da chave.
+- **Solução:** Adicionado botão "Editar" (ícone `IconPencil`, cor azul) ao lado do botão "Excluir" no card de cada chave. O botão abre o modal de visualização da chave (mesmo que "Visualizar"), permitindo editar árbitro, área e embaralhar.
+- **Arquivos alterados:** `src/pages/GerenciarChaves.tsx`
+
+### [feature] Área de luta editável em lutas casadas
+- **Data:** 2026-06-20
+- **Problema:** Na edição de luta casada (`ModalEditarLutaCasada`), não era possível alterar a área de luta. A tabela de listagem (`AdminLutasCasadas`) também não exibia a área.
+- **Solução:** Adicionado seletor de "Área de Luta" (Select pesquisável, clearable) no modal de edição. Ao trocar de área, o árbitro é automaticamente atualizado para o primeiro árbitro da nova área. Adicionada coluna "Área" na tabela de listagem. Passado array `areas` como prop para o modal.
+- **Arquivos alterados:** `src/components/ModalEditarLutaCasada.tsx`, `src/pages/AdminLutasCasadas.tsx`
+
+### [feature] PDF de resultados com formato tabela e páginas separadas
+- **Data:** 2026-06-20
+- **Problema:** O PDF de resultados era muito simples, sem formato de tabela adequado e todas as seções numa única página.
+- **Solução:** Reescrita a função `gerarPdfResultados` com: Medalhistas em tabela (Categoria, Atletas, Ouro, Prata, Bronze), Ranking de Equipes com coluna #, Árbitros com coluna #, Atletas com coluna #. Cada seção (Medalhistas, Ranking, Árbitros, Atletas) inicia em página separada via `pageBreak: 'before'`.
+- **Arquivos alterados:** `src/utils/pdfGenerator.ts`
+
+### [resolvido] Criar chave manual com qualquer faixa/categoria (item obsoleto)
+- **Data:** 2026-06-20
+- **Problema:** O item "[aberto] em criação de chave manual eu posso colocar quem eu quiser, independente de faixa, categoria" descrevia uma funcionalidade que já existia.
+- **Solução:** O código em `ModalCriarChaveManual.tsx:62` filtra atletas apenas por `!a.emChave && !selectedIds.includes(a.id)` — não há filtro de faixa ou categoria. Item removido da lista de problemas abertos.
+- **Arquivos:** `src/components/ModalCriarChaveManual.tsx`

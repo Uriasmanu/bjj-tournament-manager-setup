@@ -1,7 +1,7 @@
 import { Paper, Title, Group, Button, Badge, Stack, Text, Loader, Center, Card, SimpleGrid, Modal, Select, Tooltip, TextInput, NumberInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useDisclosure } from '@mantine/hooks';
-import { IconArrowUp, IconArrowDown, IconAward, IconSearch, IconPlus, IconTrash, IconFileDownload } from '@tabler/icons-react';
+import { IconArrowUp, IconArrowDown, IconAward, IconSearch, IconPlus, IconTrash, IconFileDownload, IconPencil } from '@tabler/icons-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
@@ -519,17 +519,30 @@ export function GerenciarChaves() {
                       <Stack gap="xs">
                         <Group justify="space-between" wrap="nowrap">
                           <Text fw={700} size="sm">{getChaveTitle(chave, athletes, customizadas)}</Text>
-                          <Tooltip label="Excluir chave">
-                            <Button
-                              size="compact-xs"
-                              color="red"
-                              variant="subtle"
-                              onClick={() => handleExcluirChave(chave.id)}
-                              leftSection={<IconTrash size={14} />}
-                            >
-                              Excluir
-                            </Button>
-                          </Tooltip>
+                          <Group gap="xs">
+                            <Tooltip label="Editar chave">
+                              <Button
+                                size="compact-xs"
+                                color="blue"
+                                variant="subtle"
+                                onClick={() => handleViewChave(chave)}
+                                leftSection={<IconPencil size={14} />}
+                              >
+                                Editar
+                              </Button>
+                            </Tooltip>
+                            <Tooltip label="Excluir chave">
+                              <Button
+                                size="compact-xs"
+                                color="red"
+                                variant="subtle"
+                                onClick={() => handleExcluirChave(chave.id)}
+                                leftSection={<IconTrash size={14} />}
+                              >
+                                Excluir
+                              </Button>
+                            </Tooltip>
+                          </Group>
                         </Group>
                         <Group gap={4}>
                           <Badge size="sm" color="blue">{chave.totalLutas} luta(s)</Badge>

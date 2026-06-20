@@ -3,6 +3,7 @@ import { Modal, Stack, Select, Group, Button, Text, Paper, Badge, Alert } from '
 import { IconAlertCircle, IconCheck } from '@tabler/icons-react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
+import type { AreaLuta } from '../types/area';
 import type { LutaCasada, AtletaSnapshot } from '../types/lutaCasada';
 import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 
@@ -72,13 +73,15 @@ interface ModalEditarLutaCasadaProps {
   luta: LutaCasada | null;
   atletas: Atleta[];
   arbitros: Arbitro[];
+  areas: AreaLuta[];
   onSalvo: (luta: LutaCasada) => void;
 }
 
-export function ModalEditarLutaCasada({ opened, onClose, luta, atletas, arbitros, onSalvo }: ModalEditarLutaCasadaProps) {
+export function ModalEditarLutaCasada({ opened, onClose, luta, atletas, arbitros, areas, onSalvo }: ModalEditarLutaCasadaProps) {
   const [atletaAId, setAtletaAId] = useState<string | null>(null);
   const [atletaBId, setAtletaBId] = useState<string | null>(null);
   const [arbitroSelectedId, setArbitroSelectedId] = useState<string | null>(null);
+  const [areaSelectedId, setAreaSelectedId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
@@ -94,9 +97,11 @@ export function ModalEditarLutaCasada({ opened, onClose, luta, atletas, arbitros
       setAtletaAId(luta.atletaAId);
       setAtletaBId(luta.atletaBId);
       setArbitroSelectedId(luta.arbitroId);
+      const area = areas.find(a => a.arbitroIds.includes(luta.arbitroId ?? ''));
+      setAreaSelectedId(area?.id ?? null);
       setErro(null);
     }
-  }, [opened, luta]);
+  }, [opened, luta, areas]);
 
   const atletasData = useMemo(
     () => atletas
@@ -112,6 +117,24 @@ export function ModalEditarLutaCasada({ opened, onClose, luta, atletas, arbitros
     [arbitros]
   );
 
+  const areasData = useMemo(
+    () => areas
+      .map(a => ({ value: a.id, label: a.nome || `Área ${a.id.slice(0, 4)}` }))
+      .sort((a, b) => a.label.localeCompare(b.label, 'pt-BR')),
+    [areas]
+  );
+
+  const handleAreaChange = (areaId: string | null) => {
+    setAreaSelectedId(areaId);
+    if (areaId) {
+      const area = areas.find(a => a.id === areaId);
+      const primeiroArbitro = area?.arbitroIds?.[0] ?? null;
+      setArbitroSelectedId(primeiroArbitro);
+    } else {
+      setArbitroSelectedId(null);
+    }
+  };
+
   const atletaA = useMemo(() => atletas.find(a => a.id === atletaAId) ?? null, [atletas, atletaAId]);
   const atletaB = useMemo(() => atletas.find(a => a.id === atletaBId) ?? null, [atletas, atletaBId]);
 
@@ -125,6 +148,7 @@ export function ModalEditarLutaCasada({ opened, onClose, luta, atletas, arbitros
     try {
       const lutaAtualizada: LutaCasada = await window.electronAPI.updateLutaCasada({
         ...luta,
+        areaId: areaSelectedId ?? luta.areaId,
         arbitroId: arbitroSelectedId,
         atletaAId: atletaA.id,
         atletaBId: atletaB.id,
@@ -151,6 +175,17 @@ export function ModalEditarLutaCasada({ opened, onClose, luta, atletas, arbitros
       centered
     >
       <Stack gap="md">
+        <Select
+          label="Área de Luta"
+          placeholder="Buscar área..."
+          data={areasData}
+          value={areaSelectedId}
+          onChange={handleAreaChange}
+          searchable
+          clearable
+          nothingFoundMessage="Nenhuma área encontrada"
+        />
+
         <Select
           label="Árbitro"
           placeholder="Buscar árbitro..."

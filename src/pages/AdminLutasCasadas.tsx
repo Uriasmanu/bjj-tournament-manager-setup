@@ -172,6 +172,12 @@ export function AdminLutasCasadas() {
     loadList();
   };
 
+  const getNomeArea = (areaId: string | null): string => {
+    if (!areaId) return '—';
+    const area = areas.find(a => a.id === areaId);
+    return area?.nome || '—';
+  };
+
   const getNome = (l: LutaCasada, side: 'A' | 'B'): string => {
     const snapshot = side === 'A' ? l.atletaASnapshot : l.atletaBSnapshot;
     const id = side === 'A' ? l.atletaAId : l.atletaBId;
@@ -303,6 +309,7 @@ export function AdminLutasCasadas() {
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Atleta B</Table.Th>
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Status</Table.Th>
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Vencedor</Table.Th>
+                  <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Área</Table.Th>
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Criada em</Table.Th>
                   {showDeleted && <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Deletado em</Table.Th>}
                   <Table.Th style={{ width: 100, textAlign: 'center', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Ações</Table.Th>
@@ -338,6 +345,9 @@ export function AdminLutasCasadas() {
                       <Table.Td>{statusBadge(l.status)}</Table.Td>
                       <Table.Td>
                         <Text size="sm" fw={600} style={{ color: '#374151' }}>{vencedor}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">{getNomeArea(l.areaId)}</Text>
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm" c="dimmed">{formatDateTime(l.createdAt)}</Text>
@@ -483,6 +493,7 @@ export function AdminLutasCasadas() {
         luta={editingLuta}
         atletas={atletas}
         arbitros={arbitros}
+        areas={areas}
         onSalvo={handleEditSaved}
       />
     </PageLayout>

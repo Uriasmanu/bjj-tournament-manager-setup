@@ -849,6 +849,37 @@ A página usa `Tabs` do Mantine com 6 abas:
 - **Arquivo:** `src/App.tsx` — nova rota `/admin/resultados`.
 - **Spec:** `spec/resultados-menu.md`
 
+### 3.24. PDF de Resultados com Tabelas e Páginas Separadas (Implementado)
+
+- **Botão "Gerar PDF Resultados":** Na aba "Visão Geral" da tela de Resultados, o botão gera um PDF consolidado com 4 seções, cada uma em página separada.
+- **Seções do PDF:**
+  1. **Medalhistas:** Tabela com colunas: Categoria (nome + faixa), Atletas (qtd), Ouro, Prata, Bronze. Cada chave encerrada é uma linha.
+  2. **Ranking de Equipes:** Tabela com colunas: #, Equipe, Atletas, Ouro, Prata, Bronze. Ordenada por ouro (desc), prata (desc), bronze (desc).
+  3. **Árbitros:** Tabela com colunas: #, Árbitro, Faixa, Equipe, Lutas (total de chaves atribuídas).
+  4. **Atletas:** Tabela com colunas: #, Atleta, Equipe, Faixa, Peso, Categoria, Chave. Ordenada alfabeticamente.
+- **Page breaks:** Cada seção (exceto a primeira) inicia em nova página via `pageBreak: 'before'`.
+- **Nome do arquivo:** `resultados-{nome-torneio}.pdf`.
+- **Spec:** `spec/pdf-resultados.md`
+
+### 3.25. Trocar Área de Luta na Chave com Ícone de Editar (Implementado)
+
+- **Área visível nos cards:** Na tela "Gerenciar Chaves", cada card de chave exibe o nome da área (se atribuída) ao lado do árbitro.
+- **Botão "Editar":** Cada card possui um botão "Editar" (ícone `IconPencil`, cor azul) ao lado do "Excluir". O botão abre o modal de visualização da chave, permitindo editar árbitro, área e embaralhar.
+- **Seletor de área no modal:** O modal de visualização inclui um Select "Área de Luta" (pesquisável, clearable). Ao selecionar uma nova área, o primeiro árbitro da área é atribuído automaticamente. Ao limpar, o árbitro é removido.
+- **Spec:** `spec/trocar-area-chave.md`
+
+### 3.26. Área de Luta Editável em Lutas Casadas (Implementado)
+
+- **Coluna "Área" na listagem:** A tabela de lutas casadas (`AdminLutasCasadas`) exibe uma coluna "Área" com o nome da área de cada luta.
+- **Seletor de área no modal de edição:** O `ModalEditarLutaCasada` inclui um Select "Área de Luta" (pesquisável, clearable). Ao trocar de área, o árbitro é automaticamente atualizado para o primeiro árbitro da nova área.
+- **Spec:** `spec/area-luta-casada.md`
+
+### 3.27. Criar Chave Manual com Qualquer Faixa/Categoria (Implementado)
+
+- **Sem filtro de faixa/categoria:** Na criação manual de chaves (`ModalCriarChaveManual`), o seletor de atletas lista todos os atletas disponíveis (não estão em outra chave) sem filtrar por faixa ou categoria.
+- **Flexibilidade:** O administrador pode criar chaves especiais com atletas de diferentes categorias e faixas.
+- **Spec:** `spec/chave-manual-faixa-categoria.md`
+
 ---
 
 ## 4. Plataforma
