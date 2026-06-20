@@ -13,10 +13,11 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Export em pdf de resultados
-### [aberto] Editar chave em geração de chaves, pode ser trocada a area de luta
 ## Feature
+### [aberto] em criação de chave manual eu posso colocar quem eu quiser, independente de faixa, categoria
 <!-- Dedicado a informações do que é esperado da feature -->
+### [aberto] O pdf das chaves de lutas tem que exibir o desenho dos backet igual tem em placar
+### [aberto] Editar chave em geração de chaves, pode ser trocada a area de luta (icone de editar do lado de apagar, abre a tela de visualizar)
 
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
@@ -491,3 +492,17 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** A geração de chaves em massa (`gerarTodasChavesHandler`) agrupava atletas por `${categoria}__${faixa}`, criando chaves separadas para cada cor de faixa dentro da mesma categoria. O usuário quer que atletas da mesma categoria (idade + peso + gênero) compartilhem a mesma chave, sem separação por cor de faixa.
 - **Solução:** Alterada a chave de agrupamento de `${a.categoria}__${a.faixa}` para apenas `a.categoria` em `electron/brackets.ts`. Agora todos os atletas da mesma categoria são agrupados em uma única chave.
 - **Arquivos alterados:** `electron/brackets.ts`
+
+### [feature] Export em pdf de resultados
+- **Data:** 2026-06-20
+- **Problema:** Não existia funcionalidade de gerar PDF com os resultados consolidados do torneio (medalhistas, ranking de equipes, árbitros, atletas). Apenas PDFs de chaves e lutas casadas eram suportados.
+- **Solução:** Criada função `gerarPdfResultados` em `src/utils/pdfGenerator.ts` que gera um PDF consolidado com 4 seções: Medalhistas (🥇/🥈/🥉 por chave encerrada), Ranking de Equipes (tabela ordenada por medalhas), Árbitros (com total de lutas) e Atletas (tabela completa). Adicionado botão "Gerar PDF Resultados" na aba "Visão Geral" da tela de Resultados.
+- **Arquivos alterados:** `src/utils/pdfGenerator.ts`, `src/pages/Resultados.tsx`
+- **Spec:** `spec/pdf-resultados.md`
+
+### [feature] Trocar área de luta na chave de gerenciamento
+- **Data:** 2026-06-20
+- **Problema:** Na tela "Gerenciar Chaves", não era possível visualizar nem trocar a área de luta de uma chave. A relação chave-área era indireta (através do árbitro) e a UI não fornecia nenhum seletor de área, obrigando o administrador a conhecer quais árbitros pertencem a quais áreas.
+- **Solução:** Adicionada resolução de área nos cards de chave (exibe nome da área ao lado do árbitro). Adicionado seletor de "Área de Luta" (Select pesquisável, clearable) no modal de visualização de chave. Ao selecionar uma nova área, o sistema atribui automaticamente o primeiro árbitro da área à chave. Ao limpar, remove o árbitro.
+- **Arquivos alterados:** `src/pages/GerenciarChaves.tsx`
+- **Spec:** `spec/trocar-area-chave.md`

@@ -198,3 +198,190 @@ export function gerarPdfChaves(chaves: Chave[], atletas: Atleta[], nomeTorneio: 
     `chaves-${nomeTorneio.replace(/\s+/g, '-').toLowerCase()}.pdf`
   );
 }
+
+export interface ResultadoMedalha {
+  chave: Chave;
+  ouro: string | null;
+  prata: string | null;
+  bronzes: string[];
+}
+
+export interface ResultadoEquipe {
+  nome: string;
+  totalAtletas: number;
+  ouro: number;
+  prata: number;
+  bronze: number;
+}
+
+export function gerarPdfResultados(
+  chaves: Chave[],
+  atletas: Atleta[],
+  arbitros: Arbitro[],
+  medalhasPorEquipe: Record<string, { ouro: number; prata: number; bronze: number }>,
+  nomeTorneio: string,
+  getChaveVencedorId: (chave: Chave) => string | null,
+  getChavePerdedorFinalId: (chave: Chave) => string | null,
+  getPerdedoresSemifinal: (chave: Chave) => string[],
+): void {
+  const atletasMap = new Map(atletas.map(a => [a.id, a]));
+  const resolveNome = (id: string | null): string => {
+    if (!id || id === 'tbd' || id === 'bye') return '—';
+    const a = atletasMap.get(id);
+    if (!a) return 'Atleta removido';
+    return capitalize(a.nome);
+  };
+
+  const chavesEncerradas = chaves.filter(c => {
+    const max = Math.max(...c.lutas.map(l => l.rodada), 0);
+    return c.lutas.some(l => l.rodada === max && l.vencedorId);
+  });
+
+  const content: Content[] = [
+    { text: `Resultados - ${nomeTorneio}`, style: 'header', alignment: 'center' },
+    { text: `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, alignment: 'center', fontSize: 9, margin: [0, 0, 0, 10] },
+  ];
+
+  // === MEDALHISTAS ===
+  content.push({ text: 'Medalhistas', style: 'sectionTitle', margin: [0, 8, 0, 4] as [number, number, number, number] });
+
+  if (chavesEncerradas.length === 0) {
+    content.push({ text: 'Nenhuma chave encerrada.', fontSize: 9, margin: [0, 0, 0, 6] as [number, number, number, number] });
+  } else {
+    for (const chave of chavesEncerradas) {
+      const titulo = chave.nome || getCategoriaLabel(chave.categoriaId);
+      const faixaText = chave.faixa ? ` - ${FAIXA_LABEL[chave.faixa] ?? chave.faixa}` : '';
+      const ouro = getChaveVencedorId(chave);
+      const prata = getChavePerdedorFinalId(chave);
+      const bronzes = getPerdedoresSemifinal(chave);
+
+      content.push({ text: `${titulo}${faixaText} (${chave.totalAtletas} atletas)`, bold: true, fontSize: 9, margin: [0, 4, 0, 2] as [number, number, number, number] });
+
+      const medalBody: TableCell[][] = [];
+      if (ouro) medalBody.push([{ text: 'Ouro', bold: true, fontSize: 9 }, { text: resolveNome(ouro), fontSize: 9 }]);
+      if (prata) medalBody.push([{ text: 'Prata', bold: true, fontSize: 9 }, { text: resolveNome(prata), fontSize: 9 }]);
+      for (const id of bronzes) {
+        medalBody.push([{ text: 'Bronze', bold: true, fontSize: 9 }, { text: resolveNome(id), fontSize: 9 }]);
+      }
+
+      if (medalBody.length > 0) {
+        content.push({
+          table: { widths: [60, '*'], body: medalBody },
+          layout: 'lightHorizontalLines',
+          margin: [0, 0, 0, 4] as [number, number, number, number],
+        });
+      }
+    }
+  }
+
+  // === RANKING DE EQUIPES ===
+  content.push({ text: 'Ranking de Equipes', style: 'sectionTitle', margin: [0, 10, 0, 4] as [number, number, number, number] });
+
+  const equipes = Object.entries(medalhasPorEquipe)
+    .map(([nome, m]) => ({ nome, totalAtletas: atletas.filter(a => (a.equipe || 'Sem equipe') === nome).length, ...m }))
+    .sort((a, b) => b.ouro - a.ouro || b.prata - a.prata || b.bronze - a.bronze);
+
+  if (equipes.length === 0) {
+    content.push({ text: 'Nenhuma equipe registrada.', fontSize: 9, margin: [0, 0, 0, 6] as [number, number, number, number] });
+  } else {
+    const eqBody: TableCell[][] = [
+      [
+        { text: 'Equipe', bold: true, fontSize: 9 },
+        { text: 'Atletas', bold: true, fontSize: 9, alignment: 'center' as const },
+        { text: 'Ouro', bold: true, fontSize: 9, alignment: 'center' as const },
+        { text: 'Prata', bold: true, fontSize: 9, alignment: 'center' as const },
+        { text: 'Bronze', bold: true, fontSize: 9, alignment: 'center' as const },
+      ],
+      ...equipes.map(e => [
+        { text: capitalize(e.nome), fontSize: 9 },
+        { text: String(e.totalAtletas), fontSize: 9, alignment: 'center' as const },
+        { text: String(e.ouro), fontSize: 9, alignment: 'center' as const },
+        { text: String(e.prata), fontSize: 9, alignment: 'center' as const },
+        { text: String(e.bronze), fontSize: 9, alignment: 'center' as const },
+      ]),
+    ];
+    content.push({
+      table: { widths: ['*', 'auto', 'auto', 'auto', 'auto'], body: eqBody },
+      layout: 'lightHorizontalLines',
+    });
+  }
+
+  // === ARBITROS ===
+  content.push({ text: 'Arbitros', style: 'sectionTitle', margin: [0, 10, 0, 4] as [number, number, number, number] });
+
+  if (arbitros.length === 0) {
+    content.push({ text: 'Nenhum arbitro cadastrado.', fontSize: 9, margin: [0, 0, 0, 6] as [number, number, number, number] });
+  } else {
+    const lutasPorArbitro: Record<string, number> = {};
+    for (const c of chaves) {
+      if (c.arbitroId) lutasPorArbitro[c.arbitroId] = (lutasPorArbitro[c.arbitroId] ?? 0) + 1;
+    }
+    const arbBody: TableCell[][] = [
+      [
+        { text: 'Arbitro', bold: true, fontSize: 9 },
+        { text: 'Faixa', bold: true, fontSize: 9 },
+        { text: 'Equipe', bold: true, fontSize: 9 },
+        { text: 'Lutas', bold: true, fontSize: 9, alignment: 'center' as const },
+      ],
+      ...arbitros.map(a => [
+        { text: capitalize(a.nome), fontSize: 9 },
+        { text: FAIXA_LABEL[a.faixa] ?? a.faixa, fontSize: 9 },
+        { text: capitalize(a.equipe || '—'), fontSize: 9 },
+        { text: String(lutasPorArbitro[a.id] ?? 0), fontSize: 9, alignment: 'center' as const },
+      ]),
+    ];
+    content.push({
+      table: { widths: ['*', 'auto', 'auto', 'auto'], body: arbBody },
+      layout: 'lightHorizontalLines',
+    });
+  }
+
+  // === ATLETAS ===
+  content.push({ text: 'Atletas', style: 'sectionTitle', margin: [0, 10, 0, 4] as [number, number, number, number] });
+
+  if (atletas.length === 0) {
+    content.push({ text: 'Nenhum atleta cadastrado.', fontSize: 9, margin: [0, 0, 0, 6] as [number, number, number, number] });
+  } else {
+    const atBody: TableCell[][] = [
+      [
+        { text: 'Atleta', bold: true, fontSize: 8 },
+        { text: 'Equipe', bold: true, fontSize: 8 },
+        { text: 'Faixa', bold: true, fontSize: 8 },
+        { text: 'Peso', bold: true, fontSize: 8, alignment: 'center' as const },
+        { text: 'Categoria', bold: true, fontSize: 8 },
+        { text: 'Chave', bold: true, fontSize: 8 },
+      ],
+      ...atletas.sort((a, b) => a.nome.localeCompare(b.nome)).map(a => {
+        const chave = chaves.find(c => c.posicoesAtletas.includes(a.id));
+        return [
+          { text: capitalize(a.nome), fontSize: 7 },
+          { text: capitalize(a.equipe || '—'), fontSize: 7 },
+          { text: FAIXA_LABEL[a.faixa] ?? a.faixa, fontSize: 7 },
+          { text: `${a.pesoKg.toFixed(1)}`, fontSize: 7, alignment: 'center' as const },
+          { text: getCategoriaLabel(a.categoria), fontSize: 7 },
+          { text: chave ? (chave.nome || getCategoriaLabel(chave.categoriaId)) : '—', fontSize: 7 },
+        ];
+      }),
+    ];
+    content.push({
+      table: { widths: ['*', 'auto', 'auto', 'auto', '*', 'auto'], body: atBody },
+      layout: 'lightHorizontalLines',
+    });
+  }
+
+  const docDefinition: TDocumentDefinitions = {
+    pageSize: 'A4',
+    pageOrientation: 'portrait',
+    pageMargins: [15, 20, 15, 20],
+    content,
+    defaultStyle: { font: 'Roboto' },
+    styles: {
+      header: { fontSize: 14, bold: true, margin: [0, 0, 0, 4] as [number, number, number, number] },
+      sectionTitle: { fontSize: 12, bold: true, decoration: 'underline' },
+    },
+  };
+
+  (pdfMake as any).createPdf(docDefinition).download(
+    `resultados-${nomeTorneio.replace(/\s+/g, '-').toLowerCase()}.pdf`
+  );
+}

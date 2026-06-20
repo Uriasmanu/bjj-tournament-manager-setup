@@ -38,7 +38,7 @@ import type { Atleta } from '../types/athlete';
 import type { Chave, Luta, PlacarLuta } from '../types/bracket';
 import type { Arbitro } from '../types/referee';
 import type { AreaLuta } from '../types/area';
-import { gerarPdfLutasCasadas, gerarPdfChaves } from '../utils/pdfGenerator';
+import { gerarPdfLutasCasadas, gerarPdfChaves, gerarPdfResultados } from '../utils/pdfGenerator';
 import type { LutaCasada } from '../types/lutaCasada';
 import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
@@ -592,7 +592,23 @@ export function Resultados() {
                 </Paper>
               </SimpleGrid>
 
-              <Title order={4} mt="sm">Medalhistas</Title>
+              <Group justify="space-between" w="100%">
+                <Title order={4} mt="sm">Medalhistas</Title>
+                <Button
+                  size="sm"
+                  variant="light"
+                  leftSection={<IconFileDownload size={16} />}
+                  onClick={() => {
+                    gerarPdfResultados(
+                      chaves, atletas, arbitros, medalhasPorEquipe,
+                      torneio.nome || `Torneio ${torneio.data}`,
+                      getChaveVencedorId, getChavePerdedorFinalId, getPerdedoresSemifinal,
+                    );
+                  }}
+                >
+                  Gerar PDF Resultados
+                </Button>
+              </Group>
               {chavesEncerradas.length === 0 ? (
                 <Text c="dimmed">Nenhuma chave encerrada ainda.</Text>
               ) : (

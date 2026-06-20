@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
 import type { Chave } from '../types/bracket';
+import type { AreaLuta } from '../types/area';
 import { categoriaLabels, getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
 import { gerarPdfChaves } from '../utils/pdfGenerator';
@@ -137,6 +138,7 @@ export function GerenciarChaves() {
   const [athletes, setAthletes] = useState<Atleta[]>([]);
   const [chaves, setChaves] = useState<Chave[]>([]);
   const [arbitros, setArbitros] = useState<Arbitro[]>([]);
+  const [areas, setAreas] = useState<AreaLuta[]>([]);
   const [loading, setLoading] = useState(true);
   const [chavesGeradas, setChavesGeradas] = useState(false);
   const [atletasSemChave, setAtletasSemChave] = useState<Atleta[]>([]);
@@ -185,7 +187,8 @@ export function GerenciarChaves() {
       window.electronAPI.loadChaves(),
       window.electronAPI.loadArbitros(),
       window.electronAPI.loadCategorias(),
-    ]).then(([a, c, r, catData]) => {
+      window.electronAPI.loadAreas(),
+    ]).then(([a, c, r, catData, areasData]) => {
       const chavesList = c as Chave[];
       const athletesList = a as Atleta[];
       setAthletes(athletesList);
@@ -193,6 +196,7 @@ export function GerenciarChaves() {
       const arbitrosList = r as Arbitro[];
       arbitrosList.sort((a, b) => a.nome.localeCompare(b.nome));
       setArbitros(arbitrosList);
+      setAreas(areasData as AreaLuta[]);
       setCustomizadas(catData.customizadas);
       setChavesGeradas(chavesList.length > 0);
 
@@ -240,6 +244,45 @@ export function GerenciarChaves() {
     const r = arbitros.find(a => a.id === id);
     if (!r) return 'Árbitro removido';
     return `${r.nome} (${FAIXA_LABEL[r.faixa]})`;
+  };
+
+  const getAreaDaChave = (chave: Chave): string | null => {
+    if (!chave.arbitroId) return null;
+    for (const area of areas) {
+      if (area.arbitroIds.includes(chave.arbitroId)) return area.nome;
+    }
+    return null;
+  };
+
+  const handleTrocarArea = async (chaveId: string, areaId: string | null) => {
+    try {
+      if (areaId) {
+        const area = areas.find(a => a.id === areaId);
+        const primeiroArbitroId = area?.arbitroIds?.[0] ?? null;
+        const updated = await window.electronAPI.atribuirArbitroChave({ chaveId, arbitroId: primeiroArbitroId });
+        setChaves(prev => prev.map(c => c.id === chaveId ? updated : c));
+        setViewChave(prev => prev?.id === chaveId ? updated : prev);
+        triggerRefresh();
+        const nomeArea = area?.nome ?? 'área';
+        notifications.show({
+          color: 'green',
+          title: 'Área alterada',
+          message: `Chave movida para ${nomeArea}.`,
+        });
+      } else {
+        const updated = await window.electronAPI.atribuirArbitroChave({ chaveId, arbitroId: null });
+        setChaves(prev => prev.map(c => c.id === chaveId ? updated : c));
+        setViewChave(prev => prev?.id === chaveId ? updated : prev);
+        triggerRefresh();
+        notifications.show({
+          color: 'blue',
+          title: 'Área removida',
+          message: 'Chave desvinculada de qualquer área.',
+        });
+      }
+    } catch (err: unknown) {
+      notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao alterar área' });
+    }
   };
 
   const handleGerarTodas = async () => {
@@ -494,6 +537,7 @@ export function GerenciarChaves() {
                         </Group>
                         <Text size="xs" c="dimmed">
                           Árbitro: {getArbitroNome(chave.arbitroId)}
+                          {(() => { const area = getAreaDaChave(chave); return area ? ` · Área: ${area}` : ''; })()}
                         </Text>
                         {chaveAtletas.length > 0 && (
                           <Text size="xs" c="dimmed">
@@ -630,6 +674,23 @@ export function GerenciarChaves() {
       >
         {viewChave && (
           <Stack gap="md">
+            <Paper withBorder p="sm" radius="sm">
+              <Text size="sm" fw={600} mb="xs">Área de Luta</Text>
+              <Text size="sm" mb="xs">{getAreaDaChave(viewChave) ?? 'Sem área'}</Text>
+              <Select
+                size="xs"
+                placeholder="Trocar área..."
+                data={areas.map(a => ({ value: a.id, label: a.nome || `Área ${a.id.slice(0, 4)}` }))}
+                value={areas.find(a => a.arbitroIds.includes(viewChave.arbitroId ?? ''))?.id ?? null}
+                onChange={(val) => {
+                  if (val !== undefined) {
+                    handleTrocarArea(viewChave.id, val ?? null);
+                  }
+                }}
+                clearable
+              />
+            </Paper>
+
             <Paper withBorder p="sm" radius="sm">
               <Text size="sm" fw={600} mb="xs">Árbitro da Chave</Text>
               <Text size="sm">{getArbitroNome(viewChave.arbitroId)}</Text>
