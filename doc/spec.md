@@ -18,6 +18,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 <!-- Dedicado a informações do que é esperado da feature -->
 ### [aberto] O pdf das chaves de lutas tem que exibir o desenho dos backet igual tem em placar
 ### [aberto] Editar chave em geração de chaves, pode ser trocada a area de luta (icone de editar do lado de apagar, abre a tela de visualizar)
+### [aberto] Craves criada manualmente, tem que receber o emChave tambem
 
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
