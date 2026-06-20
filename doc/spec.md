@@ -13,13 +13,14 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+### [aberto] Veja se a biblioteca de pdf é a ideal para fazer "desenhos", pois os pdfs estão muito simples, sómenete o de luta casada esta tudo bem ser simpl, o resto tem que ser revisado (esse em aberto é somente para trocar a biblioteca sem alterar os pdfs)
 ### [aberto] em criação de chave manual eu posso colocar quem eu quiser, independente de faixa, categoria
-<!-- Dedicado a informações do que é esperado da feature -->
 ### [aberto] O pdf das chaves de lutas tem que exibir o desenho dos backet igual tem em placar
 ### [aberto] Editar chave em geração de chaves, pode ser trocada a area de luta (icone de editar do lado de apagar, abre a tela de visualizar)
 ### [aberto] Craves criada manualmente, tem que receber o emChave tambem
 ### [aberto] lutas casadas, pode ter a area de luta editada igual tem em chave de luta
 ## Feature
+### [aberto] pdf de resultados esta muito simples, tem que mostrar em formato de tabela e tem que colocar cada aba em uma pagina do pdf
 
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
