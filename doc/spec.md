@@ -13,12 +13,13 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-## Feature
 ### [aberto] em criação de chave manual eu posso colocar quem eu quiser, independente de faixa, categoria
 <!-- Dedicado a informações do que é esperado da feature -->
 ### [aberto] O pdf das chaves de lutas tem que exibir o desenho dos backet igual tem em placar
 ### [aberto] Editar chave em geração de chaves, pode ser trocada a area de luta (icone de editar do lado de apagar, abre a tela de visualizar)
 ### [aberto] Craves criada manualmente, tem que receber o emChave tambem
+### [aberto] lutas casadas, pode ter a area de luta editada igual tem em chave de luta
+## Feature
 
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
