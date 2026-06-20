@@ -3,6 +3,7 @@ import { Modal, Stack, Select, Group, Button, Text, Paper, Badge, Alert, TextInp
 import { IconAlertCircle, IconPlus, IconTrash } from '@tabler/icons-react';
 import type { Atleta } from '../types/athlete';
 import type { Chave } from '../types/bracket';
+import type { AreaLuta } from '../types/area';
 import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 
 const FAIXA_LABEL: Record<string, string> = {
@@ -31,13 +32,19 @@ interface ModalCriarChaveManualProps {
 export function ModalCriarChaveManual({ opened, onClose, atletas, onCriada }: ModalCriarChaveManualProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [nomeChave, setNomeChave] = useState('');
+  const [areaId, setAreaId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
+  const [areas, setAreas] = useState<AreaLuta[]>([]);
 
   useEffect(() => {
-    window.electronAPI.loadCategorias().then((data) => {
-      setCustomizadas(data.customizadas);
+    Promise.all([
+      window.electronAPI.loadCategorias(),
+      window.electronAPI.loadAreas(),
+    ]).then(([catData, areasData]) => {
+      setCustomizadas(catData.customizadas);
+      setAreas(areasData.filter(a => a.deletedAt == null));
     }).catch(() => {});
   }, []);
 
@@ -45,6 +52,7 @@ export function ModalCriarChaveManual({ opened, onClose, atletas, onCriada }: Mo
     if (opened) {
       setSelectedIds([]);
       setNomeChave('');
+      setAreaId(null);
       setErro(null);
     }
   }, [opened]);
@@ -92,6 +100,15 @@ export function ModalCriarChaveManual({ opened, onClose, atletas, onCriada }: Mo
         atletaIds: selectedIds,
         nome: nomeFinal,
       });
+      if (areaId) {
+        const area = areas.find(a => a.id === areaId);
+        if (area && area.arbitroIds.length > 0) {
+          await window.electronAPI.atribuirArbitroChave({
+            chaveId: chave.id,
+            arbitroId: area.arbitroIds[0],
+          });
+        }
+      }
       onCriada(chave);
       onClose();
     } catch (err) {
@@ -116,6 +133,18 @@ export function ModalCriarChaveManual({ opened, onClose, atletas, onCriada }: Mo
           value={nomeChave}
           onChange={(e) => setNomeChave(e.currentTarget.value)}
           description="Deixe vazio para gerar automaticamente"
+        />
+
+        <Select
+          label="Área de Luta"
+          placeholder="Selecionar área (opcional)"
+          data={areas.map(a => ({ value: a.id, label: a.nome }))}
+          value={areaId}
+          onChange={setAreaId}
+          searchable
+          clearable
+          nothingFoundMessage="Nenhuma área cadastrada"
+          description="Atribui automaticamente o primeiro árbitro da área à chave"
         />
 
         <Select

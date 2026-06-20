@@ -82,7 +82,7 @@ export function RegistrarResultadoModal({
                   setVencedorId(luta.atletaAId);
                 }}
               >
-                WO {atletaANome}
+                Vitória WO: {atletaANome}
               </Button>
               <Button
                 variant="light"
@@ -92,7 +92,7 @@ export function RegistrarResultadoModal({
                   setVencedorId(luta.atletaBId);
                 }}
               >
-                WO {atletaBNome}
+                Vitória WO: {atletaBNome}
               </Button>
             </Group>
           </>

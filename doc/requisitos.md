@@ -339,7 +339,8 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 - **Persistência:** Chave criada via IPC `gerar-chave` com `categoriaId: 'manual'` e campo `nome` preenchido. Campo `nome` adicionado ao tipo `Chave` (opcional).
 - **Handler `gerar-chave`:** Aceita parâmetros opcionais `atletaIds?: string[]` e `nome?: string`. Quando `atletaIds` é fornecido, bypassa o filtro de categoria e usa os IDs diretamente. Verifica se atletas já estão em outra chave.
 - **Exibição:** `getChaveTitle` retorna `chave.nome` quando presente. Chave manual pode ser embaralhada, visualizada e ter árbitro atribuído (mesmo fluxo das chaves automáticas).
-- **Spec:** `spec/geracao-manual-chaves.md`
+- **Seleção de área (Implementado):** O modal `ModalCriarChaveManual` inclui um Select de "Área de Luta" (opcional, pesquisável, clearable). Ao criar uma chave com área selecionada, o primeiro árbitro da área é atribuído automaticamente à chave via `atribuirArbitroChave`. Isso garante que a chave apareça na tela `PlacarChaves` da área selecionada. Se nenhuma área for selecionada, a chave fica sem árbitro (comportamento anterior).
+- **Spec:** `spec/geracao-manual-chaves.md`, `spec/chave-manual-area.md`
 
 ### 3.12. Importação de Chaves
 
@@ -647,6 +648,14 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Normalização retroativa:** Chaves legadas sem `placarA`/`placarB` carregam sem erro; `normalizeLuta` adiciona defaults.
 - **Estado bloqueado:** Lutas com `tbd`/`bye` ou `completed`/`wo` exibem placar congelado e desabilitam controles e "Finalizar Luta".
 - **Especificação detalhada:** Ver `spec/placar.md` (fluxo), `spec/placar-jiu-jitsu.md` (placar funcional), `spec/placar-voltar-bracket.md` (correção do botão Voltar) e `spec/finalizar-luta-desclassificacao.md` (confirmação de resultado e habilitação de opções).
+
+#### 3.19.2. Clarificação de WO no Placar (Implementado)
+
+- **Problema:** Os botões de WO no `RegistrarResultadoModal` diziam "WO {nome}", gerando confusão se o atleta vencia ou perdia por WO.
+- **Solução:** Os labels dos botões foram alterados para "Vitória WO: {nome}", tornando explícito que o atleta selecionado é o vencedor.
+- **Comportamento:** Ao abrir o modal de registro de resultado (via clique em atleta no bracket), dois botões laranjas "Vitória WO: {nome}" são exibidos. Clicar em um deles define o atleta como vencedor com status `'wo'`.
+- **Arquivo afetado:** `src/components/RegistrarResultadoModal.tsx`
+- **Spec:** `spec/wo-clarificar-vencedor.md`
 
 #### 3.19.1. Registro de Horário de Início e Término de Lutas (Implementado)
 
