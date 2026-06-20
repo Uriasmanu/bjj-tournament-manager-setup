@@ -13,7 +13,12 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+### [aberto] troque a bibliotecaa de pdf, essa esta muito simples, tudo preto e branco em formato de tabela, use a PDFKit e deixe os pdf coloridos e desenhados
+### [aberto]  no pdf de resultaos, a categoria não pode aparecer como  custom-3ef3438a-f8a1-4e6d-9580f55bb9b96a8b
 ### [aberto] Veja se a biblioteca de pdf é a ideal para fazer "desenhos", pois os pdfs estão muito simples, sómenete o de luta casada esta tudo bem ser simpl, o resto tem que ser revisado (esse em aberto é somente para trocar a biblioteca sem alterar os pdfs)
+### [aberto] O editar nome tem que verificar nome repetido e impedir de salvar, mostrando uma mensagem na tela, falando que o nome ja existe
+### [aberto] faixa branca é só um independente da idade, revise a tela de cadastro de atleta
+### [aberto] No criar categoria customizada, não é para pergunta a cor de faixa, nem genero ou faixa eratia
 ### [aberto] O pdf das chaves de lutas tem que exibir o desenho dos backet igual tem em placar
 ### [aberto] Não é para ter 270 categorias, é para ter apenas as categorias a baixo (remova todas as infantis, juvenis e master):
 Masculino (Adulto)
