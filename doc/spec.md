@@ -13,7 +13,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Quando eu estiver dentro da area selecionada, tem que aparecer o nome no topo
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
 
@@ -539,3 +538,9 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** Ao entrar em uma luta que já foi encerrada, o sistema mostrava sempre o tempo sugerido IBJJF (ou 5 min fallback) em vez do tempo real que a luta durou. O campo `tempoRealSegundos` existia nas interfaces TypeScript mas nunca era calculado, salvo ou recuperado.
 - **Solução:** Implementado ciclo completo de persistência de tempo real: (1) No frontend, calculado `tempoRealSegundos = tempoInicial - tempoRestante` ao finalizar luta em `PlacarLuta.tsx` e `PlacarLutaCasada.tsx`; (2) Enviado `tempoRealSegundos` na chamada `registrarResultado` (frontend → preload → backend); (3) No backend, salvo `tempoRealSegundos` na luta em `registrarResultadoHandler` (`electron/brackets.ts`); (4) Incluído `tempoRealSegundos` nas funções de normalização `normalizeLuta` e `normalizeLutaCasada`; (5) Ao abrir luta finalizada, recuperado `tempoRealSegundos` salvo e calculado `tempoRestante = tempoInicial - tempoRealSegundos`.
 - **Arquivos alterados:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`, `electron/brackets.ts`, `electron/lutasCasadas.ts`, `electron/preload.ts`, `src/types/electron.d.ts`
+
+### [resolvido] Nome da área não aparecia no topo das telas de placar
+- **Data:** 2026-06-20
+- **Problema:** Ao acessar qualquer tela dentro de uma área selecionada (PlacarBracket, PlacarLuta, PlacarLutaCasada), o nome da área não era exibido no topo. O componente `PageLayout` aceitava as props `title` e `headerExtras` mas as descartava com prefixo de underscore, nunca renderizando-as.
+- **Solução:** (1) Corrigido `PageLayout.tsx` para renderizar o título como `<Title order={3}>` e os `headerExtras` dentro de um `<Group>` no topo do Paper; (2) Atualizado `PlacarBracket.tsx`, `PlacarLuta.tsx` e `PlacarLutaCasada.tsx` para carregar os dados da área via `loadAreas()` e incluir `area.nome` no título do PageLayout.
+- **Arquivos alterados:** `src/components/PageLayout.tsx`, `src/pages/PlacarBracket.tsx`, `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`

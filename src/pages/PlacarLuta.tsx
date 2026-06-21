@@ -30,6 +30,7 @@ import dayjs from 'dayjs';
 import { PageLayout } from '../components/PageLayout';
 import type { Chave, Luta, PlacarLuta } from '../types/bracket';
 import type { Atleta } from '../types/athlete';
+import type { AreaLuta } from '../types/area';
 import { sugerirTempoLutaMinutos, TEMPO_LUTA_FALLBACK_MINUTOS } from '../types/fightTime';
 
 const AZUL_ANIL = '#1e3a8a';
@@ -299,6 +300,7 @@ export function PlacarLuta() {
   const [chave, setChave] = useState<Chave | null>(null);
   const [luta, setLuta] = useState<Luta | null>(null);
   const [athletes, setAthletes] = useState<Atleta[]>([]);
+  const [area, setArea] = useState<AreaLuta | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [placarA, setPlacarA] = useState<PlacarLuta>(placarVazio());
@@ -324,12 +326,15 @@ export function PlacarLuta() {
     Promise.all([
       window.electronAPI.loadChaves(),
       window.electronAPI.loadAthletes(),
-    ]).then(([chaves, ath]) => {
+      window.electronAPI.loadAreas(),
+    ]).then(([chaves, ath, areas]) => {
       const foundChave = (chaves as Chave[]).find(c => c.id === chaveId) ?? null;
       setChave(foundChave);
       const foundLuta = foundChave?.lutas.find(l => l.id === lutaId) ?? null;
       setLuta(foundLuta);
       setAthletes(ath as Atleta[]);
+      const foundArea = (areas as AreaLuta[]).find(a => a.id === areaId) ?? null;
+      setArea(foundArea);
       if (foundLuta?.placarA) setPlacarA({ ...placarVazio(), ...foundLuta.placarA, total: calcularTotal(foundLuta.placarA) });
       if (foundLuta?.placarB) setPlacarB({ ...placarVazio(), ...foundLuta.placarB, total: calcularTotal(foundLuta.placarB) });
       const atletas = ath as Atleta[];
@@ -350,7 +355,7 @@ export function PlacarLuta() {
       }
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [chaveId, lutaId]);
+  }, [chaveId, lutaId, areaId]);
 
   useEffect(() => {
     if (!rodando) {
@@ -529,7 +534,7 @@ export function PlacarLuta() {
 
   return (
     <PageLayout
-      title={`Placar · Luta ${luta.ordem} · Rodada ${luta.rodada}`}
+      title={area ? `Placar - ${area.nome} · Luta ${luta.ordem} · Rodada ${luta.rodada}` : `Placar · Luta ${luta.ordem} · Rodada ${luta.rodada}`}
       backRoute={`/admin/placar/chave/${areaId}/${chaveId}`}
     >
       <Stack gap="md">

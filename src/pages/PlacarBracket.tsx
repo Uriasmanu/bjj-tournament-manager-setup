@@ -9,6 +9,7 @@ import { RegistrarResultadoModal } from '../components/RegistrarResultadoModal';
 import type { Chave, Luta } from '../types/bracket';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
+import type { AreaLuta } from '../types/area';
 
 const FAIXA_LABEL: Record<string, string> = {
   'branca': 'Branca', 'cinza': 'Cinza', 'amarela': 'Amarela', 'laranja': 'Laranja',
@@ -21,6 +22,7 @@ export function PlacarBracket() {
   const [chave, setChave] = useState<Chave | null>(null);
   const [athletes, setAthletes] = useState<Atleta[]>([]);
   const [arbitros, setArbitros] = useState<Arbitro[]>([]);
+  const [area, setArea] = useState<AreaLuta | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [resultModalLuta, setResultModalLuta] = useState<Luta | null>(null);
@@ -33,7 +35,8 @@ export function PlacarBracket() {
       window.electronAPI.loadChaves(),
       window.electronAPI.loadAthletes(),
       window.electronAPI.loadArbitros(),
-    ]).then(([chaves, ath, arb]) => {
+      window.electronAPI.loadAreas(),
+    ]).then(([chaves, ath, arb, areas]) => {
       const found = (chaves as Chave[]).find(c => c.id === chaveId);
       
       if (found) {
@@ -42,9 +45,11 @@ export function PlacarBracket() {
       setChave(found ?? null);
       setAthletes(ath as Atleta[]);
       setArbitros(arb as Arbitro[]);
+      const foundArea = (areas as AreaLuta[]).find(a => a.id === areaId) ?? null;
+      setArea(foundArea);
       setLoading(false);
     }).catch(() => setLoading(false));
-  }, [chaveId]);
+  }, [chaveId, areaId]);
 
   const getAtletaNome = (id: string | null): string => {
     if (!id || id === 'bye') return 'A definir';
@@ -125,7 +130,7 @@ export function PlacarBracket() {
   }
 
   return (
-    <PageLayout title="Lutas da Chave" backRoute={`/admin/placar/chaves/${areaId}`}>
+    <PageLayout title={area ? `Placar - ${area.nome}` : 'Placar'} backRoute={`/admin/placar/chaves/${areaId}`}>
       <Stack gap="md">
         <Text size="sm" c="dimmed">
           Árbitro: {getArbitroNome(chave.arbitroId)} — {chave.totalLutas} luta(s), {chave.totalAtletas} atleta(s)

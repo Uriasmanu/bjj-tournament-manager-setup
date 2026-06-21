@@ -1,4 +1,4 @@
-import { Container, Paper, ActionIcon } from '@mantine/core';
+import { Container, Paper, ActionIcon, Group, Title } from '@mantine/core';
 import { IconArrowLeft } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,7 +9,7 @@ interface PageLayoutProps {
   headerExtras?: React.ReactNode;
 }
 
-export function PageLayout({ title: _title, children, backRoute, headerExtras: _headerExtras }: PageLayoutProps) {
+export function PageLayout({ title, children, backRoute, headerExtras }: PageLayoutProps) {
   const navigate = useNavigate();
 
   return (
@@ -36,6 +36,10 @@ export function PageLayout({ title: _title, children, backRoute, headerExtras: _
             border: '1px solid var(--mantine-color-gray-2)',
           }}
         >
+          <Group justify="space-between" align="center" mb="md" wrap="wrap" gap="xs">
+            <Title order={3}>{title}</Title>
+            {headerExtras}
+          </Group>
           {children}
         </Paper>
       </Container>

@@ -30,6 +30,7 @@ import { PageLayout } from '../components/PageLayout';
 import type { PlacarLuta } from '../types/bracket';
 import type { LutaCasada, AtletaSnapshot } from '../types/lutaCasada';
 import type { Atleta } from '../types/athlete';
+import type { AreaLuta } from '../types/area';
 import { sugerirTempoLutaMinutos, TEMPO_LUTA_FALLBACK_MINUTOS } from '../types/fightTime';
 
 const AZUL_ANIL = '#1e3a8a';
@@ -283,6 +284,7 @@ export function PlacarLutaCasada() {
   const navigate = useNavigate();
   const { areaId, lutaCasadaId } = useParams<{ areaId: string; lutaCasadaId: string }>();
   const [luta, setLuta] = useState<LutaCasada | null>(null);
+  const [area, setArea] = useState<AreaLuta | null>(null);
   const [loading, setLoading] = useState(true);
 
   const [placarA, setPlacarA] = useState<PlacarLuta>(placarVazio());
@@ -308,9 +310,12 @@ export function PlacarLutaCasada() {
     Promise.all([
       window.electronAPI.loadLutasCasadasPorArea(areaId),
       window.electronAPI.loadAthletes(),
-    ]).then(([lutas, ath]) => {
+      window.electronAPI.loadAreas(),
+    ]).then(([lutas, ath, areas]) => {
       const found = (lutas as LutaCasada[]).find(l => l.id === lutaCasadaId) ?? null;
       setLuta(found);
+      const foundArea = (areas as AreaLuta[]).find(a => a.id === areaId) ?? null;
+      setArea(foundArea);
       if (found?.placarA) setPlacarA({ ...placarVazio(), ...found.placarA, total: calcularTotal(found.placarA) });
       if (found?.placarB) setPlacarB({ ...placarVazio(), ...found.placarB, total: calcularTotal(found.placarB) });
       const atletas = ath as Atleta[];
@@ -482,7 +487,7 @@ export function PlacarLutaCasada() {
   const corCronometro = tempoEsgotado ? '#fa5252' : rodando ? '#2e7d32' : '#212529';
 
   return (
-    <PageLayout title="Placar · Luta Casada" backRoute={`/admin/placar/chaves/${areaId}`}>
+    <PageLayout title={area ? `Placar - ${area.nome} · Luta Casada` : 'Placar · Luta Casada'} backRoute={`/admin/placar/chaves/${areaId}`}>
       <Stack gap="md">
         <Badge color="dark" variant="filled" size="lg" style={{ alignSelf: 'flex-start' }}>LUTA CASADA</Badge>
         {lutaFinalizada && (
