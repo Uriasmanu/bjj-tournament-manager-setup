@@ -32,6 +32,7 @@ import type { LutaCasada, AtletaSnapshot } from '../types/lutaCasada';
 import type { Atleta } from '../types/athlete';
 import type { AreaLuta } from '../types/area';
 import { sugerirTempoLutaMinutos, TEMPO_LUTA_FALLBACK_MINUTOS } from '../types/fightTime';
+import { getTipoVitoria } from '../utils/vitoria';
 
 const AZUL_ANIL = '#1e3a8a';
 const BRANCO = '#ffffff';
@@ -492,7 +493,7 @@ export function PlacarLutaCasada() {
         <Badge color="dark" variant="filled" size="lg" style={{ alignSelf: 'flex-start' }}>LUTA CASADA</Badge>
         {lutaFinalizada && (
           <Alert color="green" icon={<IconFlag size={18} />}>
-            Luta casada finalizada. Vencedor registrado: {luta.vencedorId === luta.atletaAId ? nomeA : nomeB}
+            Luta casada finalizada. Vencedor registrado: {luta.vencedorId === luta.atletaAId ? nomeA : nomeB} ({getTipoVitoria(luta).label})
           </Alert>
         )}
 

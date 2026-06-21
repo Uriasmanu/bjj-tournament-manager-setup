@@ -98,12 +98,7 @@ function getChaveTitulo(chave: Chave, customizadas?: CategoriaCustomizada[]): st
   return base;
 }
 
-function getTipoVitoria(luta: { finalizacao?: boolean; desclassificacao?: boolean; desempateArbitro?: boolean; desclassificadoId?: string }): { label: string; color: string; icon?: string } {
-  if (luta.desclassificacao) return { label: 'Desclassificação', color: 'red', icon: '🚫' };
-  if (luta.finalizacao) return { label: 'Finalização', color: 'grape', icon: '🏁' };
-  if (luta.desempateArbitro) return { label: 'Desempate', color: 'orange', icon: '⚖️' };
-  return { label: 'Pontos', color: 'blue', icon: '🏆' };
-}
+import { getTipoVitoria } from '../utils/vitoria';
 
 function isLutaValida(luta: Luta | LutaCasada): boolean {
   return Boolean(luta.vencedorId && luta.vencedorId !== 'tbd' && luta.vencedorId !== 'bye');
@@ -225,7 +220,7 @@ function LutaResumoCard({
   statusBadge?: { label: string; color: string };
   customizadas?: CategoriaCustomizada[];
 }) {
-  const tipoVitoria = getTipoVitoria({ finalizacao, desclassificacao, desempateArbitro, desclassificadoId });
+  const tipoVitoria = getTipoVitoria({ finalizacao, desclassificacao, desempateArbitro });
   const vencedorIdEfetivo = vencedorId;
   const aVenceu = vencedorIdEfetivo === atletaA.id;
   const bVenceu = vencedorIdEfetivo === atletaB.id;

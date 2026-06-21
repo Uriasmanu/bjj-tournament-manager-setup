@@ -13,7 +13,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] As lutas casadas tem que exibir o tipo de vitoria
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos que estavam em aberto-->
 
@@ -545,3 +544,9 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** Ao acessar qualquer tela dentro de uma área selecionada (PlacarBracket, PlacarLuta, PlacarLutaCasada), o nome da área não era exibido no topo. O componente `PageLayout` aceitava as props `title` e `headerExtras` mas as descartava com prefixo de underscore, nunca renderizando-as.
 - **Solução:** (1) Corrigido `PageLayout.tsx` para renderizar o título como `<Title order={3}>` e os `headerExtras` dentro de um `<Group>` no topo do Paper; (2) Atualizado `PlacarBracket.tsx`, `PlacarLuta.tsx` e `PlacarLutaCasada.tsx` para carregar os dados da área via `loadAreas()` e incluir `area.nome` no título do PageLayout.
 - **Arquivos alterados:** `src/components/PageLayout.tsx`, `src/pages/PlacarBracket.tsx`, `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
+
+### [resolvido] Lutas casadas não exibiam tipo de vitória
+- **Data:** 2026-06-20
+- **Problema:** As lutas casadas não exibiam o tipo de vitória (pontos, finalização, desclassificação, desempate) em nenhum dos pontos de exibição: PlacarChaves, AdminLutasCasadas, PlacarLutaCasada e PDF. Os campos `finalizacao`, `desclassificacao` e `desempateArbitro` já eram salvos corretamente mas nunca consultados para exibição.
+- **Solução:** (1) Criada função `getTipoVitoria` em `src/utils/vitoria.ts` para reutilização em todos os pontos; (2) Atualizado `Resultados.tsx` para usar a função compartilhada; (3) Adicionado badge de tipo de vitória nos cards de lutas casadas em `PlacarChaves.tsx`; (4) Adicionada coluna "Tipo" na tabela de `AdminLutasCasadas.tsx`; (5) Incluído tipo de vitória no alert de finalização de `PlacarLutaCasada.tsx`.
+- **Arquivos alterados:** `src/utils/vitoria.ts` (criado), `src/pages/Resultados.tsx`, `src/pages/PlacarChaves.tsx`, `src/pages/AdminLutasCasadas.tsx`, `src/pages/PlacarLutaCasada.tsx`

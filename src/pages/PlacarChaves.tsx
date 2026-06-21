@@ -10,6 +10,7 @@ import type { Arbitro } from '../types/referee';
 import type { Atleta } from '../types/athlete';
 import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import type { LutaCasada } from '../types/lutaCasada';
+import { getTipoVitoria } from '../utils/vitoria';
 
 const FAIXA_ORDER: Record<string, number> = {
   'branca': 0, 'cinza': 1, 'amarela': 2, 'laranja': 3,
@@ -272,6 +273,10 @@ export function PlacarChaves() {
                         {luta.status === 'pending' && <Badge size="sm" color="yellow" variant="light">PENDENTE</Badge>}
                         {luta.status === 'completed' && <Badge size="sm" color="green" variant="filled">FINALIZADA</Badge>}
                         {luta.status === 'wo' && <Badge size="sm" color="red" variant="filled">WO</Badge>}
+                        {luta.status !== 'pending' && (() => {
+                          const tipo = getTipoVitoria(luta);
+                          return <Badge size="sm" color={tipo.color} variant="light">{tipo.icon} {tipo.label}</Badge>;
+                        })()}
                       </Group>
                       <Text size="xs" c="dimmed">
                         Árbitro: {luta.arbitroId

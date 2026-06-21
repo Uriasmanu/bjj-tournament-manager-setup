@@ -12,6 +12,7 @@ import type { Arbitro } from '../types/referee';
 import type { AreaLuta } from '../types/area';
 import type { Torneio } from '../types/tournament';
 import type { CategoriaCustomizada } from '../types/category';
+import { getTipoVitoria } from '../utils/vitoria';
 
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -311,6 +312,7 @@ export function AdminLutasCasadas() {
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Atleta A</Table.Th>
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Atleta B</Table.Th>
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Status</Table.Th>
+                  <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Tipo</Table.Th>
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Vencedor</Table.Th>
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Área</Table.Th>
                   <Table.Th style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(27,50,95,0.5)' }}>Criada em</Table.Th>
@@ -346,6 +348,12 @@ export function AdminLutasCasadas() {
                         <Text size="xs" c="dimmed">{l.atletaBSnapshot?.equipe || ''}</Text>
                       </Table.Td>
                       <Table.Td>{statusBadge(l.status)}</Table.Td>
+                      <Table.Td>
+                        {l.status !== 'pending' && (() => {
+                          const tipo = getTipoVitoria(l);
+                          return <Badge size="sm" color={tipo.color} variant="light">{tipo.icon} {tipo.label}</Badge>;
+                        })()}
+                      </Table.Td>
                       <Table.Td>
                         <Text size="sm" fw={600} style={{ color: '#374151' }}>{vencedor}</Text>
                       </Table.Td>
