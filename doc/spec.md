@@ -13,10 +13,11 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+### [aberto] As lutas casadas tem que exibir o tipo de vitoria
 ## Historico de correçoes
-<!-- Passe para cá os itens corrigidos -->
+<!-- Passe para cá os itens corrigidos que estavam em aberto-->
 
-
+## Feature
 
 # Guia de Spec para Implementação de Features
 
