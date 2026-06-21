@@ -13,6 +13,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+### [aberto] Quando eu estiver dentro da area selecionada, tem que aparecer o nome no topo
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
 
