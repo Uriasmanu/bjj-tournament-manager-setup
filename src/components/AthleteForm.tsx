@@ -49,7 +49,7 @@ const faixas: { group: string; items: { value: string; label: string }[] }[] = [
   {
     group: 'Adulto (16+ anos)',
     items: [
-      { value: 'branca', label: 'Branca' },
+      { value: 'branca-adulto', label: 'Branca' },
       { value: 'azul', label: 'Azul' },
       { value: 'roxa', label: 'Roxa' },
       { value: 'marrom', label: 'Marrom' },
@@ -218,13 +218,15 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
   useEffect(() => {
     if (opened) {
       if (athlete) {
+        const idade = athlete.anoNascimento ? calcularIdade(athlete.anoNascimento) : 0;
+        const faixaInit = athlete.faixa === 'branca' && idade >= 16 ? 'branca-adulto' : athlete.faixa || '';
         form.setValues({
           nome: athlete.nome || '',
           equipe: athlete.equipe || '',
           genero: athlete.genero || '',
           categoria: athlete.categoria || '',
           pesoKg: athlete.pesoKg ?? 0,
-          faixa: athlete.faixa || '',
+          faixa: faixaInit,
           anoNascimento: athlete.anoNascimento ?? 0,
         });
       } else {
@@ -236,6 +238,7 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
 
   const handleSubmit = async (values: typeof form.values) => {
     const now = new Date().toISOString();
+    const faixa = values.faixa === 'branca-adulto' ? 'branca' : values.faixa;
     const data: Atleta = {
       id: athlete?.id || crypto.randomUUID(),
       nome: values.nome.trim().toLowerCase(),
@@ -243,7 +246,7 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
       genero: values.genero as 'masculino' | 'feminino',
       categoria: values.categoria,
       pesoKg: Number(values.pesoKg),
-      faixa: values.faixa as Faixa,
+      faixa: faixa as Faixa,
       anoNascimento: Number(values.anoNascimento),
       createdAt: athlete?.createdAt || now,
       updatedAt: now,
