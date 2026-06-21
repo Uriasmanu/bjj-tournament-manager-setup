@@ -13,7 +13,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] 
+### [aberto] quando eu entrar em uma luta que ja foi encerrada, tem que mostrar o tempo que foi usado, atualmente mostra 5 mim sempre
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
 
