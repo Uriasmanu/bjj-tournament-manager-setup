@@ -11,6 +11,7 @@ import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
 import type { AreaLuta } from '../types/area';
 import type { Torneio } from '../types/tournament';
+import type { CategoriaCustomizada } from '../types/category';
 
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -45,6 +46,7 @@ export function AdminLutasCasadas() {
   const [atletas, setAtletas] = useState<Atleta[]>([]);
   const [arbitros, setArbitros] = useState<Arbitro[]>([]);
   const [torneio, setTorneio] = useState<Torneio | null>(null);
+  const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
 
   const loadList = async () => {
     setLoading(true);
@@ -78,6 +80,7 @@ export function AdminLutasCasadas() {
     window.electronAPI.loadAthletes().then((a) => setAtletas(a as Atleta[])).catch(() => {});
     window.electronAPI.loadArbitros().then((a) => setArbitros(a as Arbitro[])).catch(() => {});
     window.electronAPI.getActiveTournament().then((t) => setTorneio(t)).catch(() => {});
+    window.electronAPI.loadCategorias().then((data) => setCustomizadas(data.customizadas)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDeleted]);
 
@@ -227,9 +230,9 @@ export function AdminLutasCasadas() {
               <Button
                 leftSection={<IconFileDownload size={16} />}
                 variant="outline"
-                onClick={() => {
+                onClick={async () => {
                   const nomeTorneio = torneio?.nome || 'Torneio';
-                  gerarPdfLutasCasadas(lutas, nomeTorneio, arbitros);
+                  await gerarPdfLutasCasadas(lutas, nomeTorneio, arbitros, customizadas);
                 }}
                 disabled={lutas.length === 0}
               >

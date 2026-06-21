@@ -151,7 +151,7 @@ Itens restaurados (possuem `deletedAt` limpo via `restoreAthlete`/`restoreArbitr
 - Gênero é obrigatório: `Select` com opções `Masculino` / `Feminino`.
 - Categoria IBJJF é obrigatória: `Select` populado com `CATEGORIAS_IBJJF`. Na **criação**, filtra dinamicamente por faixa etária (calculada da idade), gênero e faixa do atleta. Na **edição**, filtra apenas por gênero, permitindo ao administrador escolher livremente entre todas as categorias do gênero selecionado. O label de cada opção exibe o limite de peso, ex.: `"Adulto Masculino Leve (até 76,0 kg)"`.
 - Peso deve estar entre 1 e 300 kg.
-- Faixa segue enum: infantil (branca, cinza, amarela, laranja, verde) e adulto (branca-adulto, azul, roxa, marrom, preta). O valor `branca-adulto` é mapeado para `branca` na persistência.
+- Faixa segue enum: infantil (branca, cinza, amarela, laranja, verde) e adulto (branca, azul, roxa, marrom, preta).
 - Ano de nascimento entre 1920 e ano atual.
 - Idade é calculada dinamicamente (`ano atual - anoNascimento`), não persistida.
 - **Duplicata:** Um atleta é considerado duplicata quando possui o mesmo **nome** (case-insensitive, trimmed) **e** mesmo **ano de nascimento**. A verificação ocorre:
@@ -448,7 +448,7 @@ A função `classificarCategoria(atleta)` em `src/types/category.ts` determina a
 
 A classificação automática não substitui a seleção manual no formulário — o usuário sempre escolhe a categoria explicitamente.
 
-O array `CATEGORIAS_IBJJF` é gerado programaticamente por `gerarCategorias()` que itera 15 faixas etárias × 2 gêneros × 9 pesos (total: 270 categorias). O filtro interno `if (pesoLimite === undefined) continue` usa `undefined` como sentinela; `getPesoLimite` retorna `null` (não `undefined`) para pesadíssimo feminino e para pesadíssimo de todas as faixas, então essas categorias são incluídas com `pesoMaximoKg: null` (sem limite). O lookup `categoriaLabels` é construído a partir do mesmo array, mapeando `categoriaId → label`.
+O array `CATEGORIAS_IBJJF` é gerado programaticamente por `gerarCategorias()` que itera apenas a faixa etária `adulto` × 2 gêneros × 9 pesos masculinos / 7 femininos (total: 16 categorias). O filtro interno `if (pesoLimite === undefined) continue` exclui Super-Pesado e Pesadíssimo femininos. O lookup `categoriaLabels` é construído a partir do mesmo array, mapeando `categoriaId → label`. Categorias customizadas (`CategoriaCustomizada`) são independentes e não possuem campos `faixaEtaria`, `genero` ou `corFaixa`.
 
 #### 3.15.5. ID da Categoria
 
@@ -461,7 +461,7 @@ O campo `categoria` no JSON do atleta armazena este ID.
 
 #### 3.15.6. Dados de Referência
 
-Todas as categorias são geradas programaticamente no array `CATEGORIAS_IBJJF` em `src/types/category.ts`, totalizando 151 categorias (9 faixas etárias × 2 gêneros × 9 pesos, excluindo pesadíssimo feminino). O arquivo `doc/IBJJF.md` contém as tabelas de referência originais.
+Todas as categorias são geradas programaticamente no array `CATEGORIAS_IBJJF` em `src/types/category.ts`, totalizando 16 categorias (1 faixa etária adulto × 2 gêneros: 9 masculino + 7 feminino). O arquivo `doc/IBJJF.md` contém as tabelas de referência originais.
 
 ---
 
@@ -1516,9 +1516,11 @@ bjj-tournament-manager-setup/
 
 ### 3.13. Geração de PDF
 
-- **Lutas Casadas:** A tela de Resultados (aba "Lutas Casadas") e o menu de Lutas Casadas (`AdminLutasCasadas`) possuem botão "Gerar PDF". O PDF lista todas as lutas casadas do torneio com: nome dos atletas, status, vencedor, placar e **nome do árbitro** (resolvido a partir do ID).
-- **Chaves de Luta:** A tela de Resultados e a tela de Gerenciar Chaves possuem botão "Gerar PDF Chaves". O PDF mostra cada chave em formato de bracket vertical, com rodadas da esquerda para a direita, incluindo cards vazios para rodadas futuras. Vencedores são destacados em negrito.
-- **Formato:** PDFs gerados via pdfmake, salvos automaticamente no dispositivo do usuário.
+- **Lutas Casadas:** A tela de Resultados (aba "Lutas Casadas") e o menu de Lutas Casadas (`AdminLutasCasadas`) possuem botão "Gerar PDF". O PDF lista todas as lutas casadas do torneio com: nome dos atletas, status, vencedor, placar e **nome do árbitro** (resolvido a partir do ID). Cards coloridos com accent azul.
+- **Chaves de Luta:** A tela de Resultados e a tela de Gerenciar Chaves possuem botão "Gerar PDF Chaves". O PDF mostra cada chave em formato de bracket desenhado graficamente com PDFKit: retângulos arredondados para cards de atletas, linhas de conexão entre rodadas, badge de placar, e destaque dourado para vencedores. Rodadas são exibidas da esquerda para a direita.
+- **Resultados:** A tela de Resultados possui botão "Gerar PDF Resultados". O PDF consolidado possui 4 seções em páginas separadas: Medalhistas, Ranking de Equipes, Árbitros e Atletas. Todas as seções usam tabelas coloridas com cabeçalho azul marinho.
+- **Categorias customizadas:** Todas as funções de PDF resolvem nomes de categorias customizadas (não exibem UUIDs).
+- **Formato:** PDFs gerados via PDFKit (substituiu pdfmake), salvos automaticamente via download Blob no renderer.
 
 ### 3.14. Edição e Criação de Lutas Casadas no Menu
 

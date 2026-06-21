@@ -1,9 +1,8 @@
-import { Modal, TextInput, NumberInput, Select, Button, Group, Stack, Box, Title } from '@mantine/core';
+import { Modal, TextInput, NumberInput, Button, Group, Stack, Box, Title } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
 import { IconPlus } from '@tabler/icons-react';
 import type { CategoriaCustomizada } from '../types/category';
-import { FAIXA_ETARIA_LABELS, COR_FAIXA_OPTIONS, type FaixaEtaria } from '../types/category';
 
 const COLORS = {
   c1: '#092b5a',
@@ -28,21 +27,6 @@ const labelProps = {
   },
 };
 
-const faixaEtariaOptions = Object.entries(FAIXA_ETARIA_LABELS).map(([value, label]) => ({
-  value,
-  label,
-}));
-
-const generoOptions = [
-  { value: 'masculino', label: 'Masculino' },
-  { value: 'feminino', label: 'Feminino' },
-];
-
-const corOptions = COR_FAIXA_OPTIONS.map(c => ({
-  value: c.value,
-  label: c.label,
-}));
-
 interface CategoriaFormProps {
   opened: boolean;
   onClose: () => void;
@@ -54,24 +38,18 @@ export function CategoriaForm({ opened, onClose, onSave, categoria }: CategoriaF
   const form = useForm({
     initialValues: {
       nome: '',
-      faixaEtaria: '' as string,
-      genero: '' as string,
       pesoMinimoKg: 0,
       pesoMaximoKg: 0,
-      corFaixa: '#ffffff',
       tempoLutaMinutos: 5,
     },
     validate: {
       nome: (v) => (v.length < 2 ? 'Nome deve ter ao menos 2 caracteres' : null),
-      faixaEtaria: (v) => (!v ? 'Selecione a faixa etária' : null),
-      genero: (v) => (!v ? 'Selecione o gênero' : null),
       pesoMinimoKg: (v) => (v < 0 ? 'Peso mínimo deve ser >= 0' : null),
       pesoMaximoKg: (v, values) => {
         if (v < 1) return 'Peso máximo deve ser >= 1';
         if (v <= values.pesoMinimoKg) return 'Peso máximo deve ser maior que o mínimo';
         return null;
       },
-      corFaixa: (v) => (!v ? 'Selecione a cor da faixa' : null),
       tempoLutaMinutos: (v) => (v < 1 ? 'Tempo deve ser >= 1 minuto' : null),
     },
   });
@@ -81,11 +59,8 @@ export function CategoriaForm({ opened, onClose, onSave, categoria }: CategoriaF
       if (categoria) {
         form.setValues({
           nome: categoria.nome || '',
-          faixaEtaria: categoria.faixaEtaria || '',
-          genero: categoria.genero || '',
           pesoMinimoKg: categoria.pesoMinimoKg ?? 0,
           pesoMaximoKg: categoria.pesoMaximoKg ?? 0,
-          corFaixa: categoria.corFaixa || '#ffffff',
           tempoLutaMinutos: categoria.tempoLutaMinutos ?? 5,
         });
       } else {
@@ -98,11 +73,8 @@ export function CategoriaForm({ opened, onClose, onSave, categoria }: CategoriaF
   const handleSubmit = async (values: typeof form.values) => {
     const data: Omit<CategoriaCustomizada, 'id' | 'createdAt' | 'updatedAt'> = {
       nome: values.nome.trim(),
-      faixaEtaria: values.faixaEtaria as FaixaEtaria,
-      genero: values.genero as 'masculino' | 'feminino',
       pesoMinimoKg: Number(values.pesoMinimoKg),
       pesoMaximoKg: Number(values.pesoMaximoKg),
-      corFaixa: values.corFaixa,
       tempoLutaMinutos: Number(values.tempoLutaMinutos),
     };
     const saved = await onSave(data);
@@ -155,27 +127,6 @@ export function CategoriaForm({ opened, onClose, onSave, categoria }: CategoriaF
             />
 
             <Group grow gap="md">
-              <Select
-                label="Faixa Etária *"
-                placeholder="Selecione"
-                data={faixaEtariaOptions}
-                searchable
-                labelProps={labelProps}
-                styles={inputStyles}
-                {...form.getInputProps('faixaEtaria')}
-              />
-
-              <Select
-                label="Gênero *"
-                placeholder="Selecione"
-                data={generoOptions}
-                labelProps={labelProps}
-                styles={inputStyles}
-                {...form.getInputProps('genero')}
-              />
-            </Group>
-
-            <Group grow gap="md">
               <NumberInput
                 label="Peso Mínimo (kg) *"
                 placeholder="Ex.: 0"
@@ -197,28 +148,16 @@ export function CategoriaForm({ opened, onClose, onSave, categoria }: CategoriaF
               />
             </Group>
 
-            <Group grow gap="md">
-              <Select
-                label="Cor da Faixa *"
-                placeholder="Selecione"
-                data={corOptions}
-                searchable
-                labelProps={labelProps}
-                styles={inputStyles}
-                {...form.getInputProps('corFaixa')}
-              />
-
-              <NumberInput
-                label="Tempo de Luta (min) *"
-                placeholder="Ex.: 5"
-                min={1}
-                max={60}
-                allowDecimal={false}
-                labelProps={labelProps}
-                styles={inputStyles}
-                {...form.getInputProps('tempoLutaMinutos')}
-              />
-            </Group>
+            <NumberInput
+              label="Tempo de Luta (min) *"
+              placeholder="Ex.: 5"
+              min={1}
+              max={60}
+              allowDecimal={false}
+              labelProps={labelProps}
+              styles={inputStyles}
+              {...form.getInputProps('tempoLutaMinutos')}
+            />
 
             <Group justify="flex-end" mt="md">
               <Button variant="outline" onClick={onClose}>Cancelar</Button>

@@ -598,11 +598,12 @@ export function Resultados() {
                   size="sm"
                   variant="light"
                   leftSection={<IconFileDownload size={16} />}
-                  onClick={() => {
-                    gerarPdfResultados(
+                  onClick={async () => {
+                    await gerarPdfResultados(
                       chaves, atletas, arbitros, medalhasPorEquipe,
                       torneio.nome || `Torneio ${torneio.data}`,
                       getChaveVencedorId, getChavePerdedorFinalId, getPerdedoresSemifinal,
+                      customizadas,
                     );
                   }}
                 >
@@ -695,7 +696,7 @@ export function Resultados() {
                     size="sm"
                     variant="light"
                     leftSection={<IconFileDownload size={16} />}
-                    onClick={() => gerarPdfChaves(chaves, atletas, torneio.nome || `Torneio ${torneio.data}`)}
+                    onClick={async () => await gerarPdfChaves(chaves, atletas, torneio.nome || `Torneio ${torneio.data}`, customizadas)}
                   >
                     Gerar PDF Chaves
                   </Button>
@@ -831,7 +832,7 @@ export function Resultados() {
                     size="sm"
                     variant="light"
                     leftSection={<IconFileDownload size={16} />}
-                    onClick={() => gerarPdfLutasCasadas(lutasCasadas, torneio.nome || `Torneio ${torneio.data}`, arbitros)}
+                    onClick={async () => await gerarPdfLutasCasadas(lutasCasadas, torneio.nome || `Torneio ${torneio.data}`, arbitros, customizadas)}
                   >
                     Gerar PDF Lutas Casadas
                   </Button>

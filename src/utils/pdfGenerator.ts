@@ -1,17 +1,34 @@
-import pdfMake from 'pdfmake/build/pdfmake';
-import pdfFonts from 'pdfmake/build/vfs_fonts';
-import type { TDocumentDefinitions, Content, TableCell } from 'pdfmake/interfaces';
 import type { Chave, Luta } from '../types/bracket';
 import type { LutaCasada } from '../types/lutaCasada';
 import type { Atleta } from '../types/athlete';
 import type { Arbitro } from '../types/referee';
-import { categoriaLabels } from '../types/category';
+import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 
-(pdfMake as any).vfs = (pdfFonts as any).pdfMake?.vfs ?? (pdfFonts as any);
+let PDFDocument: any;
+async function loadPdfKit() {
+  if (!PDFDocument) {
+    const mod = await import('pdfkit');
+    PDFDocument = mod.default;
+  }
+}
 
 const FAIXA_LABEL: Record<string, string> = {
   branca: 'Branca', cinza: 'Cinza', amarela: 'Amarela', laranja: 'Laranja',
   verde: 'Verde', azul: 'Azul', roxa: 'Roxa', marrom: 'Marrom', preta: 'Preta',
+};
+
+const COLORS = {
+  primary: '#1b325f',
+  accent: '#3a89c9',
+  gold: '#ccb24c',
+  coral: '#f26c4f',
+  lightBg: '#e9f2f9',
+  white: '#ffffff',
+  textDark: '#212529',
+  textMuted: '#6c757d',
+  borderLight: '#dee2e6',
+  winnerBg: '#d4edda',
+  winnerBorder: '#28a745',
 };
 
 function getNomeAtleta(id: string, atletas: Atleta[]): string {
@@ -19,10 +36,6 @@ function getNomeAtleta(id: string, atletas: Atleta[]): string {
   const a = atletas.find(at => at.id === id);
   if (!a) return 'Atleta removido';
   return a.nome.charAt(0).toUpperCase() + a.nome.slice(1);
-}
-
-function getCategoriaLabel(categoriaId: string): string {
-  return categoriaLabels[categoriaId] ?? categoriaId;
 }
 
 function capitalize(s: string): string {
@@ -36,10 +49,113 @@ function getNomeArbitro(id: string | null, arbitros: Arbitro[]): string {
   return arbitro.nome.charAt(0).toUpperCase() + arbitro.nome.slice(1);
 }
 
-export function gerarPdfLutasCasadas(lutas: LutaCasada[], nomeTorneio: string, arbitros: Arbitro[] = []): void {
-  const body: TableCell[][] = [];
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function chunksToBlob(chunks: Uint8Array[]): Blob {
+  const buf = new ArrayBuffer(chunks.reduce((acc, c) => acc + c.byteLength, 0));
+  const view = new Uint8Array(buf);
+  let offset = 0;
+  for (const c of chunks) {
+    view.set(c, offset);
+    offset += c.byteLength;
+  }
+  return new Blob([buf], { type: 'application/pdf' });
+}
+
+function drawTableHeader(doc: PDFKit.PDFDocument, headers: string[], x: number, y: number, widths: number[]) {
+  let curX = x;
+  doc.save();
+  doc.rect(x, y, widths.reduce((a, b) => a + b, 0), 20).fill(COLORS.primary);
+  doc.fontSize(8).fillColor(COLORS.white).font('Helvetica-Bold');
+  for (let i = 0; i < headers.length; i++) {
+    doc.text(headers[i], curX + 4, y + 6, { width: widths[i] - 8, align: 'left' });
+    curX += widths[i];
+  }
+  doc.restore();
+  return y + 20;
+}
+
+function drawTableRow(
+  doc: PDFKit.PDFDocument,
+  cells: string[],
+  x: number,
+  y: number,
+  widths: number[],
+  opts?: { bold?: boolean; bgColor?: string; fontSize?: number }
+) {
+  const rowHeight = 16;
+  let curX = x;
+  doc.save();
+  if (opts?.bgColor) {
+    doc.rect(x, y, widths.reduce((a, b) => a + b, 0), rowHeight).fill(opts.bgColor);
+  }
+  doc.fontSize(opts?.fontSize ?? 7).fillColor(COLORS.textDark).font(opts?.bold ? 'Helvetica-Bold' : 'Helvetica');
+  for (let i = 0; i < cells.length; i++) {
+    doc.text(cells[i], curX + 4, y + 4, { width: widths[i] - 8, align: 'left' });
+    curX += widths[i];
+  }
+  doc.restore();
+  return y + rowHeight;
+}
+
+function drawHorizontalLine(doc: PDFKit.PDFDocument, x: number, y: number, width: number) {
+  doc.save().moveTo(x, y).lineTo(x + width, y).lineWidth(0.5).strokeColor(COLORS.borderLight).stroke().restore();
+}
+
+// ============================================================
+// LUTAS CASADAS
+// ============================================================
+export async function gerarPdfLutasCasadas(
+  lutas: LutaCasada[],
+  nomeTorneio: string,
+  arbitros: Arbitro[] = [],
+  _customizadas: CategoriaCustomizada[] = []
+): Promise<void> {
+  await loadPdfKit();
+  const doc = new PDFDocument({ size: 'A4', margin: 30 });
+  const chunks: Uint8Array[] = [];
+  doc.on('data', (chunk: Uint8Array) => chunks.push(chunk));
+
+  const filename = `lutas-casadas-${nomeTorneio.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+
+  doc.on('end', () => {
+    const blob = chunksToBlob(chunks);
+    downloadBlob(blob, filename);
+  });
+
+  // Header
+  doc.save();
+  doc.rect(0, 0, doc.page.width, 60).fill(COLORS.primary);
+  doc.fontSize(18).fillColor(COLORS.white).font('Helvetica-Bold')
+    .text(`Lutas Casadas - ${nomeTorneio}`, 30, 20, { align: 'center', width: doc.page.width - 60 });
+  doc.fontSize(9).fillColor('#a0c4e8')
+    .text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 30, 42, { align: 'center', width: doc.page.width - 60 });
+  doc.restore();
+
+  let y = 80;
+
+  if (lutas.length === 0) {
+    doc.fontSize(10).fillColor(COLORS.textMuted).font('Helvetica')
+      .text('Nenhuma luta casada registrada.', 30, y);
+    doc.end();
+    return;
+  }
 
   for (const luta of lutas) {
+    if (y > doc.page.height - 100) {
+      doc.addPage();
+      y = 30;
+    }
+
     const nomeA = capitalize(luta.atletaASnapshot?.nome ?? luta.atletaAId);
     const nomeB = capitalize(luta.atletaBSnapshot?.nome ?? luta.atletaBId);
     const statusLabel = luta.status === 'completed' ? 'Finalizada' : luta.status === 'wo' ? 'W.O.' : 'Pendente';
@@ -51,39 +167,31 @@ export function gerarPdfLutasCasadas(lutas: LutaCasada[], nomeTorneio: string, a
       : '';
     const arbitroNome = getNomeArbitro(luta.arbitroId, arbitros);
 
-    body.push([
-      { text: `${nomeA} vs ${nomeB}`, bold: true, fontSize: 10 },
-      { text: `Status: ${statusLabel}`, fontSize: 8 },
-      { text: `Vencedor: ${vencedor}`, fontSize: 8 },
-      { text: placar, fontSize: 8 },
-      { text: arbitroNome !== '—' ? `Árbitro: ${arbitroNome}` : '', fontSize: 8 },
-    ]);
+    // Card background
+    doc.save();
+    doc.roundedRect(30, y, doc.page.width - 60, 50, 4)
+      .fill(COLORS.white)
+      .lineWidth(1).strokeColor(COLORS.borderLight).stroke();
+
+    // Left accent
+    doc.rect(30, y, 4, 50).fill(COLORS.accent);
+
+    // Content
+    doc.fontSize(9).fillColor(COLORS.primary).font('Helvetica-Bold')
+      .text(`${nomeA} vs ${nomeB}`, 42, y + 6, { width: 300 });
+    doc.fontSize(7).fillColor(COLORS.textMuted).font('Helvetica')
+      .text(`Status: ${statusLabel}  |  Vencedor: ${vencedor}  ${placar ? `|  Placar: ${placar}` : ''}  ${arbitroNome !== '—' ? `|  Árbitro: ${arbitroNome}` : ''}`, 42, y + 22, { width: doc.page.width - 90 });
+
+    doc.restore();
+    y += 58;
   }
 
-  const docDefinition: TDocumentDefinitions = {
-    pageSize: 'A4',
-    pageMargins: [15, 20, 15, 20],
-    content: [
-      { text: `Lutas Casadas - ${nomeTorneio}`, style: 'header', alignment: 'center' },
-      { text: `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, alignment: 'center', fontSize: 9, margin: [0, 0, 0, 10] },
-      {
-        table: {
-          widths: ['*', 'auto', '*', 'auto', 'auto'],
-          body,
-        },
-        layout: 'lightHorizontalLines',
-      },
-    ],
-    defaultStyle: { font: 'Roboto' },
-    styles: {
-      header: { fontSize: 16, bold: true, margin: [0, 0, 0, 6] },
-    },
-  };
-
-  (pdfMake as any).createPdf(docDefinition).download(
-    `lutas-casadas-${nomeTorneio.replace(/\s+/g, '-').toLowerCase()}.pdf`
-  );
+  doc.end();
 }
+
+// ============================================================
+// BRACKET DRAWING (Issues #3, #7)
+// ============================================================
 
 const ROUND_LABELS: Record<number, string> = {
   1: 'PRIMEIRA RODADA',
@@ -97,107 +205,241 @@ function getRoundLabel(rodada: number, totalRodadas: number): string {
   return ROUND_LABELS[rodada + offset] || `Rodada ${rodada}`;
 }
 
-function createBracketRow(
-  luta: Luta,
-  atletas: Atleta[]
-): TableCell[] {
-  const nomeA = getNomeAtleta(luta.atletaAId, atletas);
-  const nomeB = getNomeAtleta(luta.atletaBId, atletas);
-  const placar = luta.placarA && luta.placarB
-    ? `${luta.placarA.total}-${luta.placarB.total}`
-    : '';
-  
-  const winnerA = luta.vencedorId === luta.atletaAId;
-  const winnerB = luta.vencedorId === luta.atletaBId;
-  
-  const nomeAStyle: Record<string, unknown> = { fontSize: 7, margin: [2, 1, 2, 1] as [number, number, number, number] };
-  const nomeBStyle: Record<string, unknown> = { fontSize: 7, margin: [2, 1, 2, 1] as [number, number, number, number] };
-  
-  if (winnerA) nomeAStyle.bold = true;
-  if (winnerB) nomeBStyle.bold = true;
-  
-  return [
-    { text: nomeA, ...nomeAStyle },
-    { text: placar ? `vs (${placar})` : 'vs', fontSize: 6, alignment: 'center' as const, margin: [0, 1, 0, 1] as [number, number, number, number] },
-    { text: nomeB, ...nomeBStyle },
-  ];
-}
+function drawBracketCard(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  nomeA: string,
+  nomeB: string,
+  placar?: string,
+  winnerA?: boolean,
+  winnerB?: boolean,
+) {
+  doc.save();
 
-export function gerarPdfChaves(chaves: Chave[], atletas: Atleta[], nomeTorneio: string): void {
-  const content: Content[] = [
-    { text: `Chaves de Luta - ${nomeTorneio}`, style: 'header', alignment: 'center' },
-    { text: `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, alignment: 'center', fontSize: 8, margin: [0, 0, 0, 10] },
-  ];
+  // Card shadow
+  doc.roundedRect(x + 1, y + 1, width, height, 3).fill('#e0e0e0');
+  // Card body
+  doc.roundedRect(x, y, width, height, 3).fill(COLORS.white).lineWidth(1).strokeColor(COLORS.borderLight).stroke();
 
-  for (const chave of chaves) {
-    const titulo = chave.nome || getCategoriaLabel(chave.categoriaId);
-    const faixaText = chave.faixa ? ` — Faixa: ${FAIXA_LABEL[chave.faixa] ?? chave.faixa}` : '';
-    const totalAtletas = chave.totalAtletas || chave.posicoesAtletas?.length || 0;
+  // Divider line
+  const midY = y + height / 2;
+  doc.save().moveTo(x + 4, midY).lineTo(x + width - 4, midY)
+    .lineWidth(0.5).strokeColor(COLORS.borderLight).stroke().restore();
 
-    content.push({ text: `${titulo}${faixaText} (${totalAtletas} atletas)`, style: 'chaveTitle', margin: [0, 6, 0, 4] as [number, number, number, number] });
+  // Left accent
+  doc.rect(x, y, 3, height).fill(winnerA || winnerB ? COLORS.gold : COLORS.accent);
 
-    const rodadas = new Map<number, Luta[]>();
-    for (const luta of chave.lutas) {
-      const arr = rodadas.get(luta.rodada) ?? [];
-      arr.push(luta);
-      rodadas.set(luta.rodada, arr);
-    }
+  const textOpts: PDFKit.Mixins.TextOptions = { width: width - 14, align: 'left' };
 
-    const sortedRodadas = [...rodadas.keys()].sort((a, b) => a - b);
-    const maxRodada = sortedRodadas[sortedRodadas.length - 1] || 1;
+  // Athlete A
+  doc.fontSize(7).font(winnerA ? 'Helvetica-Bold' : 'Helvetica').fillColor(winnerA ? COLORS.primary : COLORS.textDark);
+  doc.text(nomeA, x + 10, y + 3, textOpts);
 
-    for (const rodadaNum of sortedRodadas) {
-      const lutasDaRodada = rodadas.get(rodadaNum) ?? [];
-      const roundLabel = getRoundLabel(rodadaNum, maxRodada);
+  // Athlete B
+  doc.font(winnerB ? 'Helvetica-Bold' : 'Helvetica').fillColor(winnerB ? COLORS.primary : COLORS.textDark);
+  doc.text(nomeB, x + 10, midY + 3, textOpts);
 
-      content.push({ text: roundLabel, bold: true, fontSize: 8, margin: [0, 4, 0, 2] as [number, number, number, number] });
-
-      const tableBody: TableCell[][] = [];
-      for (const luta of lutasDaRodada) {
-        tableBody.push(createBracketRow(luta, atletas));
-      }
-
-      content.push({
-        table: {
-          widths: ['*', 'auto', '*'],
-          body: tableBody,
-        },
-        layout: {
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5,
-          hLineColor: () => '#ccc',
-          vLineColor: () => '#ccc',
-          paddingLeft: () => 4,
-          paddingRight: () => 4,
-          paddingTop: () => 2,
-          paddingBottom: () => 2,
-        },
-      });
-
-      if (rodadaNum < maxRodada) {
-        content.push({ text: '↓', alignment: 'center', fontSize: 10, margin: [0, 2, 0, 2] as [number, number, number, number] });
-      }
-    }
-
-    content.push({ text: '', margin: [0, 10, 0, 10] as [number, number, number, number] });
+  // Score badge
+  if (placar) {
+    const badgeW = 30;
+    const badgeH = 10;
+    doc.roundedRect(x + width - badgeW - 4, midY - badgeH / 2, badgeW, badgeH, 2).fill(COLORS.primary);
+    doc.fontSize(6).fillColor(COLORS.white).font('Helvetica-Bold')
+      .text(placar, x + width - badgeW - 4, midY - badgeH / 2 + 2, { width: badgeW, align: 'center' });
   }
 
-  const docDefinition: TDocumentDefinitions = {
-    pageSize: 'A4',
-    pageOrientation: 'portrait',
-    pageMargins: [15, 20, 15, 20],
-    content,
-    defaultStyle: { font: 'Roboto' },
-    styles: {
-      header: { fontSize: 14, bold: true, margin: [0, 0, 0, 4] as [number, number, number, number] },
-      chaveTitle: { fontSize: 10, bold: true },
-    },
-  };
-
-  (pdfMake as any).createPdf(docDefinition).download(
-    `chaves-${nomeTorneio.replace(/\s+/g, '-').toLowerCase()}.pdf`
-  );
+  doc.restore();
 }
+
+function drawConnectingLines(
+  doc: PDFKit.PDFDocument,
+  fromX: number,
+  fromYs: number[],
+  toX: number,
+  toY: number,
+  cardHeight: number,
+) {
+  doc.save();
+  doc.lineWidth(1).strokeColor(COLORS.accent);
+
+  const midX = fromX + 5;
+
+  for (const fromY of fromYs) {
+    const fromMidY = fromY + cardHeight / 2;
+    doc.moveTo(midX, fromMidY);
+    doc.lineTo(midX + 10, fromMidY);
+    doc.lineTo(midX + 10, toY + cardHeight / 2);
+    doc.lineTo(toX, toY + cardHeight / 2);
+    doc.stroke();
+  }
+
+  doc.restore();
+}
+
+function drawBracket(
+  doc: PDFKit.PDFDocument,
+  chave: Chave,
+  atletas: Atleta[],
+  startY: number,
+  _customizadas: CategoriaCustomizada[]
+): number {
+  const titulo = chave.nome || getCategoriaLabel(chave.categoriaId, _customizadas);
+  const faixaText = chave.faixa ? ` — Faixa: ${FAIXA_LABEL[chave.faixa] ?? chave.faixa}` : '';
+  const totalAtletas = chave.totalAtletas || chave.posicoesAtletas?.length || 0;
+
+  // Title
+  doc.save();
+  doc.fontSize(11).fillColor(COLORS.primary).font('Helvetica-Bold')
+    .text(`${titulo}${faixaText} (${totalAtletas} atletas)`, 30, startY, { width: doc.page.width - 60 });
+  doc.restore();
+
+  let y = startY + 20;
+
+  // Group lutas by round
+  const rodadas = new Map<number, Luta[]>();
+  for (const luta of chave.lutas) {
+    const arr = rodadas.get(luta.rodada) ?? [];
+    arr.push(luta);
+    rodadas.set(luta.rodada, arr);
+  }
+
+  const sortedRodadas = [...rodadas.keys()].sort((a, b) => a - b);
+  const maxRodada = sortedRodadas[sortedRodadas.length - 1] || 1;
+
+  const CARD_W = 150;
+  const CARD_H = 36;
+  const ROUND_GAP = 50;
+  const MATCH_GAP = 8;
+
+  // Calculate layout
+  const roundMatchCounts = sortedRodadas.map(r => (rodadas.get(r) ?? []).length);
+  const maxMatches = Math.max(...roundMatchCounts);
+
+  // Starting X for each round
+  const roundXs = sortedRodadas.map((_, i) => 30 + i * (CARD_W + ROUND_GAP));
+
+  // Draw round labels
+  for (let i = 0; i < sortedRodadas.length; i++) {
+    const rodadaNum = sortedRodadas[i];
+    const label = getRoundLabel(rodadaNum, maxRodada);
+    doc.save();
+    doc.fontSize(7).fillColor(COLORS.textMuted).font('Helvetica-Bold')
+      .text(label, roundXs[i], y, { width: CARD_W, align: 'center' });
+    doc.restore();
+  }
+  y += 14;
+
+  // Draw cards for each round
+  const roundTopYs: number[][] = [];
+
+  for (let r = 0; r < sortedRodadas.length; r++) {
+    const rodadaNum = sortedRodadas[r];
+    const lutasDaRodada = rodadas.get(rodadaNum) ?? [];
+    const matchCount = roundMatchCounts[r];
+
+    // Calculate Y positions centered around the middle
+    const totalHeight = matchCount * CARD_H + (matchCount - 1) * MATCH_GAP;
+    const offsetY = r === 0 ? 0 : (maxMatches * CARD_H + (maxMatches - 1) * MATCH_GAP - totalHeight) / 2;
+    const baseY = y + offsetY;
+
+    const matchYs: number[] = [];
+
+    for (let m = 0; m < lutasDaRodada.length; m++) {
+      const luta = lutasDaRodada[m];
+      const nomeA = getNomeAtleta(luta.atletaAId, atletas);
+      const nomeB = getNomeAtleta(luta.atletaBId, atletas);
+      const placar = luta.placarA && luta.placarB
+        ? `${luta.placarA.total}-${luta.placarB.total}`
+        : undefined;
+      const winnerA = luta.vencedorId === luta.atletaAId;
+      const winnerB = luta.vencedorId === luta.atletaBId;
+
+      const cardY = baseY + m * (CARD_H + MATCH_GAP);
+      matchYs.push(cardY);
+
+      drawBracketCard(doc, roundXs[r], cardY, CARD_W, CARD_H, nomeA, nomeB, placar, winnerA, winnerB);
+    }
+
+    roundTopYs.push(matchYs);
+  }
+
+  // Draw connecting lines between rounds
+  for (let r = 0; r < sortedRodadas.length - 1; r++) {
+    const fromYs = roundTopYs[r];
+    const toYs = roundTopYs[r + 1];
+
+    for (let t = 0; t < toYs.length; t++) {
+      // Each next-round match connects to 2 from previous round
+      const fromIndices = [t * 2, t * 2 + 1];
+      const validFromYs = fromIndices
+        .filter(i => i < fromYs.length)
+        .map(i => fromYs[i]);
+
+      if (validFromYs.length > 0) {
+        drawConnectingLines(
+          doc,
+          roundXs[r] + CARD_W,
+          validFromYs,
+          roundXs[r + 1],
+          toYs[t],
+          CARD_H,
+        );
+      }
+    }
+  }
+
+  const totalBracketHeight = maxMatches * CARD_H + (maxMatches - 1) * MATCH_GAP + 40;
+  return y + totalBracketHeight;
+}
+
+export async function gerarPdfChaves(
+  chaves: Chave[],
+  atletas: Atleta[],
+  nomeTorneio: string,
+  customizadas: CategoriaCustomizada[] = []
+): Promise<void> {
+  await loadPdfKit();
+  const doc = new PDFDocument({ size: 'A4', margin: 30 });
+  const chunks: Uint8Array[] = [];
+  doc.on('data', (chunk: Uint8Array) => chunks.push(chunk));
+
+  const filename = `chaves-${nomeTorneio.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+
+  doc.on('end', () => {
+    const blob = chunksToBlob(chunks);
+    downloadBlob(blob, filename);
+  });
+
+  // Header
+  doc.save();
+  doc.rect(0, 0, doc.page.width, 60).fill(COLORS.primary);
+  doc.fontSize(18).fillColor(COLORS.white).font('Helvetica-Bold')
+    .text(`Chaves de Luta - ${nomeTorneio}`, 30, 20, { align: 'center', width: doc.page.width - 60 });
+  doc.fontSize(9).fillColor('#a0c4e8')
+    .text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 30, 42, { align: 'center', width: doc.page.width - 60 });
+  doc.restore();
+
+  let y = 80;
+
+  for (const chave of chaves) {
+    if (y > doc.page.height - 120) {
+      doc.addPage();
+      y = 30;
+    }
+
+    y = drawBracket(doc, chave, atletas, y, customizadas);
+    y += 20;
+  }
+
+  doc.end();
+}
+
+// ============================================================
+// RESULTADOS
+// ============================================================
 
 export interface ResultadoMedalha {
   chave: Chave;
@@ -214,7 +456,7 @@ export interface ResultadoEquipe {
   bronze: number;
 }
 
-export function gerarPdfResultados(
+export async function gerarPdfResultados(
   chaves: Chave[],
   atletas: Atleta[],
   arbitros: Arbitro[],
@@ -223,7 +465,20 @@ export function gerarPdfResultados(
   getChaveVencedorId: (chave: Chave) => string | null,
   getChavePerdedorFinalId: (chave: Chave) => string | null,
   getPerdedoresSemifinal: (chave: Chave) => string[],
-): void {
+  customizadas: CategoriaCustomizada[] = []
+): Promise<void> {
+  await loadPdfKit();
+  const doc = new PDFDocument({ size: 'A4', margin: 30 });
+  const chunks: Uint8Array[] = [];
+  doc.on('data', (chunk: Uint8Array) => chunks.push(chunk));
+
+  const filename = `resultados-${nomeTorneio.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+
+  doc.on('end', () => {
+    const blob = chunksToBlob(chunks);
+    downloadBlob(blob, filename);
+  });
+
   const atletasMap = new Map(atletas.map(a => [a.id, a]));
   const resolveNome = (id: string | null): string => {
     if (!id || id === 'tbd' || id === 'bye') return '—';
@@ -237,160 +492,150 @@ export function gerarPdfResultados(
     return c.lutas.some(l => l.rodada === max && l.vencedorId);
   });
 
-  const content: Content[] = [
-    { text: `Resultados - ${nomeTorneio}`, style: 'header', alignment: 'center' },
-    { text: `Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, alignment: 'center', fontSize: 9, margin: [0, 0, 0, 10] },
-  ];
+  const pageW = doc.page.width - 60;
 
-  // === MEDALHISTAS ===
-  content.push({ text: 'Medalhistas', style: 'sectionTitle', margin: [0, 8, 0, 6] as [number, number, number, number] });
+  // ========== HEADER ==========
+  doc.save();
+  doc.rect(0, 0, doc.page.width, 60).fill(COLORS.primary);
+  doc.fontSize(18).fillColor(COLORS.white).font('Helvetica-Bold')
+    .text(`Resultados - ${nomeTorneio}`, 30, 20, { align: 'center', width: pageW });
+  doc.fontSize(9).fillColor('#a0c4e8')
+    .text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 30, 42, { align: 'center', width: pageW });
+  doc.restore();
+
+  let y = 80;
+
+  // ========== MEDALHISTAS ==========
+  doc.save();
+  doc.fontSize(13).fillColor(COLORS.primary).font('Helvetica-Bold').text('Medalhistas', 30, y);
+  doc.restore();
+  y += 20;
 
   if (chavesEncerradas.length === 0) {
-    content.push({ text: 'Nenhuma chave encerrada.', fontSize: 9, margin: [0, 0, 0, 6] as [number, number, number, number] });
+    doc.fontSize(9).fillColor(COLORS.textMuted).font('Helvetica').text('Nenhuma chave encerrada.', 30, y);
+    y += 15;
   } else {
-    const medalBody: TableCell[][] = [
-      [
-        { text: 'Categoria', bold: true, fontSize: 9 },
-        { text: 'Atletas', bold: true, fontSize: 9, alignment: 'center' as const },
-        { text: 'Ouro', bold: true, fontSize: 9 },
-        { text: 'Prata', bold: true, fontSize: 9 },
-        { text: 'Bronze', bold: true, fontSize: 9 },
-      ],
-    ];
+    const headers = ['Categoria', 'Atletas', 'Ouro', 'Prata', 'Bronze'];
+    const widths = [160, 40, 120, 120, 120];
+    y = drawTableHeader(doc, headers, 30, y, widths);
+
     for (const chave of chavesEncerradas) {
-      const titulo = chave.nome || getCategoriaLabel(chave.categoriaId);
+      if (y > doc.page.height - 50) { doc.addPage(); y = 30; y = drawTableHeader(doc, headers, 30, y, widths); }
+      const titulo = chave.nome || getCategoriaLabel(chave.categoriaId, customizadas);
       const faixaText = chave.faixa ? ` - ${FAIXA_LABEL[chave.faixa] ?? chave.faixa}` : '';
       const ouro = getChaveVencedorId(chave);
       const prata = getChavePerdedorFinalId(chave);
       const bronzes = getPerdedoresSemifinal(chave);
-      medalBody.push([
-        { text: `${titulo}${faixaText}`, fontSize: 8 },
-        { text: String(chave.totalAtletas), fontSize: 8, alignment: 'center' as const },
-        { text: ouro ? resolveNome(ouro) : '—', fontSize: 8 },
-        { text: prata ? resolveNome(prata) : '—', fontSize: 8 },
-        { text: bronzes.length > 0 ? bronzes.map(id => resolveNome(id)).join(', ') : '—', fontSize: 8 },
-      ]);
+      const cells = [
+        `${titulo}${faixaText}`,
+        String(chave.totalAtletas),
+        ouro ? resolveNome(ouro) : '—',
+        prata ? resolveNome(prata) : '—',
+        bronzes.length > 0 ? bronzes.map(id => resolveNome(id)).join(', ') : '—',
+      ];
+      y = drawTableRow(doc, cells, 30, y, widths);
+      drawHorizontalLine(doc, 30, y, pageW);
     }
-    content.push({
-      table: { widths: ['*', 'auto', '*', '*', '*'], body: medalBody },
-      layout: 'lightHorizontalLines',
-    });
   }
 
-  // === RANKING DE EQUIPES ===
-  content.push({ text: 'Ranking de Equipes', style: 'sectionTitle', pageBreak: 'before', margin: [0, 8, 0, 6] as [number, number, number, number] });
+  // ========== RANKING DE EQUIPES ==========
+  doc.addPage();
+  y = 30;
+  doc.save();
+  doc.rect(0, 0, doc.page.width, 50).fill(COLORS.primary);
+  doc.fontSize(14).fillColor(COLORS.white).font('Helvetica-Bold')
+    .text('Ranking de Equipes', 30, 18, { align: 'center', width: pageW });
+  doc.restore();
+  y = 70;
 
   const equipes = Object.entries(medalhasPorEquipe)
     .map(([nome, m]) => ({ nome, totalAtletas: atletas.filter(a => (a.equipe || 'Sem equipe') === nome).length, ...m }))
     .sort((a, b) => b.ouro - a.ouro || b.prata - a.prata || b.bronze - a.bronze);
 
   if (equipes.length === 0) {
-    content.push({ text: 'Nenhuma equipe registrada.', fontSize: 9, margin: [0, 0, 0, 6] as [number, number, number, number] });
+    doc.fontSize(9).fillColor(COLORS.textMuted).font('Helvetica').text('Nenhuma equipe registrada.', 30, y);
   } else {
-    const eqBody: TableCell[][] = [
-      [
-        { text: '#', bold: true, fontSize: 9, alignment: 'center' as const },
-        { text: 'Equipe', bold: true, fontSize: 9 },
-        { text: 'Atletas', bold: true, fontSize: 9, alignment: 'center' as const },
-        { text: 'Ouro', bold: true, fontSize: 9, alignment: 'center' as const },
-        { text: 'Prata', bold: true, fontSize: 9, alignment: 'center' as const },
-        { text: 'Bronze', bold: true, fontSize: 9, alignment: 'center' as const },
-      ],
-      ...equipes.map((e, i) => [
-        { text: String(i + 1), fontSize: 9, alignment: 'center' as const },
-        { text: capitalize(e.nome), fontSize: 9 },
-        { text: String(e.totalAtletas), fontSize: 9, alignment: 'center' as const },
-        { text: String(e.ouro), fontSize: 9, alignment: 'center' as const },
-        { text: String(e.prata), fontSize: 9, alignment: 'center' as const },
-        { text: String(e.bronze), fontSize: 9, alignment: 'center' as const },
-      ]),
-    ];
-    content.push({
-      table: { widths: ['auto', '*', 'auto', 'auto', 'auto', 'auto'], body: eqBody },
-      layout: 'lightHorizontalLines',
-    });
+    const headers = ['#', 'Equipe', 'Atletas', 'Ouro', 'Prata', 'Bronze'];
+    const widths = [30, 180, 60, 50, 50, 50];
+    y = drawTableHeader(doc, headers, 30, y, widths);
+
+    for (let i = 0; i < equipes.length; i++) {
+      if (y > doc.page.height - 50) { doc.addPage(); y = 30; y = drawTableHeader(doc, headers, 30, y, widths); }
+      const e = equipes[i];
+      const cells = [String(i + 1), capitalize(e.nome), String(e.totalAtletas), String(e.ouro), String(e.prata), String(e.bronze)];
+      const bg = i % 2 === 0 ? '#f8f9fa' : undefined;
+      y = drawTableRow(doc, cells, 30, y, widths, { bgColor: bg });
+      drawHorizontalLine(doc, 30, y, pageW);
+    }
   }
 
-  // === ARBITROS ===
-  content.push({ text: 'Arbitros', style: 'sectionTitle', pageBreak: 'before', margin: [0, 8, 0, 6] as [number, number, number, number] });
+  // ========== ARBITROS ==========
+  doc.addPage();
+  y = 30;
+  doc.save();
+  doc.rect(0, 0, doc.page.width, 50).fill(COLORS.primary);
+  doc.fontSize(14).fillColor(COLORS.white).font('Helvetica-Bold')
+    .text('Árbitros', 30, 18, { align: 'center', width: pageW });
+  doc.restore();
+  y = 70;
 
   if (arbitros.length === 0) {
-    content.push({ text: 'Nenhum arbitro cadastrado.', fontSize: 9, margin: [0, 0, 0, 6] as [number, number, number, number] });
+    doc.fontSize(9).fillColor(COLORS.textMuted).font('Helvetica').text('Nenhum árbitro cadastrado.', 30, y);
   } else {
     const lutasPorArbitro: Record<string, number> = {};
     for (const c of chaves) {
       if (c.arbitroId) lutasPorArbitro[c.arbitroId] = (lutasPorArbitro[c.arbitroId] ?? 0) + 1;
     }
-    const arbBody: TableCell[][] = [
-      [
-        { text: '#', bold: true, fontSize: 9, alignment: 'center' as const },
-        { text: 'Arbitro', bold: true, fontSize: 9 },
-        { text: 'Faixa', bold: true, fontSize: 9 },
-        { text: 'Equipe', bold: true, fontSize: 9 },
-        { text: 'Lutas', bold: true, fontSize: 9, alignment: 'center' as const },
-      ],
-      ...arbitros.map((a, i) => [
-        { text: String(i + 1), fontSize: 9, alignment: 'center' as const },
-        { text: capitalize(a.nome), fontSize: 9 },
-        { text: FAIXA_LABEL[a.faixa] ?? a.faixa, fontSize: 9 },
-        { text: capitalize(a.equipe || '—'), fontSize: 9 },
-        { text: String(lutasPorArbitro[a.id] ?? 0), fontSize: 9, alignment: 'center' as const },
-      ]),
-    ];
-    content.push({
-      table: { widths: ['auto', '*', 'auto', '*', 'auto'], body: arbBody },
-      layout: 'lightHorizontalLines',
-    });
+    const headers = ['#', 'Árbitro', 'Faixa', 'Equipe', 'Lutas'];
+    const widths = [30, 150, 60, 150, 50];
+    y = drawTableHeader(doc, headers, 30, y, widths);
+
+    for (let i = 0; i < arbitros.length; i++) {
+      if (y > doc.page.height - 50) { doc.addPage(); y = 30; y = drawTableHeader(doc, headers, 30, y, widths); }
+      const a = arbitros[i];
+      const cells = [String(i + 1), capitalize(a.nome), FAIXA_LABEL[a.faixa] ?? a.faixa, capitalize(a.equipe || '—'), String(lutasPorArbitro[a.id] ?? 0)];
+      const bg = i % 2 === 0 ? '#f8f9fa' : undefined;
+      y = drawTableRow(doc, cells, 30, y, widths, { bgColor: bg });
+      drawHorizontalLine(doc, 30, y, pageW);
+    }
   }
 
-  // === ATLETAS ===
-  content.push({ text: 'Atletas', style: 'sectionTitle', pageBreak: 'before', margin: [0, 8, 0, 6] as [number, number, number, number] });
+  // ========== ATLETAS ==========
+  doc.addPage();
+  y = 30;
+  doc.save();
+  doc.rect(0, 0, doc.page.width, 50).fill(COLORS.primary);
+  doc.fontSize(14).fillColor(COLORS.white).font('Helvetica-Bold')
+    .text('Atletas', 30, 18, { align: 'center', width: pageW });
+  doc.restore();
+  y = 70;
 
   if (atletas.length === 0) {
-    content.push({ text: 'Nenhum atleta cadastrado.', fontSize: 9, margin: [0, 0, 0, 6] as [number, number, number, number] });
+    doc.fontSize(9).fillColor(COLORS.textMuted).font('Helvetica').text('Nenhum atleta cadastrado.', 30, y);
   } else {
-    const atBody: TableCell[][] = [
-      [
-        { text: '#', bold: true, fontSize: 8, alignment: 'center' as const },
-        { text: 'Atleta', bold: true, fontSize: 8 },
-        { text: 'Equipe', bold: true, fontSize: 8 },
-        { text: 'Faixa', bold: true, fontSize: 8 },
-        { text: 'Peso', bold: true, fontSize: 8, alignment: 'center' as const },
-        { text: 'Categoria', bold: true, fontSize: 8 },
-        { text: 'Chave', bold: true, fontSize: 8 },
-      ],
-      ...atletas.sort((a, b) => a.nome.localeCompare(b.nome)).map((a, i) => {
-        const chave = chaves.find(c => c.posicoesAtletas.includes(a.id));
-        return [
-          { text: String(i + 1), fontSize: 7, alignment: 'center' as const },
-          { text: capitalize(a.nome), fontSize: 7 },
-          { text: capitalize(a.equipe || '—'), fontSize: 7 },
-          { text: FAIXA_LABEL[a.faixa] ?? a.faixa, fontSize: 7 },
-          { text: `${a.pesoKg.toFixed(1)}`, fontSize: 7, alignment: 'center' as const },
-          { text: getCategoriaLabel(a.categoria), fontSize: 7 },
-          { text: chave ? (chave.nome || getCategoriaLabel(chave.categoriaId)) : '—', fontSize: 7 },
-        ];
-      }),
-    ];
-    content.push({
-      table: { widths: ['auto', '*', '*', 'auto', 'auto', '*', 'auto'], body: atBody },
-      layout: 'lightHorizontalLines',
-    });
+    const headers = ['#', 'Atleta', 'Equipe', 'Faixa', 'Peso', 'Categoria', 'Chave'];
+    const widths = [25, 120, 100, 50, 40, 130, 100];
+    y = drawTableHeader(doc, headers, 30, y, widths);
+
+    const sorted = [...atletas].sort((a, b) => a.nome.localeCompare(b.nome));
+    for (let i = 0; i < sorted.length; i++) {
+      if (y > doc.page.height - 50) { doc.addPage(); y = 30; y = drawTableHeader(doc, headers, 30, y, widths); }
+      const a = sorted[i];
+      const chave = chaves.find(c => c.posicoesAtletas.includes(a.id));
+      const cells = [
+        String(i + 1),
+        capitalize(a.nome),
+        capitalize(a.equipe || '—'),
+        FAIXA_LABEL[a.faixa] ?? a.faixa,
+        `${a.pesoKg.toFixed(1)}`,
+        getCategoriaLabel(a.categoria, customizadas),
+        chave ? (chave.nome || getCategoriaLabel(chave.categoriaId, customizadas)) : '—',
+      ];
+      const bg = i % 2 === 0 ? '#f8f9fa' : undefined;
+      y = drawTableRow(doc, cells, 30, y, widths, { bgColor: bg, fontSize: 6.5 });
+      drawHorizontalLine(doc, 30, y, pageW);
+    }
   }
 
-  const docDefinition: TDocumentDefinitions = {
-    pageSize: 'A4',
-    pageOrientation: 'portrait',
-    pageMargins: [15, 20, 15, 20],
-    content,
-    defaultStyle: { font: 'Roboto' },
-    styles: {
-      header: { fontSize: 14, bold: true, margin: [0, 0, 0, 4] as [number, number, number, number] },
-      sectionTitle: { fontSize: 12, bold: true, decoration: 'underline' },
-    },
-  };
-
-  (pdfMake as any).createPdf(docDefinition).download(
-    `resultados-${nomeTorneio.replace(/\s+/g, '-').toLowerCase()}.pdf`
-  );
+  doc.end();
 }

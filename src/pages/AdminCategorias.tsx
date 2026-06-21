@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Text, Group, Box, Title, Table, ActionIcon, Badge, TextInput, Loader, Center, Modal, Stack, Button,
+  Text, Group, Box, Title, Table, ActionIcon, TextInput, Loader, Center, Modal, Stack, Button,
 } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { notifications } from '@mantine/notifications';
 import { IconPencil, IconTrash, IconSearch, IconPlus } from '@tabler/icons-react';
 import type { CategoriaCustomizada } from '../types/category';
-import { FAIXA_ETARIA_LABELS } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
 import { CategoriaForm } from '../components/CategoriaForm';
 
@@ -177,10 +176,7 @@ export function AdminCategorias() {
           <Table striped highlightOnHover>
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Cor</Table.Th>
                 <Table.Th>Nome</Table.Th>
-                <Table.Th>Faixa Etária</Table.Th>
-                <Table.Th>Gênero</Table.Th>
                 <Table.Th>Peso</Table.Th>
                 <Table.Th>Tempo</Table.Th>
                 <Table.Th style={{ width: 100 }}>Ações</Table.Th>
@@ -190,26 +186,7 @@ export function AdminCategorias() {
               {filtered.map((cat) => (
                 <Table.Tr key={cat.id}>
                   <Table.Td>
-                    <Box
-                      style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: '50%',
-                        background: cat.corFaixa,
-                        border: '1px solid #ccc',
-                      }}
-                    />
-                  </Table.Td>
-                  <Table.Td>
                     <Text fw={500} size="sm">{cat.nome}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge size="sm" variant="light" color="blue">
-                      {FAIXA_ETARIA_LABELS[cat.faixaEtaria] || cat.faixaEtaria}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm" style={{ textTransform: 'capitalize' }}>{cat.genero}</Text>
                   </Table.Td>
                   <Table.Td>
                     <Text size="sm">{cat.pesoMinimoKg} - {cat.pesoMaximoKg} kg</Text>

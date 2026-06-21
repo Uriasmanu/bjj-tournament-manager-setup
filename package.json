@@ -17,13 +17,13 @@
     "@mantine/notifications": "^7.17.8",
     "@tabler/icons-react": "^3.44.0",
     "dayjs": "^1.11.21",
-    "pdfmake": "^0.3.11",
+    "pdfkit": "^0.19.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.30.4"
   },
   "devDependencies": {
-    "@types/pdfmake": "^0.3.3",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",
     "@typescript-eslint/eslint-plugin": "^7.1.1",

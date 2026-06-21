@@ -494,9 +494,9 @@ export function GerenciarChaves() {
                 <Button
                   variant="light"
                   leftSection={<IconFileDownload size={16} />}
-                  onClick={() => {
+                  onClick={async () => {
                     const nomeTorneio = 'Torneio';
-                    gerarPdfChaves(chaves, athletes, nomeTorneio);
+                    await gerarPdfChaves(chaves, athletes, nomeTorneio, customizadas);
                   }}
                 >
                   Gerar PDF

@@ -11,18 +11,10 @@ const CATEGORIAS_PESO = [
   { peso: "leve", nome: "Leve", masculino: 76, feminino: 64 },
   { peso: "medio", nome: "Médio", masculino: 82.3, feminino: 69 },
   { peso: "meio-pesado", nome: "Meio-Pesado", masculino: 88.3, feminino: 74 },
-  { peso: "pesado", nome: "Pesado", masculino: 94.3, feminino: 79.3 },
-  { peso: "super-pesado", nome: "Super Pesado", masculino: 97.5, feminino: null },
+  { peso: "pesado", nome: "Pesado", masculino: 94.3, feminino: null },
+  { peso: "super-pesado", nome: "Super Pesado", masculino: 100.5, feminino: null },
   { peso: "pesadissimo", nome: "Pesadíssimo", masculino: null, feminino: null }
 ];
-const kidsLabel = {
-  "pre-mirim": "Pré-Mirim",
-  "mirim": "Mirim",
-  "infantil-a": "Infantil A",
-  "infantil-b": "Infantil B",
-  "infanto-juvenil-a": "Infanto-Juvenil A",
-  "infanto-juvenil-b": "Infanto-Juvenil B"
-};
 const KIDS_PESO_LIMITES = {
   "pre-mirim": { galo: 14.7, pluma: 17.9, pena: 20, leve: 24, medio: 26, "meio-pesado": 29, pesado: 31.2, "super-pesado": 33.2, pesadissimo: null },
   "mirim": { galo: 21, pluma: 24, pena: 27, leve: 30.2, medio: 33.2, "meio-pesado": 36.2, pesado: 39.3, "super-pesado": 42.3, pesadissimo: null },
@@ -36,32 +28,18 @@ function getPesoLimite(faixaEtaria, genero, cat) {
   if (kidsLimites) {
     return kidsLimites[cat.peso] ?? null;
   }
+  if (genero === "feminino" && (cat.peso === "super-pesado" || cat.peso === "pesadissimo")) {
+    return void 0;
+  }
   const base = genero === "masculino" ? cat.masculino : cat.feminino;
-  if (cat.peso === "pesadissimo" && genero === "feminino") return null;
   return base;
 }
 function gerarCategorias() {
-  const faixasEtarias = [
-    "pre-mirim",
-    "mirim",
-    "infantil-a",
-    "infantil-b",
-    "infanto-juvenil-a",
-    "infanto-juvenil-b",
-    "juvenil",
-    "adulto",
-    "master1",
-    "master2",
-    "master3",
-    "master4",
-    "master5",
-    "master6",
-    "master7"
-  ];
+  const faixasEtarias = ["adulto"];
   const generos = ["masculino", "feminino"];
   const result = [];
   for (const fe of faixasEtarias) {
-    const feLabel = kidsLabel[fe] || fe.charAt(0).toUpperCase() + fe.slice(1);
+    const feLabel = fe.charAt(0).toUpperCase() + fe.slice(1);
     for (const gen of generos) {
       const genLabel = gen === "masculino" ? "Masculino" : "Feminino";
       for (const cat of CATEGORIAS_PESO) {
@@ -2809,7 +2787,9 @@ function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "favicon.svg"),
     webPreferences: {
-      preload: path.join(__dirname$1, "preload.mjs")
+      preload: path.join(__dirname$1, "preload.mjs"),
+      nodeIntegration: true,
+      contextIsolation: true
     }
   });
   win.maximize();

@@ -49,7 +49,7 @@ const faixas: { group: string; items: { value: string; label: string }[] }[] = [
   {
     group: 'Adulto (16+ anos)',
     items: [
-      { value: 'branca-adulto', label: 'Branca' },
+      { value: 'branca', label: 'Branca' },
       { value: 'azul', label: 'Azul' },
       { value: 'roxa', label: 'Roxa' },
       { value: 'marrom', label: 'Marrom' },
@@ -90,7 +90,7 @@ function categoriasFiltradas(
   else if (idade >= 56 && idade <= 60) faixaEtariaMatch = 'master6';
   else if (idade >= 61) faixaEtariaMatch = 'master7';
 
-  const faixaNormalizada = faixa === 'branca-adulto' ? 'branca' : faixa;
+  const faixaNormalizada = faixa;
   const desabilitadasSet = new Set(desabilitadas);
 
   const ibjjf = CATEGORIAS_IBJJF
@@ -117,11 +117,6 @@ function categoriasFiltradas(
     });
 
   const custom = customizadas
-    .filter((c) => {
-      if (genero && c.genero !== genero) return false;
-      if (faixaEtariaMatch && c.faixaEtaria !== faixaEtariaMatch) return false;
-      return true;
-    })
     .map((c) => ({
       value: c.id,
       label: `${c.nome} (${c.pesoMinimoKg}-${c.pesoMaximoKg} kg, ${c.tempoLutaMinutos} min)`,
@@ -149,10 +144,6 @@ function categoriasPorGenero(genero: string, customizadas: CategoriaCustomizada[
     });
 
   const custom = customizadas
-    .filter((c) => {
-      if (genero && c.genero !== genero) return false;
-      return true;
-    })
     .map((c) => ({
       value: c.id,
       label: `${c.nome} (${c.pesoMinimoKg}-${c.pesoMaximoKg} kg, ${c.tempoLutaMinutos} min)`,
@@ -185,6 +176,7 @@ interface AthleteFormProps {
 export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormProps) {
   const [desabilitadas, setDesabilitadas] = useState<string[]>([]);
   const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
+  const [allAthletes, setAllAthletes] = useState<Atleta[]>([]);
 
   const form = useForm({
     initialValues: {
@@ -197,7 +189,15 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
       anoNascimento: '' as string | number,
     },
     validate: {
-      nome: (v) => (v.length < 2 ? 'Nome deve ter ao menos 2 caracteres' : null),
+      nome: (v) => {
+        if (v.length < 2) return 'Nome deve ter ao menos 2 caracteres';
+        const normalized = v.trim().toLowerCase();
+        const duplicate = allAthletes.find(
+          a => a.nome.toLowerCase() === normalized && a.id !== athlete?.id
+        );
+        if (duplicate) return 'Já existe um atleta com este nome';
+        return null;
+      },
       equipe: (v) => (v.length < 2 ? 'Equipe deve ter ao menos 2 caracteres' : null),
       genero: (v) => (!v ? 'Selecione um gênero' : null),
       categoria: (v) => (!v ? 'Selecione uma categoria' : null),
@@ -218,17 +218,13 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
   useEffect(() => {
     if (opened) {
       if (athlete) {
-        const idade = athlete.anoNascimento ? anoAtual - athlete.anoNascimento : 99;
-        const faixaValue = athlete.faixa === 'branca' && idade > 15
-          ? 'branca-adulto'
-          : athlete.faixa;
         form.setValues({
           nome: athlete.nome || '',
           equipe: athlete.equipe || '',
           genero: athlete.genero || '',
           categoria: athlete.categoria || '',
           pesoKg: athlete.pesoKg ?? 0,
-          faixa: faixaValue,
+          faixa: athlete.faixa || '',
           anoNascimento: athlete.anoNascimento ?? 0,
         });
       } else {
@@ -247,7 +243,7 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
       genero: values.genero as 'masculino' | 'feminino',
       categoria: values.categoria,
       pesoKg: Number(values.pesoKg),
-      faixa: (values.faixa === 'branca-adulto' ? 'branca' : values.faixa) as Faixa,
+      faixa: values.faixa as Faixa,
       anoNascimento: Number(values.anoNascimento),
       createdAt: athlete?.createdAt || now,
       updatedAt: now,
@@ -261,6 +257,9 @@ export function AthleteForm({ opened, onClose, onSave, athlete }: AthleteFormPro
       window.electronAPI.loadCategorias().then((data) => {
         setDesabilitadas(data.desabilitadas);
         setCustomizadas(data.customizadas);
+      }).catch(() => {});
+      window.electronAPI.loadAthletes().then((data) => {
+        setAllAthletes(data);
       }).catch(() => {});
     }
   }, [opened]);

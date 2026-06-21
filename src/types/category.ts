@@ -52,19 +52,10 @@ const CATEGORIAS_PESO: CategoriaDef[] = [
   { peso: 'leve', nome: 'Leve', masculino: 76.0, feminino: 64.0 },
   { peso: 'medio', nome: 'Médio', masculino: 82.3, feminino: 69.0 },
   { peso: 'meio-pesado', nome: 'Meio-Pesado', masculino: 88.3, feminino: 74.0 },
-  { peso: 'pesado', nome: 'Pesado', masculino: 94.3, feminino: 79.3 },
-  { peso: 'super-pesado', nome: 'Super Pesado', masculino: 97.5, feminino: null },
+  { peso: 'pesado', nome: 'Pesado', masculino: 94.3, feminino: null },
+  { peso: 'super-pesado', nome: 'Super Pesado', masculino: 100.5, feminino: null },
   { peso: 'pesadissimo', nome: 'Pesadíssimo', masculino: null, feminino: null },
 ];
-
-const kidsLabel: Record<string, string> = {
-  'pre-mirim': 'Pré-Mirim',
-  'mirim': 'Mirim',
-  'infantil-a': 'Infantil A',
-  'infantil-b': 'Infantil B',
-  'infanto-juvenil-a': 'Infanto-Juvenil A',
-  'infanto-juvenil-b': 'Infanto-Juvenil B',
-};
 
 const KIDS_PESO_LIMITES: Record<string, Record<string, number | null>> = {
   'pre-mirim':         { galo: 14.7, pluma: 17.9, pena: 20.0, leve: 24.0, medio: 26.0, 'meio-pesado': 29.0, pesado: 31.2, 'super-pesado': 33.2, pesadissimo: null },
@@ -79,29 +70,27 @@ function getPesoLimite(
   faixaEtaria: FaixaEtaria,
   genero: 'masculino' | 'feminino',
   cat: CategoriaDef
-): number | null {
+): number | null | undefined {
   const kidsLimites = KIDS_PESO_LIMITES[faixaEtaria];
   if (kidsLimites) {
     return kidsLimites[cat.peso] ?? null;
   }
 
+  if (genero === 'feminino' && (cat.peso === 'super-pesado' || cat.peso === 'pesadissimo')) {
+    return undefined;
+  }
+
   const base = genero === 'masculino' ? cat.masculino : cat.feminino;
-  if (cat.peso === 'pesadissimo' && genero === 'feminino') return null;
   return base;
 }
 
 function gerarCategorias(): CategoriaIBJJF[] {
-  const faixasEtarias: FaixaEtaria[] = [
-    'pre-mirim', 'mirim', 'infantil-a', 'infantil-b',
-    'infanto-juvenil-a', 'infanto-juvenil-b',
-    'juvenil', 'adulto', 'master1', 'master2', 'master3',
-    'master4', 'master5', 'master6', 'master7',
-  ];
+  const faixasEtarias: FaixaEtaria[] = ['adulto'];
   const generos: ('masculino' | 'feminino')[] = ['masculino', 'feminino'];
   const result: CategoriaIBJJF[] = [];
 
   for (const fe of faixasEtarias) {
-    const feLabel = kidsLabel[fe] || fe.charAt(0).toUpperCase() + fe.slice(1);
+    const feLabel = fe.charAt(0).toUpperCase() + fe.slice(1);
     for (const gen of generos) {
       const genLabel = gen === 'masculino' ? 'Masculino' : 'Feminino';
       for (const cat of CATEGORIAS_PESO) {
@@ -196,42 +185,9 @@ export function classificarCategoria(atleta: ClassificarInput): CategoriaIBJJF |
 export interface CategoriaCustomizada {
   id: string;
   nome: string;
-  faixaEtaria: FaixaEtaria;
-  genero: 'masculino' | 'feminino';
   pesoMinimoKg: number;
   pesoMaximoKg: number;
-  corFaixa: string;
   tempoLutaMinutos: number;
   createdAt: string;
   updatedAt: string;
 }
-
-export const FAIXA_ETARIA_LABELS: Record<FaixaEtaria, string> = {
-  'pre-mirim': 'Pré-Mirim (4-5)',
-  'mirim': 'Mirim (6-7)',
-  'infantil-a': 'Infantil A (8-9)',
-  'infantil-b': 'Infantil B (10-11)',
-  'infanto-juvenil-a': 'Infanto-Juvenil A (12-13)',
-  'infanto-juvenil-b': 'Infanto-Juvenil B (14-15)',
-  'juvenil': 'Juvenil (16-17)',
-  'adulto': 'Adulto (18-29)',
-  'master1': 'Master 1 (30-35)',
-  'master2': 'Master 2 (36-40)',
-  'master3': 'Master 3 (41-45)',
-  'master4': 'Master 4 (46-50)',
-  'master5': 'Master 5 (51-55)',
-  'master6': 'Master 6 (56-60)',
-  'master7': 'Master 7 (61+)',
-};
-
-export const COR_FAIXA_OPTIONS = [
-  { value: '#ffffff', label: 'Branca', color: '#ffffff' },
-  { value: '#9e9e9e', label: 'Cinza', color: '#9e9e9e' },
-  { value: '#fdd835', label: 'Amarela', color: '#fdd835' },
-  { value: '#ff9800', label: 'Laranja', color: '#ff9800' },
-  { value: '#4caf50', label: 'Verde', color: '#4caf50' },
-  { value: '#1e88e5', label: 'Azul', color: '#1e88e5' },
-  { value: '#7b1fa2', label: 'Roxa', color: '#7b1fa2' },
-  { value: '#5d4037', label: 'Marrom', color: '#5d4037' },
-  { value: '#212121', label: 'Preta', color: '#212121' },
-];
