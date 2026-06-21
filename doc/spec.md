@@ -13,7 +13,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] quando eu entrar em uma luta que ja foi encerrada, tem que mostrar o tempo que foi usado, atualmente mostra 5 mim sempre
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos -->
 
@@ -533,3 +532,9 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 - **Problema:** O item "[aberto] em criação de chave manual eu posso colocar quem eu quiser, independente de faixa, categoria" descrevia uma funcionalidade que já existia.
 - **Solução:** O código em `ModalCriarChaveManual.tsx:62` filtra atletas apenas por `!a.emChave && !selectedIds.includes(a.id)` — não há filtro de faixa ou categoria. Item removido da lista de problemas abertos.
 - **Arquivos:** `src/components/ModalCriarChaveManual.tsx`
+
+### [resolvido] Luta encerrada sempre exibia tempo padrão (5 min) em vez do tempo real
+- **Data:** 2026-06-20
+- **Problema:** Ao entrar em uma luta que já foi encerrada, o sistema mostrava sempre o tempo sugerido IBJJF (ou 5 min fallback) em vez do tempo real que a luta durou. O campo `tempoRealSegundos` existia nas interfaces TypeScript mas nunca era calculado, salvo ou recuperado.
+- **Solução:** Implementado ciclo completo de persistência de tempo real: (1) No frontend, calculado `tempoRealSegundos = tempoInicial - tempoRestante` ao finalizar luta em `PlacarLuta.tsx` e `PlacarLutaCasada.tsx`; (2) Enviado `tempoRealSegundos` na chamada `registrarResultado` (frontend → preload → backend); (3) No backend, salvo `tempoRealSegundos` na luta em `registrarResultadoHandler` (`electron/brackets.ts`); (4) Incluído `tempoRealSegundos` nas funções de normalização `normalizeLuta` e `normalizeLutaCasada`; (5) Ao abrir luta finalizada, recuperado `tempoRealSegundos` salvo e calculado `tempoRestante = tempoInicial - tempoRealSegundos`.
+- **Arquivos alterados:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`, `electron/brackets.ts`, `electron/lutasCasadas.ts`, `electron/preload.ts`, `src/types/electron.d.ts`

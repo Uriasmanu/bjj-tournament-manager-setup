@@ -1793,6 +1793,7 @@ function normalizeLuta(luta) {
     desclassificacao: luta.desclassificacao ?? void 0,
     desclassificadoId: luta.desclassificadoId ?? void 0,
     desempateArbitro: luta.desempateArbitro ?? void 0,
+    tempoRealSegundos: luta.tempoRealSegundos ?? void 0,
     horarioInicio: luta.horarioInicio ?? void 0,
     horarioTermino: luta.horarioTermino ?? void 0,
     updatedAt: luta.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
@@ -2233,6 +2234,7 @@ function registrarResultadoHandler(torneioId, data) {
   luta.finalizacao = data.finalizacao ?? false;
   luta.desclassificacao = data.desclassificacao ?? false;
   luta.desempateArbitro = data.desempateArbitro ?? false;
+  luta.tempoRealSegundos = data.tempoRealSegundos ?? luta.tempoRealSegundos;
   luta.horarioInicio = data.horarioInicio ?? luta.horarioInicio;
   luta.horarioTermino = data.horarioTermino ?? luta.horarioTermino;
   luta.updatedAt = (/* @__PURE__ */ new Date()).toISOString();
@@ -2466,6 +2468,7 @@ function normalizeLutaCasada(raw) {
     desclassificacao: raw.desclassificacao ?? false,
     desempateArbitro: raw.desempateArbitro ?? false,
     dataFinalizacao: raw.dataFinalizacao ?? null,
+    tempoRealSegundos: raw.tempoRealSegundos ?? void 0,
     horarioInicio: raw.horarioInicio ?? void 0,
     deletedAt: raw.deletedAt ?? null,
     createdAt: raw.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),

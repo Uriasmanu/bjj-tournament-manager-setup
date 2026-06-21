@@ -343,7 +343,11 @@ export function PlacarLuta() {
       setTempoSugeridoMinutos(minutos);
       const segundos = minutos * 60;
       setTempoInicial(segundos);
-      setTempoRestante(segundos);
+      if (foundLuta?.tempoRealSegundos !== undefined && foundLuta.tempoRealSegundos !== null) {
+        setTempoRestante(segundos - foundLuta.tempoRealSegundos);
+      } else {
+        setTempoRestante(segundos);
+      }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [chaveId, lutaId]);
@@ -475,6 +479,7 @@ export function PlacarLuta() {
     setSalvando(true);
     try {
       const status = resultadoTipo === 'desclassificacao' ? 'wo' : 'completed';
+      const tempoRealSegundos = tempoInicial - tempoRestante;
       const updatedChave = await window.electronAPI.registrarResultado({
         chaveId: chave.id,
         lutaId: luta.id,
@@ -485,6 +490,7 @@ export function PlacarLuta() {
         finalizacao: resultadoTipo === 'finalizacao',
         desclassificacao: resultadoTipo === 'desclassificacao',
         desempateArbitro: resultadoTipo === 'desempate',
+        tempoRealSegundos,
         horarioInicio: horarioInicioRef.current ?? undefined,
         horarioTermino: dayjs().format('DD/MM/YYYY HH:mm:ss'),
       });

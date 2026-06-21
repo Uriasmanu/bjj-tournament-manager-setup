@@ -987,6 +987,7 @@ function normalizeLuta(luta: Record<string, unknown>): Luta {
     desclassificacao: (luta.desclassificacao as boolean) ?? undefined,
     desclassificadoId: (luta.desclassificadoId as string | undefined) ?? undefined,
     desempateArbitro: (luta.desempateArbitro as boolean) ?? undefined,
+    tempoRealSegundos: (luta.tempoRealSegundos as number | undefined) ?? undefined,
     horarioInicio: (luta.horarioInicio as string | undefined) ?? undefined,
     horarioTermino: (luta.horarioTermino as string | undefined) ?? undefined,
     updatedAt: (luta.updatedAt as string) ?? new Date().toISOString(),
@@ -1478,6 +1479,7 @@ function registrarResultadoHandler(
     finalizacao?: boolean;
     desclassificacao?: boolean;
     desempateArbitro?: boolean;
+    tempoRealSegundos?: number;
     horarioInicio?: string;
     horarioTermino?: string;
   }
@@ -1503,6 +1505,7 @@ function registrarResultadoHandler(
   luta.finalizacao = data.finalizacao ?? false;
   luta.desclassificacao = data.desclassificacao ?? false;
   luta.desempateArbitro = data.desempateArbitro ?? false;
+  luta.tempoRealSegundos = data.tempoRealSegundos ?? luta.tempoRealSegundos;
   luta.horarioInicio = data.horarioInicio ?? luta.horarioInicio;
   luta.horarioTermino = data.horarioTermino ?? luta.horarioTermino;
   luta.updatedAt = new Date().toISOString();

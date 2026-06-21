@@ -326,7 +326,11 @@ export function PlacarLutaCasada() {
       setTempoSugeridoMinutos(minutos);
       const segundos = minutos * 60;
       setTempoInicial(segundos);
-      setTempoRestante(segundos);
+      if (found?.tempoRealSegundos !== undefined && found.tempoRealSegundos !== null) {
+        setTempoRestante(segundos - found.tempoRealSegundos);
+      } else {
+        setTempoRestante(segundos);
+      }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [areaId, lutaCasadaId]);
@@ -431,6 +435,7 @@ export function PlacarLutaCasada() {
     setSalvando(true);
     try {
       const status = resultadoTipo === 'desclassificacao' ? 'wo' : 'completed';
+      const tempoRealSegundos = tempoInicial - tempoRestante;
       const atualizada: LutaCasada = {
         ...luta,
         status,
@@ -440,6 +445,7 @@ export function PlacarLutaCasada() {
         finalizacao: resultadoTipo === 'finalizacao',
         desclassificacao: resultadoTipo === 'desclassificacao',
         desempateArbitro: resultadoTipo === 'desempate',
+        tempoRealSegundos,
         dataFinalizacao: dayjs().format('DD/MM/YYYY HH:mm:ss'),
         horarioInicio: horarioInicioRef.current ?? luta.horarioInicio,
       };

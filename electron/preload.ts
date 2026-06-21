@@ -122,6 +122,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     finalizacao?: boolean;
     desclassificacao?: boolean;
     desempateArbitro?: boolean;
+    tempoRealSegundos?: number;
   }) => ipcRenderer.invoke('registrar-resultado', data),
   loadLutasCasadas: () =>
     ipcRenderer.invoke('load-lutas-casadas'),

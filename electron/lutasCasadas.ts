@@ -41,6 +41,7 @@ function normalizeLutaCasada(raw: Record<string, unknown>): LutaCasada {
     desclassificacao: (raw.desclassificacao as boolean | undefined) ?? false,
     desempateArbitro: (raw.desempateArbitro as boolean | undefined) ?? false,
     dataFinalizacao: (raw.dataFinalizacao as string | null | undefined) ?? null,
+    tempoRealSegundos: (raw.tempoRealSegundos as number | undefined) ?? undefined,
     horarioInicio: (raw.horarioInicio as string | undefined) ?? undefined,
     deletedAt: (raw.deletedAt as string | null | undefined) ?? null,
     createdAt: (raw.createdAt as string) ?? new Date().toISOString(),

@@ -84,6 +84,7 @@ interface ElectronAPI {
     finalizacao?: boolean;
     desclassificacao?: boolean;
     desempateArbitro?: boolean;
+    tempoRealSegundos?: number;
     horarioInicio?: string;
     horarioTermino?: string;
   }) => Promise<Chave>;
