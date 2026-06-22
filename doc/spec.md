@@ -22,10 +22,10 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 - **Solução:** Atualizada a função `getCategoriaLabel` em `electron/pdf.ts` para verificar primeiro o mapa `categoriaLabels` (categorias IBJJF) e depois as categorias customizadas, garantindo que nenhuma categoria seja exibida como UUID bruto.
 - **Arquivos alterados:** `electron/pdf.ts`
 
-### [resolvido] Geração automática de chaves deve considerar cor de faixa do atleta
+### [resolvido] Geração automática de chaves deve considerar categoria, cor de faixa e gênero do atleta
 - **Data:** 2026-06-21
-- **Problema:** A geração automática de chaves em massa (`gerarTodasChavesHandler`) agrupava atletas apenas por `categoria`, ignorando a cor de faixa. Atletas da mesma categoria mas com faixas diferentes (ex: azul e marrom) eram colocados na mesma chave.
-- **Solução:** Alterada a chave de agrupamento de `a.categoria` para `` `${a.categoria}__${a.faixa}` ``. Agora atletas são separados por categoria E cor de faixa. A cor de faixa é passada para `gerarChave` e armazenada na chave (`chave.faixa`).
+- **Problema:** A geração automática de chaves em massa (`gerarTodasChavesHandler`) agrupava atletas apenas por `categoria`, ignorando a cor de faixa e o gênero. Atletas da mesma categoria mas com faixas diferentes (ex: azul e marrom) ou gêneros diferentes eram colocados na mesma chave.
+- **Solução:** Alterada a chave de agrupamento de `a.categoria` para `` `${a.categoria}__${a.faixa}__${a.genero}` ``. Agora atletas são separados por categoria, cor de faixa E gênero. A cor de faixa é passada para `gerarChave` e armazenada na chave (`chave.faixa`).
 - **Arquivos alterados:** `electron/brackets.ts`
 
 ### [resolvido] PDF de chaves devia ter bordas visíveis nos retângulos

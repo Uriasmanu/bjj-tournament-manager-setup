@@ -732,7 +732,7 @@ function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16, fa
       atletasIgnorados.push(a.nome);
       continue;
     }
-    const key = `${a.categoria}__${a.faixa}`;
+    const key = `${a.categoria}__${a.faixa}__${a.genero}`;
     const g = grupos.get(key) ?? [];
     g.push(a);
     grupos.set(key, g);
@@ -745,7 +745,7 @@ function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16, fa
   for (const [groupKey, grupo] of grupos) {
     if (grupo.length === 0) continue;
 
-    const [categoriaId, faixa] = groupKey.split('__');
+    const [categoriaId, faixa, genero] = groupKey.split('__');
 
     if (grupo.length === 1) {
       atletasSemChave.push(grupo[0]);
