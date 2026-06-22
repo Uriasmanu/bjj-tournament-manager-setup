@@ -14,7 +14,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
 ### [aberto] em nenhum lugar do sistema a categoria customisada deve aparecer como custom-3f6e8e0e-580d-44f8-8c80-e4250352dbaa
-### [aberto] O gerar chave automaticas tem que levar em consideração, categoria e cor de faixa
+### [aberto] O gerar chave automaticas tem que levar em consideração, categoria e cor de faixa e genero que foi cadastrado no atleta e não as informações que tem so na categoria
 ### [aberto] no pdf das chaves, os retangulos devem ter bordas desenhadas em todos os lados
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos que estavam em aberto-->
