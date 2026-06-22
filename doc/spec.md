@@ -13,7 +13,10 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] Gerar pdf de resultados e de chave de luta não esta funcionando
+### [resolvido] Gerar pdf de resultados e de chave de luta não esta funcionando
+**Causa raiz:** pdfkit foi importado no renderer process, mas usa APIs Node.js (streams, __dirname para fontes) que não funcionam com polyfills do vite-plugin-electron-renderer.
+**Solução:** Movida toda geração de PDF para o main process via IPC (`electron/pdf.ts`). Renderer agora chama IPC e recebe buffer para download. Adicionado `globalThis.__dirname` em `main.ts` para resolução de fontes.
+**Arquivos:** `electron/pdf.ts` (novo), `electron/main.ts`, `electron/preload.ts`, `src/utils/pdfGenerator.ts`, `src/types/electron.d.ts`
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos que estavam em aberto-->
 

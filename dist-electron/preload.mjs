@@ -70,7 +70,10 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   toggleCategoria: (categoriaId) => electron.ipcRenderer.invoke("toggle-categoria", categoriaId),
   saveCategoriaCustomizada: (data) => electron.ipcRenderer.invoke("save-categoria-customizada", data),
   updateCategoriaCustomizada: (data) => electron.ipcRenderer.invoke("update-categoria-customizada", data),
-  deleteCategoriaCustomizada: (categoriaId) => electron.ipcRenderer.invoke("delete-categoria-customizada", categoriaId)
+  deleteCategoriaCustomizada: (categoriaId) => electron.ipcRenderer.invoke("delete-categoria-customizada", categoriaId),
+  gerarPdfLutasCasadas: (lutas, nomeTorneio, arbitros, customizadas) => electron.ipcRenderer.invoke("gerar-pdf-lutas-casadas", lutas, nomeTorneio, arbitros, customizadas),
+  gerarPdfChaves: (chaves, atletas, nomeTorneio, customizadas) => electron.ipcRenderer.invoke("gerar-pdf-chaves", chaves, atletas, nomeTorneio, customizadas),
+  gerarPdfResultados: (chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas) => electron.ipcRenderer.invoke("gerar-pdf-resultados", chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas)
 });
 electron.contextBridge.exposeInMainWorld("activation", {
   check: () => electron.ipcRenderer.invoke("check-activation"),

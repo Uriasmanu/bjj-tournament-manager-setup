@@ -104,6 +104,9 @@ interface ElectronAPI {
   saveCategoriaCustomizada: (data: Omit<CategoriaCustomizada, 'id' | 'createdAt' | 'updatedAt'>) => Promise<CategoriaCustomizada>;
   updateCategoriaCustomizada: (data: CategoriaCustomizada) => Promise<CategoriaCustomizada>;
   deleteCategoriaCustomizada: (categoriaId: string) => Promise<void>;
+  gerarPdfLutasCasadas: (lutas: LutaCasada[], nomeTorneio: string, arbitros: Arbitro[], customizadas: CategoriaCustomizada[]) => Promise<number[]>;
+  gerarPdfChaves: (chaves: Chave[], atletas: Atleta[], nomeTorneio: string, customizadas: CategoriaCustomizada[]) => Promise<number[]>;
+  gerarPdfResultados: (chaves: Chave[], atletas: Atleta[], arbitros: Arbitro[], medalhasPorEquipe: Record<string, { ouro: number; prata: number; bronze: number }>, nomeTorneio: string, customizadas: CategoriaCustomizada[]) => Promise<number[]>;
 }
 
 interface ActivationAPI {

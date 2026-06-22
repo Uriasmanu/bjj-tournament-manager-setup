@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import path from 'node:path'
+import fs from 'node:fs'
 import electron from 'vite-plugin-electron/simple'
 import react from '@vitejs/plugin-react'
 
@@ -11,6 +12,11 @@ export default defineConfig({
       main: {
         // Shortcut of `build.lib.entry`.
         entry: 'electron/main.ts',
+        vite: {
+          define: {
+            __dirname: JSON.stringify(path.join(__dirname, 'dist-electron')),
+          },
+        },
       },
       preload: {
         // Shortcut of `build.rollupOptions.input`.
@@ -25,5 +31,15 @@ export default defineConfig({
         ? undefined
         : {},
     }),
+    {
+      name: 'copy-pdfkit-data',
+      closeBundle() {
+        const src = path.join(__dirname, 'node_modules', 'pdfkit', 'js', 'data')
+        const dest = path.join(__dirname, 'dist-electron', 'data')
+        if (fs.existsSync(src)) {
+          fs.cpSync(src, dest, { recursive: true })
+        }
+      },
+    },
   ],
 })

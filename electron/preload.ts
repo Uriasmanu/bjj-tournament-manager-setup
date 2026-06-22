@@ -1,9 +1,11 @@
 import { ipcRenderer, contextBridge } from 'electron'
 import type { Torneio } from '../src/types/tournament'
 import type { AreaLuta } from '../src/types/area'
-import type { PlacarLuta } from '../src/types/bracket'
+import type { PlacarLuta, Chave } from '../src/types/bracket'
 import type { LutaCasada } from '../src/types/lutaCasada'
 import type { CategoriaCustomizada } from '../src/types/category'
+import type { Atleta } from '../src/types/athlete'
+import type { Arbitro } from '../src/types/referee'
 
 contextBridge.exposeInMainWorld('electronAPI', {
   createTournament: (data: { nome: string; data: string }) =>
@@ -156,6 +158,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('update-categoria-customizada', data),
   deleteCategoriaCustomizada: (categoriaId: string) =>
     ipcRenderer.invoke('delete-categoria-customizada', categoriaId),
+  gerarPdfLutasCasadas: (lutas: LutaCasada[], nomeTorneio: string, arbitros: Arbitro[], customizadas: CategoriaCustomizada[]) =>
+    ipcRenderer.invoke('gerar-pdf-lutas-casadas', lutas, nomeTorneio, arbitros, customizadas),
+  gerarPdfChaves: (chaves: Chave[], atletas: Atleta[], nomeTorneio: string, customizadas: CategoriaCustomizada[]) =>
+    ipcRenderer.invoke('gerar-pdf-chaves', chaves, atletas, nomeTorneio, customizadas),
+  gerarPdfResultados: (chaves: Chave[], atletas: Atleta[], arbitros: Arbitro[], medalhasPorEquipe: Record<string, { ouro: number; prata: number; bronze: number }>, nomeTorneio: string, customizadas: CategoriaCustomizada[]) =>
+    ipcRenderer.invoke('gerar-pdf-resultados', chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas),
 })
 
 contextBridge.exposeInMainWorld('activation', {

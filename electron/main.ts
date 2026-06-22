@@ -1,7 +1,7 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
-import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
+import { gerarPdfLutasCasadas, gerarPdfChaves, gerarPdfResultados } from './pdf'
 import { loadAthletes, loadDeletedAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, restoreAthlete, permanentlyDeleteAthlete, permanentlyDeleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
 import { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, restoreArbitro, permanentlyDeleteArbitro, permanentlyDeleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
 import { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas } from './areas'
@@ -10,12 +10,11 @@ import { loadLutasCasadas, loadDeletedLutasCasadas, loadLutasCasadasPorArea, sav
 import { loadCategorias, toggleCategoria, saveCategoriaCustomizada, updateCategoriaCustomizada, deleteCategoriaCustomizada } from './categorias'
 import { checkActivation, validatePassword, activateLicense, getActivationInfo } from './activation'
 import type { AreaLuta } from '../src/types/area'
+import type { Chave } from '../src/types/bracket'
 import type { Atleta } from '../src/types/athlete'
 import type { Arbitro } from '../src/types/referee'
 import type { LutaCasada } from '../src/types/lutaCasada'
 import type { CategoriaCustomizada } from '../src/types/category'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // The built directory structure
 //
@@ -408,6 +407,20 @@ function registerLutasCasadasHandlers(): void {
   })
 }
 
+function registerPdfHandlers(): void {
+  ipcMain.handle('gerar-pdf-lutas-casadas', (_event, lutas: LutaCasada[], nomeTorneio: string, arbitros: Arbitro[], customizadas: CategoriaCustomizada[]): Promise<Buffer> => {
+    return gerarPdfLutasCasadas(lutas, nomeTorneio, arbitros, customizadas)
+  })
+
+  ipcMain.handle('gerar-pdf-chaves', (_event, chaves: Chave[], atletas: Atleta[], nomeTorneio: string, customizadas: CategoriaCustomizada[]): Promise<Buffer> => {
+    return gerarPdfChaves(chaves, atletas, nomeTorneio, customizadas)
+  })
+
+  ipcMain.handle('gerar-pdf-resultados', (_event, chaves: Chave[], atletas: Atleta[], arbitros: Arbitro[], medalhasPorEquipe: Record<string, { ouro: number; prata: number; bronze: number }>, nomeTorneio: string, customizadas: CategoriaCustomizada[]): Promise<Buffer> => {
+    return gerarPdfResultados(chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas)
+  })
+}
+
 app.whenReady().then(() => {
   registerTournamentHandlers()
   registerAthleteHandlers()
@@ -417,5 +430,6 @@ app.whenReady().then(() => {
   registerLutasCasadasHandlers()
   registerCategoriaHandlers()
   registerActivationHandlers()
+  registerPdfHandlers()
   createWindow()
 })
