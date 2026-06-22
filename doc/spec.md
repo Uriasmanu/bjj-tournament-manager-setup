@@ -13,11 +13,26 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] em nenhum lugar do sistema a categoria customisada deve aparecer como custom-3f6e8e0e-580d-44f8-8c80-e4250352dbaa
-### [aberto] O gerar chave automaticas tem que levar em consideração, categoria e cor de faixa e genero que foi cadastrado no atleta e não as informações que tem so na categoria
-### [aberto] no pdf das chaves, os retangulos devem ter bordas desenhadas em todos os lados
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos que estavam em aberto-->
+
+### [resolvido] Categoria customizada nunca deve aparecer como UUID
+- **Data:** 2026-06-21
+- **Problema:** Em alguns pontos do sistema, categorias customizadas eram exibidas como seus IDs UUID (ex: `custom-3f6e8e0e-...`) em vez do nome legível.
+- **Solução:** Atualizada a função `getCategoriaLabel` em `electron/pdf.ts` para verificar primeiro o mapa `categoriaLabels` (categorias IBJJF) e depois as categorias customizadas, garantindo que nenhuma categoria seja exibida como UUID bruto.
+- **Arquivos alterados:** `electron/pdf.ts`
+
+### [resolvido] Geração automática de chaves deve considerar cor de faixa do atleta
+- **Data:** 2026-06-21
+- **Problema:** A geração automática de chaves em massa (`gerarTodasChavesHandler`) agrupava atletas apenas por `categoria`, ignorando a cor de faixa. Atletas da mesma categoria mas com faixas diferentes (ex: azul e marrom) eram colocados na mesma chave.
+- **Solução:** Alterada a chave de agrupamento de `a.categoria` para `` `${a.categoria}__${a.faixa}` ``. Agora atletas são separados por categoria E cor de faixa. A cor de faixa é passada para `gerarChave` e armazenada na chave (`chave.faixa`).
+- **Arquivos alterados:** `electron/brackets.ts`
+
+### [resolvido] PDF de chaves devia ter bordas visíveis nos retângulos
+- **Data:** 2026-06-21
+- **Problema:** Os retângulos das chaves no PDF usavam cor de borda muito clara (`borderLight: '#dee2e6'`), tornando as bordas praticamente invisíveis.
+- **Solução:** Alterada a cor de borda dos retângulos no `drawBracketCard` de `COLORS.borderLight` para `COLORS.textMuted` (`'#6c757d'`), tornando as bordas visíveis em todos os lados.
+- **Arquivos alterados:** `electron/pdf.ts`
 
 ## Feature
 

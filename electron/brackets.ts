@@ -732,7 +732,7 @@ function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16, fa
       atletasIgnorados.push(a.nome);
       continue;
     }
-    const key = a.categoria;
+    const key = `${a.categoria}__${a.faixa}`;
     const g = grupos.get(key) ?? [];
     g.push(a);
     grupos.set(key, g);
@@ -742,8 +742,10 @@ function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16, fa
   const atletasSemChave: Atleta[] = [];
   const metadados: GerarTodasResult['metadados'] = [];
 
-  for (const [categoriaId, grupo] of grupos) {
+  for (const [groupKey, grupo] of grupos) {
     if (grupo.length === 0) continue;
+
+    const [categoriaId, faixa] = groupKey.split('__');
 
     if (grupo.length === 1) {
       atletasSemChave.push(grupo[0]);
@@ -764,7 +766,7 @@ function gerarTodasChavesHandler(torneioId: string, maxPorChave: number = 16, fa
         atletasSemChave.push(sub[0]);
         continue;
       }
-      novasChaves.push(gerarChave(categoriaId, sub));
+      novasChaves.push(gerarChave(categoriaId, sub, faixa));
       chavesGeradas++;
     }
 

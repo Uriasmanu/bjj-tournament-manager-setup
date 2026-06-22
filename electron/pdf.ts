@@ -4,6 +4,7 @@ import type { LutaCasada } from '../src/types/lutaCasada'
 import type { Atleta } from '../src/types/athlete'
 import type { Arbitro } from '../src/types/referee'
 import type { CategoriaCustomizada } from '../src/types/category'
+import { categoriaLabels } from '../src/types/category'
 
 const FAIXA_LABEL: Record<string, string> = {
   branca: 'Branca', cinza: 'Cinza', amarela: 'Amarela', laranja: 'Laranja',
@@ -198,7 +199,7 @@ function drawBracketCard(
   doc.rect(x, y, 3, height).fill(winnerA || winnerB ? COLORS.gold : COLORS.accent)
 
   // Border on all sides (drawn after accent so it's visible)
-  doc.roundedRect(x, y, width, height, 3).lineWidth(1).strokeColor(COLORS.borderLight).stroke()
+  doc.roundedRect(x, y, width, height, 3).lineWidth(1).strokeColor(COLORS.textMuted).stroke()
 
   // Divider line
   const midY = y + height / 2
@@ -429,6 +430,7 @@ function getPerdedoresSemifinal(chave: Chave): string[] {
 }
 
 function getCategoriaLabel(categoriaId: string, customizadas?: CategoriaCustomizada[]): string {
+  if (categoriaLabels[categoriaId]) return categoriaLabels[categoriaId]
   const cat = customizadas?.find(c => c.id === categoriaId)
   return cat?.nome ?? categoriaId
 }
