@@ -149790,10 +149790,11 @@ function getRoundLabel(rodada, totalRodadas) {
 function drawBracketCard(doc, x, y, width, height, nomeA, nomeB, placar, winnerA, winnerB) {
   doc.save();
   doc.roundedRect(x + 1, y + 1, width, height, 3).fill("#e0e0e0");
-  doc.roundedRect(x, y, width, height, 3).fill(COLORS.white).lineWidth(1).strokeColor(COLORS.borderLight).stroke();
+  doc.roundedRect(x, y, width, height, 3).fill(COLORS.white);
+  doc.rect(x, y, 3, height).fill(winnerA || winnerB ? COLORS.gold : COLORS.accent);
+  doc.roundedRect(x, y, width, height, 3).lineWidth(1).strokeColor(COLORS.borderLight).stroke();
   const midY = y + height / 2;
   doc.save().moveTo(x + 4, midY).lineTo(x + width - 4, midY).lineWidth(0.5).strokeColor(COLORS.borderLight).stroke().restore();
-  doc.rect(x, y, 3, height).fill(winnerA || winnerB ? COLORS.gold : COLORS.accent);
   const textOpts = { width: width - 14, align: "left" };
   doc.fontSize(7).font(winnerA ? "Helvetica-Bold" : "Helvetica").fillColor(winnerA ? COLORS.primary : COLORS.textDark);
   doc.text(nomeA, x + 10, y + 3, textOpts);

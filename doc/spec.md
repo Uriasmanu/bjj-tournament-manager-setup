@@ -13,10 +13,9 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [resolvido] Gerar pdf de resultados e de chave de luta não esta funcionando
-**Causa raiz:** pdfkit foi importado no renderer process, mas usa APIs Node.js (streams, __dirname para fontes) que não funcionam com polyfills do vite-plugin-electron-renderer.
-**Solução:** Movida toda geração de PDF para o main process via IPC (`electron/pdf.ts`). Renderer agora chama IPC e recebe buffer para download. Adicionado `globalThis.__dirname` em `main.ts` para resolução de fontes.
-**Arquivos:** `electron/pdf.ts` (novo), `electron/main.ts`, `electron/preload.ts`, `src/utils/pdfGenerator.ts`, `src/types/electron.d.ts`
+### [aberto] em nenhum lugar do sistema a categoria customisada deve aparecer como custom-3f6e8e0e-580d-44f8-8c80-e4250352dbaa
+### [aberto] O gerar chave automaticas tem que levar em consideração, categoria e cor de faixa
+### [aberto] no pdf das chaves, os retangulos devem ter bordas desenhadas em todos os lados
 ## Historico de correçoes
 <!-- Passe para cá os itens corrigidos que estavam em aberto-->
 

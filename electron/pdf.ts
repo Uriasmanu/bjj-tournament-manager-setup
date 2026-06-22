@@ -191,16 +191,19 @@ function drawBracketCard(
 
   // Card shadow
   doc.roundedRect(x + 1, y + 1, width, height, 3).fill('#e0e0e0')
-  // Card body
-  doc.roundedRect(x, y, width, height, 3).fill(COLORS.white).lineWidth(1).strokeColor(COLORS.borderLight).stroke()
+  // Card body fill
+  doc.roundedRect(x, y, width, height, 3).fill(COLORS.white)
+
+  // Left accent
+  doc.rect(x, y, 3, height).fill(winnerA || winnerB ? COLORS.gold : COLORS.accent)
+
+  // Border on all sides (drawn after accent so it's visible)
+  doc.roundedRect(x, y, width, height, 3).lineWidth(1).strokeColor(COLORS.borderLight).stroke()
 
   // Divider line
   const midY = y + height / 2
   doc.save().moveTo(x + 4, midY).lineTo(x + width - 4, midY)
     .lineWidth(0.5).strokeColor(COLORS.borderLight).stroke().restore()
-
-  // Left accent
-  doc.rect(x, y, 3, height).fill(winnerA || winnerB ? COLORS.gold : COLORS.accent)
 
   const textOpts: PDFKit.Mixins.TextOptions = { width: width - 14, align: 'left' }
 
