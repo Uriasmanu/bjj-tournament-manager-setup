@@ -633,8 +633,8 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Tela do bracket (`/admin/placar/chave/:areaId/:chaveId`):** `PlacarBracket` renderiza a árvore do bracket (`BracketTree`) e abaixo uma tabela "Lutas para Iniciar" com botão "Iniciar" para cada luta válida.
 - **Bloqueio de lutas inválidas:** Lutas com pelo menos um lado `tbd` ou `bye` não exibem botão "Iniciar". Lutas com status `completed` ou `wo` também não.
 - **Tela do placar (`/admin/placar/luta/:areaId/:chaveId/:lutaId`):** `PlacarLuta` exibe:
-  - Atleta A no lado esquerdo com fundo **azul anil** (`#1e3a8a`) e texto branco.
-  - Atleta B no lado direito com fundo **branco** (`#ffffff`) e texto escuro.
+  - Atleta A no lado esquerdo com fundo **branco** (`#ffffff`) e texto escuro.
+  - Atleta B no lado direito com fundo **azul anil** (`#1e3a8a`) e texto branco.
   - Para cada atleta, exibe nome, faixa (label) e equipe.
   - Cronômetro regressivo central (mm:ss) com botões **Iniciar/Pausar** e **Zerar**; valor inicial editável (1–30 min, padrão 5 min); sem áudio.
   - Contadores de pontos 2/3/4 (com + e −) por atleta; total acumulado = 2×qtd2 + 3×qtd3 + 4×qtd4.
@@ -1176,7 +1176,7 @@ A identidade visual segue o tema **Oceano & Coral**, com azul marinho profundo c
 | **Acento Ouro** | `#ccb24c` | Badges de campeão, medalhas, hover de botões secundários |
 | **Ouro Claro** | `#f7d683` | Realces suaves, variação de ouro |
 | **Branco** | `#ffffff` | Fundo de cards, papers, tabelas, modais |
-| **Azul Anil (Placar)** | `#1e3a8a` | Painel do Atleta A no scoreboard |
+| **Azul Anil (Placar)** | `#1e3a8a` | Painel do Atleta B no scoreboard (lado direito) |
 | **Fundo página** | Gradient `#f8f9fa → #e3f2fd` | Body background |
 | **Texto escuro** | `#212529` / `#374151` / `#1b325f` | Textos de corpo, labels, dados de tabela |
 | **Texto secundário** | `rgba(27,50,95,0.5)` / `rgba(27,50,95,0.6)` / `#6c757d` | Descrições, labels de estatística, metadados |

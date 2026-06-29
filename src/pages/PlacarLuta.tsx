@@ -651,21 +651,21 @@ export function PlacarLuta() {
 
         <Group align="stretch" gap="md" grow wrap="nowrap">
           <AtletaPanel
-            lado="A"
-            nome={atletaAInfo.nome}
-            equipe={atletaAInfo.equipe}
-            faixa={atletaAInfo.faixa}
-            placar={placarA}
-            onChange={setPlacarA}
-            bloqueado={bloqueado}
-          />
-          <AtletaPanel
             lado="B"
             nome={atletaBInfo.nome}
             equipe={atletaBInfo.equipe}
             faixa={atletaBInfo.faixa}
             placar={placarB}
             onChange={setPlacarB}
+            bloqueado={bloqueado}
+          />
+          <AtletaPanel
+            lado="A"
+            nome={atletaAInfo.nome}
+            equipe={atletaAInfo.equipe}
+            faixa={atletaAInfo.faixa}
+            placar={placarA}
+            onChange={setPlacarA}
             bloqueado={bloqueado}
           />
         </Group>

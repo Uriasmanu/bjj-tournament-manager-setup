@@ -1,10 +1,12 @@
 # spec.md — Template de Feature
 
-NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes e atualize o documento `spec/{nome-da-feature}.md` caso seja implementado uma nova regra de negocio. Permitido melhorar a descrição e titulo do problema aberto, ao final do ciclo atualize requisitos.md
+**Antes de começar, melhore a descrição da feature ou Problemas Encontrados nesse documento spec.md, depois siga o restante das orientações.**
+NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes e atualize o documento `implementado/{nome-da-feature}.md` caso seja implementado uma nova regra de negocio. Permitido melhorar a descrição e titulo do problema aberto, ao final do ciclo atualize requisitos.md
 
 ---
 
 ## Problemas Encontrados
+
 <!-- Ao iniciar qualquer ciclo, a IA deve: ler todos os itens [aberto], corrigir, mover para Histórico de Correções e atualizar os RF/CA/Passos afetados. -->
 
 <!--
@@ -13,26 +15,21 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-## Historico de correçoes
-<!-- Passe para cá os itens corrigidos que estavam em aberto-->
 
-### [resolvido] Categoria customizada nunca deve aparecer como UUID
-- **Data:** 2026-06-21
-- **Problema:** Em alguns pontos do sistema, categorias customizadas eram exibidas como seus IDs UUID (ex: `custom-3f6e8e0e-...`) em vez do nome legível.
-- **Solução:** Atualizada a função `getCategoriaLabel` em `electron/pdf.ts` para verificar primeiro o mapa `categoriaLabels` (categorias IBJJF) e depois as categorias customizadas, garantindo que nenhuma categoria seja exibida como UUID bruto.
-- **Arquivos alterados:** `electron/pdf.ts`
+### [aberto] Não é para mostrar categoria como custom-3f6e8e0e-580d-44f8-8c80-e4250352dbaa. Olhe toda a aplicação e corrija
+---
 
-### [resolvido] Geração automática de chaves deve considerar categoria, cor de faixa e gênero do atleta
-- **Data:** 2026-06-21
-- **Problema:** A geração automática de chaves em massa (`gerarTodasChavesHandler`) agrupava atletas apenas por `categoria`, ignorando a cor de faixa e o gênero. Atletas da mesma categoria mas com faixas diferentes (ex: azul e marrom) ou gêneros diferentes eram colocados na mesma chave.
-- **Solução:** Alterada a chave de agrupamento de `a.categoria` para `` `${a.categoria}__${a.faixa}__${a.genero}` ``. Agora atletas são separados por categoria, cor de faixa E gênero. A cor de faixa é passada para `gerarChave` e armazenada na chave (`chave.faixa`).
-- **Arquivos alterados:** `electron/brackets.ts`
+## Histórico de Correções
 
-### [resolvido] PDF de chaves devia ter bordas visíveis nos retângulos
-- **Data:** 2026-06-21
-- **Problema:** Os retângulos das chaves no PDF usavam cor de borda muito clara (`borderLight: '#dee2e6'`), tornando as bordas praticamente invisíveis.
-- **Solução:** Alterada a cor de borda dos retângulos no `drawBracketCard` de `COLORS.borderLight` para `COLORS.textMuted` (`'#6c757d'`), tornando as bordas visíveis em todos os lados.
-- **Arquivos alterados:** `electron/pdf.ts`
+### [resolvido] Trocar lado do azul no placar
+**Data:** 2026-06-29
+**Comportamento anterior:** Painel do Atleta A com fundo azul anil (`#1e3a8a`) à esquerda, painel do Atleta B com fundo branco à direita.
+**Comportamento novo:** Painel do Atleta B com fundo azul anil (`#1e3a8a`) à direita, painel do Atleta A com fundo branco à esquerda.
+**Arquivos afetados:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
+**RF afetados:** RF-01, RF-02, RF-03, RF-04 (requisitos de layout do placar)
+**CA afetados:** CA-01, CA-02, CA-03, CA-04 (critérios de aceite do placar)
+**Spec:** `implementado/trocar-lado-azul-placar.md`
+
 
 ## Feature
 
@@ -62,8 +59,8 @@ Antes de escrever qualquer linha de código, leia este documento inteiro e produ
 ## 2. Analise os Documentos de Referência
 
 - **Guia de spec** (este documento): confirme que todas as seções serão preenchidas
-- **Documento de requisitos** requisitos.md
-- **Documentação técnica existente** `spec/{nome-da-feature}.md`: identifique padrões e convenções já estabelecidos
+- **Documento de requisitos** `doc/requisitos.md`
+- **Documentação técnica existente** `implementado/{nome-da-feature}.md`: identifique padrões e convenções já estabelecidos
 - **Código-fonte relevante**: leia os arquivos relacionados antes de propor qualquer mudança
 
 > ⚠️ Nunca assuma o comportamento de um arquivo sem tê-lo lido. Sinalize explicitamente quando uma informação é uma inferência e não uma certeza.
@@ -101,6 +98,45 @@ Use linguagem de comportamento observável: "o sistema exibe", "o endpoint retor
 - **Compatibilidade:** versões de browser, SO, plataforma
 - **Observabilidade:** logs esperados, métricas, rastreamento de erros
 
+### 5.1 UI/UX Responsivo — Obrigatório para qualquer tela ou componente visual
+
+> ⚠️ Toda implementação com interface visual deve considerar os breakpoints abaixo. Não é aceitável desenvolver apenas para um tamanho de tela.
+
+**Breakpoints de referência:**
+
+| Contexto       | Largura aproximada | Exemplos de dispositivo              |
+| -------------- | ------------------ | ------------------------------------ |
+| Mobile pequeno | até 375px          | iPhone SE, Android compacto          |
+| Mobile padrão  | 376px – 430px      | iPhone 14/15, Pixel                  |
+| Tablet         | 431px – 768px      | iPad mini, tablets Android           |
+| Notebook       | 769px – 1280px     | Laptops 13"–15"                      |
+| Desktop        | acima de 1280px    | Monitores externos, telas widescreen |
+
+**Regras obrigatórias ao implementar UI:**
+
+- [ ] Layout não quebra em nenhum dos breakpoints listados acima
+- [ ] Elementos de toque (botões, inputs) têm área mínima de 44x44px em mobile
+- [ ] Textos permanecem legíveis sem zoom em telas pequenas (mínimo 14px corpo, 12px secundário)
+- [ ] Navegação e menus adaptam-se ao espaço disponível (ex: menu hamburguer em mobile, sidebar em desktop)
+- [ ] Imagens e ícones escalam corretamente sem distorção
+- [ ] Espaçamentos internos (padding/margin) são proporcionais ao tamanho da tela
+- [ ] Nenhum conteúdo principal fica cortado ou inacessível sem scroll horizontal indesejado
+- [ ] Formulários e listas têm comportamento adequado em teclado virtual (mobile) — sem sobreposição de elementos
+
+**Para projetos React Native (ct-imperio-app):**
+
+- Usar `Dimensions`, `useWindowDimensions` ou `flexbox` para layouts fluidos
+- Nunca usar valores fixos de largura em px para containers principais
+- Testar em emulador com telas pequenas (ex: Pixel 4a) e grandes (ex: Pixel 9 Pro XL)
+- Considerar Safe Area (`useSafeAreaInsets`) em todos os layouts de tela cheia
+
+**Para projetos Web (ct-imperio-web, Sigma):**
+
+- Usar unidades relativas (`rem`, `%`, `vw`, `vh`) em vez de `px` fixo onde possível
+- Mobile-first: estilizar para telas pequenas e sobrescrever para maiores com `min-width`
+- Garantir que a experiência em notebook (769px–1280px) não seja um "desktop encolhido" — revisar grids e proporções
+- Testar com DevTools em pelo menos: 375px (mobile), 768px (tablet), 1024px (notebook), 1440px (desktop)
+
 ---
 
 ## 6. Analise da Aplicação
@@ -114,13 +150,13 @@ Use linguagem de comportamento observável: "o sistema exibe", "o endpoint retor
 
 ## 7. Arquivos Envolvidos
 
-| Arquivo | Acao | Razao |
-|---------|------|-------|
-| `src/components/MeuComponente.vue` | Modificar | Adicionar nova prop e emissão de evento |
-| `src/services/MeuService.ts` | Criar | Encapsular chamada ao novo endpoint |
-| `Controllers/MeuController.cs` | Modificar | Adicionar novo endpoint POST |
-| `Repositories/MeuRepositorio.cs` | Modificar | Adicionar query para novo filtro |
-| `migrations/2025_xx_xx_descricao.sql` | Criar | Adicionar nova coluna na tabela |
+| Arquivo                               | Acao      | Razao                                   |
+| ------------------------------------- | --------- | --------------------------------------- |
+| `src/components/MeuComponente.vue`    | Modificar | Adicionar nova prop e emissão de evento |
+| `src/services/MeuService.ts`          | Criar     | Encapsular chamada ao novo endpoint     |
+| `Controllers/MeuController.cs`        | Modificar | Adicionar novo endpoint POST            |
+| `Repositories/MeuRepositorio.cs`      | Modificar | Adicionar query para novo filtro        |
+| `migrations/2025_xx_xx_descricao.sql` | Criar     | Adicionar nova coluna na tabela         |
 
 > ⚠️ Se não tiver certeza sobre um arquivo, sinalize como "a confirmar" em vez de assumir.
 
@@ -206,6 +242,7 @@ Passo 2: [descrição clara da ação]
 - [ ] O plano de implementação está em ordem lógica (base → topo)
 - [ ] Os critérios de aceite são verificáveis
 - [ ] Sinalizei todas as incertezas explicitamente
+- [ ] Se houver interface visual: revisei os requisitos de UI/UX responsivo da seção 5.1 e planejo implementar para todos os breakpoints relevantes
 
 > ⚠️ Se qualquer item do checklist estiver pendente, resolva antes de escrever código.
 
@@ -217,9 +254,10 @@ Passo 2: [descrição clara da ação]
 
 1. Leia a seção **Problemas Encontrados**. Se houver itens `[aberto]`, trate-os PRIMEIRO antes de qualquer nova feature.
 2. Para cada item `[aberto]` resolvido: mova-o para **Histórico de Correções** com o formato estabelecido e atualize os RF, CA e Passos afetados.
-3. Crie o arquivo `spec/{nome-da-feature}.md` seguindo todas as seções deste guia antes de escrever qualquer código.
+3. Crie o arquivo `implementado/{nome-da-feature}.md` seguindo todas as seções deste guia antes de escrever qualquer código.
 4. Após criar o `.md`, revise-o para verificar coerência. Só então implemente.
-5. Ao finalizar qualquer ciclo (feature nova ou correção), registre no **Histórico de Correções** em spec.md NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes e atualize o documento `spec/{nome-da-feature}.md` caso seja implementado uma nova regra de negocio. Permitido melhorar a descrição e titulo do problema aberto
+5. Ao finalizar qualquer ciclo (feature nova ou correção), registre no **Histórico de Correções** em spec.md NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes e atualize o documento `implementado/{nome-da-feature}.md` caso seja implementado uma nova regra de negocio. Permitido melhorar a descrição e titulo do problema aberto
+6. **Para qualquer tarefa com interface visual:** aplique obrigatoriamente os requisitos da seção **5.1 UI/UX Responsivo**. Isso inclui: planejar o layout para mobile, notebook e desktop antes de codificar; nunca assumir que o layout funciona em todos os tamanhos sem validação explícita; e registrar nos critérios de aceite (seção 9) ao menos um CA de responsividade por tela ou componente novo.
 
 ## Antes de atualizar a doc de requisitos.md garanta que esta seguindo os principios a baixo
 
@@ -233,7 +271,7 @@ Passo 2: [descrição clara da ação]
 
 Todo requisito deve ter uma única interpretação possível. Linguagem vaga como "o sistema deve ser rápido" ou "fácil de usar" é recorrentemente apontada como a principal fonte de falhas em projetos.
 
-- Evitar termos subjetivos: *eficiente*, *robusto*, *amigável*, *adequado*
+- Evitar termos subjetivos: _eficiente_, _robusto_, _amigável_, _adequado_
 - Preferir linguagem declarativa e objetiva
 - Quando necessário, complementar texto com diagramas ou exemplos concretos
 
@@ -310,7 +348,7 @@ Modelos comuns:
 - **Kano:** Básico, de desempenho, de encantamento
 - Numeração ou atributos de prioridade no próprio documento
 
-**Referências:** Wiegers (*Software Requirements*), IREB
+**Referências:** Wiegers (_Software Requirements_), IREB
 
 ---
 
@@ -356,215 +394,67 @@ Requisitos mudam. Um bom documento prevê um processo para lidar com isso.
 
 ## Resumo Visual
 
-| Atributo           | Pergunta que deve ser respondida com "sim"                        |
-|--------------------|-------------------------------------------------------------------|
-| Claro              | Qualquer leitor interpretaria da mesma forma?                     |
-| Completo           | Todos os cenários e restrições estão cobertos?                    |
-| Consistente        | Nenhum requisito contradiz outro?                                 |
-| Verificável        | É possível escrever um teste para isso?                           |
-| Rastreável         | Sei de onde veio e onde está implementado?                        |
-| Atômico            | Expressa uma única ideia?                                         |
-| Priorizado         | Sei o que é essencial vs. desejável?                              |
-| Bem estruturado    | O documento tem seções claras e navegáveis?                       |
-| Validado           | Os stakeholders revisaram e aprovaram?                            |
-| Versionado         | Mudanças são registradas e controladas?                           |
+| Atributo        | Pergunta que deve ser respondida com "sim"     |
+| --------------- | ---------------------------------------------- |
+| Claro           | Qualquer leitor interpretaria da mesma forma?  |
+| Completo        | Todos os cenários e restrições estão cobertos? |
+| Consistente     | Nenhum requisito contradiz outro?              |
+| Verificável     | É possível escrever um teste para isso?        |
+| Rastreável      | Sei de onde veio e onde está implementado?     |
+| Atômico         | Expressa uma única ideia?                      |
+| Priorizado      | Sei o que é essencial vs. desejável?           |
+| Bem estruturado | O documento tem seções claras e navegáveis?    |
+| Validado        | Os stakeholders revisaram e aprovaram?         |
+| Versionado      | Mudanças são registradas e controladas?        |
 
 ---
 
-*Fontes: Sommerville & Kotonya (1998); Wiegers (2003); IEEE 830-1998; SWEBOK v3; IREB CPRE Syllabus; INCOSE SE Handbook; Standish Group Chaos Report.*
+Para que um documento de requisitos (seja ele um _Software Requirements Specification_ - SRS, ou uma lista de _User Stories_) seja considerado de alta qualidade, a literatura consolidada — especialmente seguindo as diretrizes de autores como **Karl Wiegers** e **Ian Sommerville** — enfatiza que ele deve servir como uma ponte clara entre o problema de negócio e a solução técnica.
+
+Aqui estão os pontos fundamentais que esses autores consideram cruciais para um documento de requisitos eficaz:
+
+### 1. Clareza e Ambiguidade Zero
+
+A característica mais crítica de um requisito é que ele deve ser interpretado da mesma forma por desenvolvedores, testadores e clientes.
+
+- **O que evitar:** Termos vagos como "rápido", "fácil de usar" ou "eficiente".
+- **O que buscar:** Descrições quantificáveis. Em vez de "o sistema deve ser rápido", use "o tempo de resposta para a consulta X deve ser inferior a 2 segundos em condições de carga normal".
+
+### 2. Rastreabilidade
+
+Um bom documento permite que você saiba a origem de cada requisito.
+
+- **Por que importa:** Se um requisito for alterado ou excluído, você precisa saber qual funcionalidade ele afeta e qual regra de negócio ou _stakeholder_ o originou. A rastreabilidade conecta o requisito à sua fonte e ao seu teste correspondente.
+
+### 3. Verificabilidade (Testabilidade)
+
+Se um requisito não puder ser testado, ele não deve existir.
+
+- **A regra de ouro:** Para cada requisito, deve ser possível definir um critério de aceitação claro. Se você não consegue escrever um caso de teste para verificar se o requisito foi atendido, ele está mal formulado.
+
+### 4. Completude e Consistência
+
+- **Completude:** O documento deve cobrir todos os cenários, incluindo as exceções. O que acontece se a internet cair? O que acontece se o usuário errar a senha três vezes? Um documento que só descreve o "caminho feliz" é insuficiente.
+- **Consistência:** O documento não pode conter contradições internas. Um requisito de segurança não pode invalidar um requisito de usabilidade sem que haja uma priorização explícita.
+
+### 5. Priorização
+
+Nem tudo é urgente ou essencial para a versão inicial (_MVP_). Os autores recomendam classificar os requisitos, geralmente usando métodos como **MoSCoW** (_Must have, Should have, Could have, Won't have_). Isso é vital para gerenciar o escopo e evitar que projetos estourem prazos por falta de foco.
 
 ---
 
-## Histórico de Correções
+### Estrutura Sugerida para um Documento de Requisitos
 
-### [resolvido] PDF lutas casadas exibia ID do árbitro em vez do nome
-- **Data:** 2026-06-18
-- **Problema:** O PDF de lutas casadas exibia o `arbitroId` diretamente, sem resolver para o nome do árbitro.
-- **Solução:** Adicionado parâmetro `arbitros` na função `gerarPdfLutasCasadas` e criada função `getNomeArbitro` para resolver o nome. Atualizadas chamadas em `AdminLutasCasadas.tsx` e `Resultados.tsx`.
-- **Arquivos alterados:** `src/utils/pdfGenerator.ts`, `src/pages/AdminLutasCasadas.tsx`, `src/pages/Resultados.tsx`
-- **Spec:** `spec/pdf-lutas-casadas-chaves.md`
+Embora o formato varie (de documentos formais do IEEE 830 até _backlogs_ ágeis), estes são os blocos que não podem faltar:
 
-### [resolvido] PDF chaves não exibia formato de bracket
-- **Data:** 2026-06-18
-- **Problema:** O PDF de chaves exibia as lutas em formato de tabela simples, sem mostrar a estrutura visual do bracket.
-- **Solução:** Reescrita a função `gerarPdfChaves` para exibir bracket vertical com rodadas sequenciais. Adicionadas funções auxiliares `createBracketRow` e `getRoundLabel`. Vencedores são destacados em negrito.
-- **Arquivos alterados:** `src/utils/pdfGenerator.ts`
-- **Spec:** `spec/pdf-lutas-casadas-chaves.md`
+| Seção                         | O que deve conter                                              |
+| ----------------------------- | -------------------------------------------------------------- |
+| **Visão Geral**               | O problema que está sendo resolvido e os objetivos do sistema. |
+| **Requisitos Funcionais**     | O que o sistema deve fazer (o comportamento).                  |
+| **Requisitos Não Funcionais** | Atributos de qualidade (desempenho, segurança, portabilidade). |
+| **Regras de Negócio**         | Limitações e diretrizes que governam o processo.               |
+| **Cenários/Casos de Uso**     | O fluxo de interação entre o usuário e o sistema.              |
 
-### [resolvido] Seleção de árbitro ao criar luta casada
-- **Data:** 2026-06-16
-- **Problema:** Ao criar uma luta casada, o sistema sempre atribuía o primeiro árbitro da área (`area.arbitroIds[0]`), sem permitir escolha.
-- **Solução (atualizada):** Substituído o badge estático por um componente `Select` que lista **todos** os árbitros cadastrados no torneio, permitindo busca livre. O árbitro da área é pré-selecionado, mas o usuário pode trocar para qualquer um.
-- **Arquivos alterados:** `src/components/ModalCriarLutaCasada.tsx`
+---
 
-### [resolvido] Permitir mesmo árbitro em múltiplas áreas com aviso
-- **Data:** 2026-06-16
-- **Problema:** O sistema bloqueava a atribuição de um árbitro a mais de uma área, impedindo o uso compartilhado de árbitros entre áreas.
-- **Solução:** Removida a validação de exclusão mútua no backend (`checkRefereeNotInUse` → `checkRefereesExist`). No frontend (`AreaForm`), removido o filtro que ocultava árbitros já usados e adicionado alerta visual quando um árbitro selecionado já está atribuído a outra área, exibindo o nome da área conflitante.
-- **Arquivos alterados:** `electron/areas.ts`, `src/components/AreaForm.tsx`
-
-### [resolvido] Escolher categoria livremente ao editar atleta
-- **Data:** 2026-06-17
-- **Problema:** Ao editar um atleta, o Select de categoria filtrava por gênero + idade + faixa, impedindo o administrador de atribuir manualmente uma categoria diferente.
-- **Solução:** Criada função `categoriasPorGenero()` que filtra apenas por gênero. No modo edição (`athlete` presente), usa-se `categoriasPorGenero` em vez de `categoriasFiltradas`, permitindo escolha livre entre todas as categorias do gênero. Modo criação mantém o filtro completo.
-- **Arquivos alterados:** `src/components/AthleteForm.tsx`
-- **Spec:** `spec/escolher-categoria-livre.md`
-
-### [feature] Menu de Categorias no Dashboard
-- **Data:** 2026-06-17
-- **Descrição:** Implementado menu "Categorias" no Dashboard para gerenciar categorias do torneio.
-- **Funcionalidades:**
-  - Habilitar/desabilitar categorias IBJJF do sistema (toggle switch)
-  - Criar, editar e excluir categorias personalizadas
-  - Campos: nome, faixa etária, gênero, peso mínimo/máximo, cor da faixa, tempo de luta
-  - Integração com formulário de atletas (filtra desabilitadas, inclui customizadas)
-- **Arquivos criados:** `electron/categorias.ts`, `src/components/CategoriaForm.tsx`, `src/pages/CategoriasMenu.tsx`, `src/pages/AdminCategorias.tsx`, `spec/categorias-menu.md`
-- **Arquivos alterados:** `src/types/category.ts`, `src/types/tournament.ts`, `src/types/electron.d.ts`, `electron/main.ts`, `electron/preload.ts`, `src/components/AthleteForm.tsx`, `src/App.tsx`, `src/pages/Dashboard.tsx`
-
-### [resolvido] Menu categorias seguindo padrão dos outros menus
-- **Data:** 2026-06-17
-- **Problema:** O menu de categorias não seguia o padrão visual dos outros menus (ex: Atletas). Cards com border-left, hover effects, botão "Acessar" dourado.
-- **Solução:** Reescrito `CategoriasMenu.tsx` seguindo exatamente o padrão de `AthletesMenu.tsx`: welcome banner com stats (Grid 8/4), 3 cards (Categorias IBJJF, Nova Categoria Customizada, Listar Categorias Customizadas) com ícone, título, descrição e botão "Acessar". Adicionado `useDisclosure` para abrir modal de criação inline.
-- **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
-
-### [resolvido] Atualizar nome do atleta cria novo atleta
-- **Data:** 2026-06-18
-- **Problema:** Ao tentar atualizar o nome de um atleta, o sistema tentava criar um novo atleta. O backend `saveAthlete` não tinha proteção contra duplicatas — sempre fazia `push` na lista.
-- **Solução:** Adicionado guard no backend `saveAthlete` que verifica se o ID já existe na lista. Se existir, atualiza em vez de criar duplicata. Também atualizado `AthletesMenu.tsx` para usar `updateAthlete` quando o atleta já existe.
-- **Arquivos alterados:** `electron/athletes.ts`, `src/pages/AthletesMenu.tsx`
-
-### [resolvido] Listas não atualizam visualmente ao adicionar itens
-- **Data:** 2026-06-18
-- **Problema:** As listas (Dashboard, Árbitros, Áreas, Categorias, Equipes, Placar, Resultados) carregavam dados apenas no mount do componente e nunca atualizavam. O usuário precisava sair e entrar novamente para ver novos itens.
-- **Solução:** Adicionado `window.addEventListener('focus', ...)` em todas as páginas afetadas para re-buscar dados quando o usuário retorna à janela. Isso garante que as listas estejam sempre atualizadas sem necessidade de navegação extra.
-- **Arquivos alterados:** `src/pages/Dashboard.tsx`, `src/pages/ArbitrosMenu.tsx`, `src/pages/AreasMenu.tsx`, `src/pages/CategoriasMenu.tsx`, `src/pages/Equipes.tsx`, `src/pages/PlacarMenu.tsx`, `src/pages/Resultados.tsx`
-
-### [resolvido] Categorias devem exibir tempo de luta
-- **Data:** 2026-06-18
-- **Problema:** A lista de categorias IBJJF no menu mostrava apenas o nome e a faixa de peso, sem informar o tempo de luta.
-- **Solução:** Adicionado badge azul com o tempo de luta (ex: "5-10 min") ao lado de cada categoria IBJJF, calculado com base na faixa etária. Categorias customizadas já exibiam o tempo na tabela.
-- **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
-
-### [resolvido] Criar Chave Manual deve mostrar apenas atletas sem chave
-- **Data:** 2026-06-17
-- **Problema:** O modal `ModalCriarChaveManual` listava todos os atletas disponíveis, incluindo os que já estavam em chaves geradas (`emChave: true`). Isso permitia adicionar atletas que já tinham chave a uma nova chave manual.
-- **Solução:** Adicionado filtro `!a.emChave` no `atletasData` do modal, tornando invisíveis os atletas que já possuem chave. Ao deletar uma chave, o backend já limpa `emChave` dos atletas (via `removeAthleteFromChaves` + `delete-chave`), então eles voltam a aparecer no modal automaticamente.
-- **Arquivos alterados:** `src/components/ModalCriarChaveManual.tsx`
-
-### [resolvido] Import de atleta deve reconhecer categorias customizadas
-- **Data:** 2026-06-17
-- **Problema:** O handler `import-athletes` (`electron/athletes.ts:importAthletesFromFile`) validava o campo `categoria` apenas contra `CATEGORIAS_IBJJF`. Atletas com categorias customizadas (`custom-<uuid>`) eram rejeitados com erro "categoria não reconhecida".
-- **Solução:** Movido `loadTorneio` antes da validação de categorias e adicionados os IDs de `torneio.categoriasCustomizadas` ao `Set` de categorias válidas. Agora tanto categorias IBJJF quanto customizadas são aceitas na importação.
-- **Arquivos alterados:** `electron/athletes.ts`
-
-### [feature] Geração Manual de Chaves
-- **Data:** 2026-06-17
-- **Descrição:** Implementada opção de criar chaves manualmente, selecionando atletas livremente (sem seguir separação automática por faixa/categoria). Similar ao fluxo de luta casada, mas com N atletas (2-16).
-- **Funcionalidades:**
-  - Botão "Criar Chave Manual" na tela Gerenciar Chaves (acessível antes e depois da geração automática)
-  - Modal com campo de nome (opcional, geração automática se vazio), MultiSelect de atletas, cards de preview com faixa/peso/equipe/categoria
-  - Validação: mínimo 2 atletas, máximo 16, sem duplicatas, sem atletas já em outra chave
-  - Chave criada com `categoriaId: 'manual'` e nome personalizado
-  - Badge "Manual" na listagem (via `getChaveTitle` usando `chave.nome`)
-  - Chave manual pode ser embaralhada, visualizada e ter árbitro atribuído
-- **Arquivos criados:** `src/components/ModalCriarChaveManual.tsx`, `spec/geracao-manual-chaves.md`
-- **Arquivos alterados:** `electron/brackets.ts`, `electron/preload.ts`, `src/types/electron.d.ts`, `src/types/bracket.ts`, `src/pages/GerenciarChaves.tsx`
-
-### [resolvido] Filtros UI removidos — geração por faixa/categoria é regra interna
-- **Data:** 2026-06-17
-- **Problema:** Os `MultiSelect` de filtro de faixa e categoria adicionados ao modal "Configurar Geração de Chaves" não são necessários. A separação por categoria e cor de faixa é uma regra interna do sistema que sempre deve ser aplicada automaticamente, sem necessidade de filtros manuais no UI.
-- **Solução:** Removidos os dois `MultiSelect` ("Filtrar por faixa" e "Filtrar por categoria"), o state `filterFaixas`/`filterCategorias` e a passagem de parâmetros de filtro nos handlers `handleGerarTodas`/`handleGerarNovamente`. Mantidas as correções no backend (`gerar-chave` filtra por faixa, `gerarTodasChavesHandler` aceita filtros opcionais para compatibilidade). UI volta ao formato original com apenas "Máximo de atletas por chave".
-- **Arquivos alterados:** `src/pages/GerenciarChaves.tsx`
-
-### [resolvido] Geração de chaves deve filtrar por cor de faixa e categoria
-- **Data:** 2026-06-17
-- **Problema:** O handler `gerar-chave` (geração individual) misturava atletas de todas as faixas dentro de uma categoria, ignorando a separação por cor de faixa. A UI de geração de chaves não permitia filtrar por faixa ou categoria antes de gerar.
-- **Solução:** No backend (`electron/brackets.ts`), o handler `gerar-chave` agora aceita `faixa?` e filtra atletas por ela. O handler `gerar-todas-chaves` aceita arrays opcionais `faixas?` e `categorias?` para filtrar antes do agrupamento. No frontend (`GerenciarChaves.tsx`), adicionados dois `MultiSelect` no modal de configuração: "Filtrar por faixa" e "Filtrar por categoria", com busca e clearable. Atualizados `preload.ts` e `electron.d.ts` com as novas assinaturas.
-- **Arquivos alterados:** `electron/brackets.ts`, `electron/preload.ts`, `src/types/electron.d.ts`, `src/pages/GerenciarChaves.tsx`
-- **Spec:** `spec/filtrar-chave-por-faixa-categoria.md`
-
-### [resolvido] Categorias IBJJF devem mostrar faixa de peso na frente
-- **Data:** 2026-06-17
-- **Problema:** A lista de categorias IBJJF no menu mostrava apenas o nome, sem a faixa de peso.
-- **Solução:** Adicionado badge com a faixa de peso (ex: "até 76,0 kg") ao lado do nome de cada categoria IBJJF na lista de toggles.
-- **Arquivos alterados:** `src/pages/CategoriasMenu.tsx`
-
-### [resolvido] Gerar PDF das lutas casadas e das chaves de luta
-- **Data:** 2026-06-18
-- **Problema:** Não existia funcionalidade de gerar PDF para lutas casadas nem para chaves de luta.
-- **Solução:** Criado `src/utils/pdfGenerator.ts` com funções `gerarPdfLutasCasadas` e `gerarPdfChaves` (usando pdfmake). Adicionados botões "Gerar PDF" nas abas "Chaves" e "Lutas Casadas" da tela de Resultados, no cabeçalho da tela de Gerenciar Chaves, e no menu de Lutas Casadas (`AdminLutasCasadas.tsx`). O PDF das chaves mostra bracket vertical com rodadas da esquerda para a direita.
-- **Arquivos alterados:** `src/utils/pdfGenerator.ts` (criado), `src/pages/Resultados.tsx`, `src/pages/GerenciarChaves.tsx`, `src/pages/AdminLutasCasadas.tsx`
-
-### [resolvido] Editar e criar luta casada no menu de lutas casadas
-- **Data:** 2026-06-18
-- **Problema:** O menu de lutas casadas (`AdminLutasCasadas`) apenas listava e permitia excluir/restaurar. Não era possível criar novas lutas casadas nem editar/acompanhar as existentes.
-- **Solução:** Adicionado botão "Nova Luta Casada" que abre modal com seletor de área e reutiliza `ModalCriarLutaCasada`. Adicionado botão "Editar" (ícone de lápis) por linha que navega para o placar da luta casada correspondente.
-- **Arquivos alterados:** `src/pages/AdminLutasCasadas.tsx`
-
-### [resolvido] Categorias padrão - remover separação por faixa na geração de chaves
-- **Data:** 2026-06-18
-- **Problema:** A geração de chaves em massa (`gerarTodasChavesHandler`) agrupava atletas por `${categoria}__${faixa}`, criando chaves separadas para cada cor de faixa dentro da mesma categoria. O usuário quer que atletas da mesma categoria (idade + peso + gênero) compartilhem a mesma chave, sem separação por cor de faixa.
-- **Solução:** Alterada a chave de agrupamento de `${a.categoria}__${a.faixa}` para apenas `a.categoria` em `electron/brackets.ts`. Agora todos os atletas da mesma categoria são agrupados em uma única chave.
-- **Arquivos alterados:** `electron/brackets.ts`
-
-### [feature] Export em pdf de resultados
-- **Data:** 2026-06-20
-- **Problema:** Não existia funcionalidade de gerar PDF com os resultados consolidados do torneio (medalhistas, ranking de equipes, árbitros, atletas). Apenas PDFs de chaves e lutas casadas eram suportados.
-- **Solução:** Criada função `gerarPdfResultados` em `src/utils/pdfGenerator.ts` que gera um PDF consolidado com 4 seções: Medalhistas (🥇/🥈/🥉 por chave encerrada), Ranking de Equipes (tabela ordenada por medalhas), Árbitros (com total de lutas) e Atletas (tabela completa). Adicionado botão "Gerar PDF Resultados" na aba "Visão Geral" da tela de Resultados.
-- **Arquivos alterados:** `src/utils/pdfGenerator.ts`, `src/pages/Resultados.tsx`
-- **Spec:** `spec/pdf-resultados.md`
-
-### [feature] Trocar área de luta na chave de gerenciamento
-- **Data:** 2026-06-20
-- **Problema:** Na tela "Gerenciar Chaves", não era possível visualizar nem trocar a área de luta de uma chave. A relação chave-área era indireta (através do árbitro) e a UI não fornecia nenhum seletor de área, obrigando o administrador a conhecer quais árbitros pertencem a quais áreas.
-- **Solução:** Adicionada resolução de área nos cards de chave (exibe nome da área ao lado do árbitro). Adicionado seletor de "Área de Luta" (Select pesquisável, clearable) no modal de visualização de chave. Ao selecionar uma nova área, o sistema atribui automaticamente o primeiro árbitro da área à chave. Ao limpar, remove o árbitro.
-- **Arquivos alterados:** `src/pages/GerenciarChaves.tsx`
-- **Spec:** `spec/trocar-area-chave.md`
-
-### [resolvido] Chaves manuais já recebem emChave (item obsoleto)
-- **Data:** 2026-06-20
-- **Problema:** O item "[aberto] Craves criada manualmente, tem que receber o emChave tambem" estava desatualizado.
-- **Solução:** O código já implementa corretamente o `emChave = true` para atletas em chaves manuais, tanto no backend (`electron/brackets.ts:1653-1658`) quanto no frontend (`GerenciarChaves.tsx:329-331`). Item removido da lista de problemas abertos.
-- **Arquivos:** `electron/brackets.ts`, `src/pages/GerenciarChaves.tsx`
-
-### [feature] Ícone de editar ao lado de excluir em chaves
-- **Data:** 2026-06-20
-- **Problema:** Na tela "Gerenciar Chaves", o card de cada chave só exibia botão "Excluir". Não havia ícone de editar para acessar rapidamente a visualização da chave.
-- **Solução:** Adicionado botão "Editar" (ícone `IconPencil`, cor azul) ao lado do botão "Excluir" no card de cada chave. O botão abre o modal de visualização da chave (mesmo que "Visualizar"), permitindo editar árbitro, área e embaralhar.
-- **Arquivos alterados:** `src/pages/GerenciarChaves.tsx`
-
-### [feature] Área de luta editável em lutas casadas
-- **Data:** 2026-06-20
-- **Problema:** Na edição de luta casada (`ModalEditarLutaCasada`), não era possível alterar a área de luta. A tabela de listagem (`AdminLutasCasadas`) também não exibia a área.
-- **Solução:** Adicionado seletor de "Área de Luta" (Select pesquisável, clearable) no modal de edição. Ao trocar de área, o árbitro é automaticamente atualizado para o primeiro árbitro da nova área. Adicionada coluna "Área" na tabela de listagem. Passado array `areas` como prop para o modal.
-- **Arquivos alterados:** `src/components/ModalEditarLutaCasada.tsx`, `src/pages/AdminLutasCasadas.tsx`
-
-### [feature] PDF de resultados com formato tabela e páginas separadas
-- **Data:** 2026-06-20
-- **Problema:** O PDF de resultados era muito simples, sem formato de tabela adequado e todas as seções numa única página.
-- **Solução:** Reescrita a função `gerarPdfResultados` com: Medalhistas em tabela (Categoria, Atletas, Ouro, Prata, Bronze), Ranking de Equipes com coluna #, Árbitros com coluna #, Atletas com coluna #. Cada seção (Medalhistas, Ranking, Árbitros, Atletas) inicia em página separada via `pageBreak: 'before'`.
-- **Arquivos alterados:** `src/utils/pdfGenerator.ts`
-
-### [resolvido] Criar chave manual com qualquer faixa/categoria (item obsoleto)
-- **Data:** 2026-06-20
-- **Problema:** O item "[aberto] em criação de chave manual eu posso colocar quem eu quiser, independente de faixa, categoria" descrevia uma funcionalidade que já existia.
-- **Solução:** O código em `ModalCriarChaveManual.tsx:62` filtra atletas apenas por `!a.emChave && !selectedIds.includes(a.id)` — não há filtro de faixa ou categoria. Item removido da lista de problemas abertos.
-- **Arquivos:** `src/components/ModalCriarChaveManual.tsx`
-
-### [resolvido] Luta encerrada sempre exibia tempo padrão (5 min) em vez do tempo real
-- **Data:** 2026-06-20
-- **Problema:** Ao entrar em uma luta que já foi encerrada, o sistema mostrava sempre o tempo sugerido IBJJF (ou 5 min fallback) em vez do tempo real que a luta durou. O campo `tempoRealSegundos` existia nas interfaces TypeScript mas nunca era calculado, salvo ou recuperado.
-- **Solução:** Implementado ciclo completo de persistência de tempo real: (1) No frontend, calculado `tempoRealSegundos = tempoInicial - tempoRestante` ao finalizar luta em `PlacarLuta.tsx` e `PlacarLutaCasada.tsx`; (2) Enviado `tempoRealSegundos` na chamada `registrarResultado` (frontend → preload → backend); (3) No backend, salvo `tempoRealSegundos` na luta em `registrarResultadoHandler` (`electron/brackets.ts`); (4) Incluído `tempoRealSegundos` nas funções de normalização `normalizeLuta` e `normalizeLutaCasada`; (5) Ao abrir luta finalizada, recuperado `tempoRealSegundos` salvo e calculado `tempoRestante = tempoInicial - tempoRealSegundos`.
-- **Arquivos alterados:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`, `electron/brackets.ts`, `electron/lutasCasadas.ts`, `electron/preload.ts`, `src/types/electron.d.ts`
-
-### [resolvido] Nome da área não aparecia no topo das telas de placar
-- **Data:** 2026-06-20
-- **Problema:** Ao acessar qualquer tela dentro de uma área selecionada (PlacarBracket, PlacarLuta, PlacarLutaCasada), o nome da área não era exibido no topo. O componente `PageLayout` aceitava as props `title` e `headerExtras` mas as descartava com prefixo de underscore, nunca renderizando-as.
-- **Solução:** (1) Corrigido `PageLayout.tsx` para renderizar o título como `<Title order={3}>` e os `headerExtras` dentro de um `<Group>` no topo do Paper; (2) Atualizado `PlacarBracket.tsx`, `PlacarLuta.tsx` e `PlacarLutaCasada.tsx` para carregar os dados da área via `loadAreas()` e incluir `area.nome` no título do PageLayout.
-- **Arquivos alterados:** `src/components/PageLayout.tsx`, `src/pages/PlacarBracket.tsx`, `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
-
-### [resolvido] Lutas casadas não exibiam tipo de vitória
-- **Data:** 2026-06-20
-- **Problema:** As lutas casadas não exibiam o tipo de vitória (pontos, finalização, desclassificação, desempate) em nenhum dos pontos de exibição: PlacarChaves, AdminLutasCasadas, PlacarLutaCasada e PDF. Os campos `finalizacao`, `desclassificacao` e `desempateArbitro` já eram salvos corretamente mas nunca consultados para exibição.
-- **Solução:** (1) Criada função `getTipoVitoria` em `src/utils/vitoria.ts` para reutilização em todos os pontos; (2) Atualizado `Resultados.tsx` para usar a função compartilhada; (3) Adicionado badge de tipo de vitória nos cards de lutas casadas em `PlacarChaves.tsx`; (4) Adicionada coluna "Tipo" na tabela de `AdminLutasCasadas.tsx`; (5) Incluído tipo de vitória no alert de finalização de `PlacarLutaCasada.tsx`.
-- **Arquivos alterados:** `src/utils/vitoria.ts` (criado), `src/pages/Resultados.tsx`, `src/pages/PlacarChaves.tsx`, `src/pages/AdminLutasCasadas.tsx`, `src/pages/PlacarLutaCasada.tsx`
+⚠️ **Atenção:** Evite documentos excessivamente longos que ninguém lê. O segredo moderno não é a quantidade de páginas, mas a **precisão das informações**. Se o documento se torna obsoleto assim que o código começa a ser escrito, ele falhou em sua missão de comunicação.

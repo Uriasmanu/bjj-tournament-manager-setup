@@ -149792,7 +149792,7 @@ function drawBracketCard(doc, x, y, width, height, nomeA, nomeB, placar, winnerA
   doc.roundedRect(x + 1, y + 1, width, height, 3).fill("#e0e0e0");
   doc.roundedRect(x, y, width, height, 3).fill(COLORS.white);
   doc.rect(x, y, 3, height).fill(winnerA || winnerB ? COLORS.gold : COLORS.accent);
-  doc.roundedRect(x, y, width, height, 3).lineWidth(1).strokeColor(COLORS.borderLight).stroke();
+  doc.roundedRect(x, y, width, height, 3).lineWidth(1).strokeColor(COLORS.textMuted).stroke();
   const midY = y + height / 2;
   doc.save().moveTo(x + 4, midY).lineTo(x + width - 4, midY).lineWidth(0.5).strokeColor(COLORS.borderLight).stroke().restore();
   const textOpts = { width: width - 14, align: "left" };
@@ -149935,6 +149935,7 @@ function getPerdedoresSemifinal(chave) {
   return semis.filter((l) => l.vencedorId).map((l) => l.vencedorId === l.atletaAId ? l.atletaBId : l.atletaAId);
 }
 function getCategoriaLabel(categoriaId, customizadas) {
+  if (categoriaLabels[categoriaId]) return categoriaLabels[categoriaId];
   const cat = customizadas == null ? void 0 : customizadas.find((c) => c.id === categoriaId);
   return (cat == null ? void 0 : cat.nome) ?? categoriaId;
 }
@@ -151344,7 +151345,7 @@ function gerarTodasChavesHandler(torneioId, maxPorChave = 16, faixas, categorias
       atletasIgnorados.push(a.nome);
       continue;
     }
-    const key = a.categoria;
+    const key = `${a.categoria}__${a.faixa}__${a.genero}`;
     const g = grupos.get(key) ?? [];
     g.push(a);
     grupos.set(key, g);
@@ -151352,8 +151353,9 @@ function gerarTodasChavesHandler(torneioId, maxPorChave = 16, faixas, categorias
   const novasChaves = [];
   const atletasSemChave = [];
   const metadados = [];
-  for (const [categoriaId, grupo] of grupos) {
+  for (const [groupKey, grupo] of grupos) {
     if (grupo.length === 0) continue;
+    const [categoriaId, faixa, genero] = groupKey.split("__");
     if (grupo.length === 1) {
       atletasSemChave.push(grupo[0]);
       metadados.push({
@@ -151371,7 +151373,7 @@ function gerarTodasChavesHandler(torneioId, maxPorChave = 16, faixas, categorias
         atletasSemChave.push(sub[0]);
         continue;
       }
-      novasChaves.push(gerarChave(categoriaId, sub));
+      novasChaves.push(gerarChave(categoriaId, sub, faixa));
       chavesGeradas++;
     }
     metadados.push({

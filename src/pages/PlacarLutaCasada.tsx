@@ -598,17 +598,17 @@ export function PlacarLutaCasada() {
 
         <Group align="stretch" gap="md" grow wrap="nowrap">
           <AtletaPanel
-            lado="A"
-            snapshot={luta.atletaASnapshot}
-            placar={placarA}
-            onChange={setPlacarA}
-            bloqueado={bloqueado}
-          />
-          <AtletaPanel
             lado="B"
             snapshot={luta.atletaBSnapshot}
             placar={placarB}
             onChange={setPlacarB}
+            bloqueado={bloqueado}
+          />
+          <AtletaPanel
+            lado="A"
+            snapshot={luta.atletaASnapshot}
+            placar={placarA}
+            onChange={setPlacarA}
             bloqueado={bloqueado}
           />
         </Group>
