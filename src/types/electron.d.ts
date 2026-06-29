@@ -111,6 +111,7 @@ interface ElectronAPI {
   enviarDadosPlacarTelao: (dados: unknown) => Promise<void>;
   fecharTelao: () => Promise<void>;
   onAtualizarPlacarTelao: (callback: (dados: unknown) => void) => void;
+  onTelaoFechado: (callback: () => void) => void;
 }
 
 interface ActivationAPI {

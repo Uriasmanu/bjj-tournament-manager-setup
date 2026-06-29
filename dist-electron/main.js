@@ -1,4 +1,4 @@
-import { app, ipcMain, dialog, BrowserWindow } from "electron";
+import { app, ipcMain, dialog, BrowserWindow, screen } from "electron";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
@@ -152574,19 +152574,29 @@ function createTelaoWindow(url) {
     telaoWin.focus();
     return telaoWin;
   }
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  const telaoHeight = Math.round(screenHeight * 0.1);
   telaoWin = new BrowserWindow({
     title: "Telão - Placar",
     icon: path.join(process.env.VITE_PUBLIC, "favicon.svg"),
-    width: 1200,
-    height: 800,
+    width: screenWidth,
+    height: telaoHeight,
+    x: 0,
+    y: screenHeight - telaoHeight,
+    resizable: true,
+    alwaysOnTop: true,
+    frame: false,
     webPreferences: {
       preload: path.join("C:\\git\\bjj-tournament-manager-setup\\dist-electron", "preload.mjs"),
       nodeIntegration: true,
       contextIsolation: true
     }
   });
-  telaoWin.maximize();
   telaoWin.on("closed", () => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("telao-fechado");
+    }
     telaoWin = null;
   });
   if (VITE_DEV_SERVER_URL) {

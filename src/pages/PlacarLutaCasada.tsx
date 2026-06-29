@@ -418,13 +418,41 @@ export function PlacarLutaCasada() {
     window.electronAPI.enviarDadosPlacarTelao(dados);
   }, [telaoAberto, luta, placarA, placarB, tempoRestante, rodando, tempoEsgotado, bloqueado, area]);
 
+  const enviarDadosTelaoImmediate = useCallback(() => {
+    if (!luta) return;
+    const dados = {
+      tipo: 'luta-casada' as const,
+      nomeA: capitalize(luta.atletaASnapshot.nome),
+      nomeB: capitalize(luta.atletaBSnapshot.nome),
+      equipeA: luta.atletaASnapshot.equipe,
+      equipeB: luta.atletaBSnapshot.equipe,
+      faixaA: luta.atletaASnapshot.faixa,
+      faixaB: luta.atletaBSnapshot.faixa,
+      placarA,
+      placarB,
+      tempoRestante,
+      rodando,
+      tempoEsgotado,
+      bloqueado,
+      titulo: area ? `${area.nome} · Luta Casada` : 'Luta Casada',
+    };
+    window.electronAPI.enviarDadosPlacarTelao(dados);
+  }, [luta, placarA, placarB, tempoRestante, rodando, tempoEsgotado, bloqueado, area]);
+
   useEffect(() => {
     enviarDadosTelao();
   }, [enviarDadosTelao]);
 
+  useEffect(() => {
+    window.electronAPI.onTelaoFechado(() => {
+      setTelaoAberto(false);
+    });
+  }, []);
+
   const handleAbrirTelao = () => {
     window.electronAPI.abrirTelao(`/admin/telao/${lutaCasadaId}`);
     setTelaoAberto(true);
+    setTimeout(() => enviarDadosTelaoImmediate(), 100);
   };
 
   const handleFecharTelao = () => {

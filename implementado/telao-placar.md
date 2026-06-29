@@ -2,7 +2,7 @@
 
 ## 1. Contexto e Objetivo
 
-- **O que é:** Funcionalidade para abrir uma segunda janela do Electron (telão) a partir das telas PlacarLuta e PlacarLutaCasada, exibindo o placar completo + cronômetro em estilo telão.
+- **O que é:** Funcionalidade para abrir uma segunda janela do Electron (telão) a partir das telas PlacarLuta e PlacarLutaCasada, exibindo o placar em formato banner horizontal (100% largura × 10% altura, sempre visível na parte inferior da tela, sem moldura).
 - **Por que existe:** Necessidade de projetar o placar para o público em uma tela separada (projetor, TV, monitor externo) enquanto o operador controla o placar na tela principal.
 - **Quem usa:** Operadores de área de luta em campeonatos de Jiu-Jitsu.
 - **Escopo:** 
@@ -37,12 +37,12 @@ para que o público possa acompanhar o placar em uma tela separada.
 ## 4. Requisitos Funcionais
 
 - [x] RF-01: Botão "Telão" na PlacarLuta e PlacarLutaCasada abre segunda janela do Electron
-- [x] RF-02: Segunda janela exibe placar completo + cronômetro em estilo telão (fontes grandes)
+- [x] RF-02: Segunda janela exibe placar em formato banner horizontal (100%×10%, alwaysOnTop, sem moldura)
 - [x] RF-03: Telão atualiza em tempo real quando o placar é alterado na janela principal
 - [x] RF-04: Botão "Fechar Telão" fecha a segunda janela
-- [x] RF-05: Telão exibe informações dos atletas (nome, equipe, faixa, pontuação total, vantagens, punições)
+- [x] RF-05: Telão exibe dados de cada atleta: nome + colunas [Total, Vantagem, Punição] com label acima e valor abaixo
 - [x] RF-06: Telão exibe cronômetro com cores dinâmicas (verde=rodando, vermelho=esgotado, branco=pausado)
-- [x] RF-07: Telão exibe título com informações da área, luta e rodada
+- [x] RF-07: Layout horizontal: lado B (branco) à esquerda, cronômetro ao centro, lado A (azul) à direita. V e P condicionais (só aparecem quando > 0)
 
 ## 5. Requisitos Não-Funcionais
 
@@ -54,7 +54,8 @@ para que o público possa acompanhar o placar em uma tela separada.
 ## 6. Análise da Aplicação
 
 - **Arquitetura:** Electron (main + renderer) com React/Vite frontend
-- **Padrão:** IPC bridge via preload script, janela única maximizada (agora suporta segunda janela)
+- **Padrão:** IPC bridge via preload script, janela única maximizada (agora suporta segunda janela em formato banner)
+- **Janela telão:** Largura 100% da tela, altura 10%, posicionada na parte inferior, `alwaysOnTop: true`, `frame: false`, sem botões de janela
 - **Fluxo de dados:** Janela principal → IPC `enviar-dados-placar-telao` → Processo principal → IPC `atualizar-placar-telao` → Janela secundária
 
 ## 7. Arquivos Envolvidos
@@ -82,7 +83,7 @@ para que o público possa acompanhar o placar em uma tela separada.
 
 ## 9. Critérios de Aceite
 
-- [x] CA-01: dado que o operador está na PlacarLuta, quando clica no botão "Telão", então uma segunda janela é aberta com o placar + cronômetro
+- [x] CA-01: dado que o operador está na PlacarLuta, quando clica no botão "Telão", então uma segunda janela é aberta em formato banner horizontal na parte inferior com placar + cronômetro
 - [x] CA-02: dado que o telão está aberto, quando o operador altera o placar na janela principal, então o telão atualiza em tempo real
 - [x] CA-03: dado que o telão está aberto, quando o operador clica em "Fechar Telão", então a segunda janela é fechada
 - [x] CA-04: dado que o operador está na PlacarLutaCasada, quando clica no botão "Telão", então o telão exibe "Luta Casada" como título

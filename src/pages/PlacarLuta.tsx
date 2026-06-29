@@ -440,13 +440,40 @@ export function PlacarLuta() {
     window.electronAPI.enviarDadosPlacarTelao(dados);
   }, [telaoAberto, atletaAInfo, atletaBInfo, placarA, placarB, tempoRestante, rodando, tempoEsgotado, bloqueado, area, luta]);
 
+  const enviarDadosTelaoImmediate = useCallback(() => {
+    const dados = {
+      tipo: 'luta' as const,
+      nomeA: atletaAInfo.nome,
+      nomeB: atletaBInfo.nome,
+      equipeA: atletaAInfo.equipe,
+      equipeB: atletaBInfo.equipe,
+      faixaA: atletaAInfo.faixa,
+      faixaB: atletaBInfo.faixa,
+      placarA,
+      placarB,
+      tempoRestante,
+      rodando,
+      tempoEsgotado,
+      bloqueado,
+      titulo: area ? `${area.nome} · Luta ${luta?.ordem} · Rodada ${luta?.rodada}` : undefined,
+    };
+    window.electronAPI.enviarDadosPlacarTelao(dados);
+  }, [atletaAInfo, atletaBInfo, placarA, placarB, tempoRestante, rodando, tempoEsgotado, bloqueado, area, luta]);
+
   useEffect(() => {
     enviarDadosTelao();
   }, [enviarDadosTelao]);
 
+  useEffect(() => {
+    window.electronAPI.onTelaoFechado(() => {
+      setTelaoAberto(false);
+    });
+  }, []);
+
   const handleAbrirTelao = () => {
     window.electronAPI.abrirTelao(`/admin/telao/${lutaId}`);
     setTelaoAberto(true);
+    setTimeout(() => enviarDadosTelaoImmediate(), 100);
   };
 
   const handleFecharTelao = () => {

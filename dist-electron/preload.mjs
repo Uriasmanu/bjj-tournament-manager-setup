@@ -79,6 +79,9 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   fecharTelao: () => electron.ipcRenderer.invoke("fechar-telao"),
   onAtualizarPlacarTelao: (callback) => {
     electron.ipcRenderer.on("atualizar-placar-telao", (_event, dados) => callback(dados));
+  },
+  onTelaoFechado: (callback) => {
+    electron.ipcRenderer.on("telao-fechado", () => callback());
   }
 });
 electron.contextBridge.exposeInMainWorld("activation", {

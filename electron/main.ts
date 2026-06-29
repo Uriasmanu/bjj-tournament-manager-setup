@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
 import { gerarPdfLutasCasadas, gerarPdfChaves, gerarPdfResultados } from './pdf'
@@ -68,11 +68,20 @@ function createTelaoWindow(url: string) {
     return telaoWin
   }
 
+  const primaryDisplay = screen.getPrimaryDisplay()
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize
+  const telaoHeight = Math.round(screenHeight * 0.10)
+
   telaoWin = new BrowserWindow({
     title: 'Telão - Placar',
     icon: path.join(process.env.VITE_PUBLIC, 'favicon.svg'),
-    width: 1200,
-    height: 800,
+    width: screenWidth,
+    height: telaoHeight,
+    x: 0,
+    y: screenHeight - telaoHeight,
+    resizable: true,
+    alwaysOnTop: true,
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
       nodeIntegration: true,
@@ -80,9 +89,10 @@ function createTelaoWindow(url: string) {
     },
   })
 
-  telaoWin.maximize()
-
   telaoWin.on('closed', () => {
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('telao-fechado')
+    }
     telaoWin = null
   })
 

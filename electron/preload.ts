@@ -173,6 +173,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onAtualizarPlacarTelao: (callback: (dados: unknown) => void) => {
     ipcRenderer.on('atualizar-placar-telao', (_event, dados) => callback(dados))
   },
+  onTelaoFechado: (callback: () => void) => {
+    ipcRenderer.on('telao-fechado', () => callback())
+  },
 })
 
 contextBridge.exposeInMainWorld('activation', {
