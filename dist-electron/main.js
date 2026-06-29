@@ -152549,6 +152549,7 @@ const MAIN_DIST = path.join(process.env.APP_ROOT, "dist-electron");
 const RENDERER_DIST = path.join(process.env.APP_ROOT, "dist");
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, "public") : RENDERER_DIST;
 let win;
+let telaoWin;
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "favicon.svg"),
@@ -152567,6 +152568,33 @@ function createWindow() {
   } else {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
+}
+function createTelaoWindow(url) {
+  if (telaoWin && !telaoWin.isDestroyed()) {
+    telaoWin.focus();
+    return telaoWin;
+  }
+  telaoWin = new BrowserWindow({
+    title: "Telão - Placar",
+    icon: path.join(process.env.VITE_PUBLIC, "favicon.svg"),
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      preload: path.join("C:\\git\\bjj-tournament-manager-setup\\dist-electron", "preload.mjs"),
+      nodeIntegration: true,
+      contextIsolation: true
+    }
+  });
+  telaoWin.maximize();
+  telaoWin.on("closed", () => {
+    telaoWin = null;
+  });
+  if (VITE_DEV_SERVER_URL) {
+    telaoWin.loadURL(`${VITE_DEV_SERVER_URL}#${url}`);
+  } else {
+    telaoWin.loadFile(path.join(RENDERER_DIST, "index.html"), { hash: url });
+  }
+  return telaoWin;
 }
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -152865,6 +152893,22 @@ function registerPdfHandlers() {
     return gerarPdfResultados(chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas);
   });
 }
+function registerTelaoHandlers() {
+  ipcMain.handle("abrir-telao", (_event, url) => {
+    createTelaoWindow(url);
+  });
+  ipcMain.handle("enviar-dados-placar-telao", (_event, dados) => {
+    if (telaoWin && !telaoWin.isDestroyed()) {
+      telaoWin.webContents.send("atualizar-placar-telao", dados);
+    }
+  });
+  ipcMain.handle("fechar-telao", () => {
+    if (telaoWin && !telaoWin.isDestroyed()) {
+      telaoWin.close();
+      telaoWin = null;
+    }
+  });
+}
 app.whenReady().then(() => {
   registerTournamentHandlers();
   registerAthleteHandlers();
@@ -152875,6 +152919,7 @@ app.whenReady().then(() => {
   registerCategoriaHandlers();
   registerActivationHandlers();
   registerPdfHandlers();
+  registerTelaoHandlers();
   createWindow();
 });
 export {

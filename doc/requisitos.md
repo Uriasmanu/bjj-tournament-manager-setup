@@ -648,6 +648,7 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Normalização retroativa:** Chaves legadas sem `placarA`/`placarB` carregam sem erro; `normalizeLuta` adiciona defaults.
 - **Estado bloqueado:** Lutas com `tbd`/`bye` ou `completed`/`wo` exibem placar congelado e desabilitam controles e "Finalizar Luta".
 - **Especificação detalhada:** Ver `spec/placar.md` (fluxo), `spec/placar-jiu-jitsu.md` (placar funcional), `spec/placar-voltar-bracket.md` (correção do botão Voltar) e `spec/finalizar-luta-desclassificacao.md` (confirmação de resultado e habilitação de opções).
+- **Telão - Segunda janela do Placar (2026-06-29):** Botão "Telão" nas telas PlacarLuta e PlacarLutaCasada que abre uma segunda janela do Electron exibindo o placar completo + cronômetro em estilo telão (fontes grandes, layout otimizado para projeção). A segunda janela atualiza em tempo real via IPC quando o placar é alterado na janela principal. Rota: `/admin/telao/:lutaId`. Arquivos: `PlacarExibicao.tsx`, handlers IPC em `electron/main.ts`, canais em `electron/preload.ts`. Ver `implementado/telao-placar.md`.
 
 #### 3.19.2. Clarificação de WO no Placar (Implementado)
 

@@ -35,6 +35,7 @@ export const RENDERER_DIST = path.join(process.env.APP_ROOT, 'dist')
 process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL ? path.join(process.env.APP_ROOT, 'public') : RENDERER_DIST
 
 let win: BrowserWindow | null
+let telaoWin: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
@@ -59,6 +60,39 @@ function createWindow() {
     // win.loadFile('dist/index.html')
     win.loadFile(path.join(RENDERER_DIST, 'index.html'))
   }
+}
+
+function createTelaoWindow(url: string) {
+  if (telaoWin && !telaoWin.isDestroyed()) {
+    telaoWin.focus()
+    return telaoWin
+  }
+
+  telaoWin = new BrowserWindow({
+    title: 'Telão - Placar',
+    icon: path.join(process.env.VITE_PUBLIC, 'favicon.svg'),
+    width: 1200,
+    height: 800,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.mjs'),
+      nodeIntegration: true,
+      contextIsolation: true,
+    },
+  })
+
+  telaoWin.maximize()
+
+  telaoWin.on('closed', () => {
+    telaoWin = null
+  })
+
+  if (VITE_DEV_SERVER_URL) {
+    telaoWin.loadURL(`${VITE_DEV_SERVER_URL}#${url}`)
+  } else {
+    telaoWin.loadFile(path.join(RENDERER_DIST, 'index.html'), { hash: url })
+  }
+
+  return telaoWin
 }
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -421,6 +455,25 @@ function registerPdfHandlers(): void {
   })
 }
 
+function registerTelaoHandlers(): void {
+  ipcMain.handle('abrir-telao', (_event, url: string): void => {
+    createTelaoWindow(url)
+  })
+
+  ipcMain.handle('enviar-dados-placar-telao', (_event, dados: unknown): void => {
+    if (telaoWin && !telaoWin.isDestroyed()) {
+      telaoWin.webContents.send('atualizar-placar-telao', dados)
+    }
+  })
+
+  ipcMain.handle('fechar-telao', (): void => {
+    if (telaoWin && !telaoWin.isDestroyed()) {
+      telaoWin.close()
+      telaoWin = null
+    }
+  })
+}
+
 app.whenReady().then(() => {
   registerTournamentHandlers()
   registerAthleteHandlers()
@@ -431,5 +484,6 @@ app.whenReady().then(() => {
   registerCategoriaHandlers()
   registerActivationHandlers()
   registerPdfHandlers()
+  registerTelaoHandlers()
   createWindow()
 })

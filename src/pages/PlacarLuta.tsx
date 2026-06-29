@@ -23,6 +23,7 @@ import {
   IconFlag,
   IconAlertTriangle,
   IconArrowBack,
+  IconDeviceDesktop,
 } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -320,6 +321,7 @@ export function PlacarLuta() {
 
   const intervalRef = useRef<number | null>(null);
   const horarioInicioRef = useRef<string | null>(null);
+  const [telaoAberto, setTelaoAberto] = useState(false);
 
   useEffect(() => {
     if (!chaveId || !lutaId) return;
@@ -416,6 +418,41 @@ export function PlacarLuta() {
 
   const bloqueado = lutaInvalida || lutaFinalizada;
   const tempoEsgotado = !rodando && tempoRestante === 0 && tempoInicial > 0;
+
+  const enviarDadosTelao = useCallback(() => {
+    if (!telaoAberto) return;
+    const dados = {
+      tipo: 'luta' as const,
+      nomeA: atletaAInfo.nome,
+      nomeB: atletaBInfo.nome,
+      equipeA: atletaAInfo.equipe,
+      equipeB: atletaBInfo.equipe,
+      faixaA: atletaAInfo.faixa,
+      faixaB: atletaBInfo.faixa,
+      placarA,
+      placarB,
+      tempoRestante,
+      rodando,
+      tempoEsgotado,
+      bloqueado,
+      titulo: area ? `${area.nome} · Luta ${luta?.ordem} · Rodada ${luta?.rodada}` : undefined,
+    };
+    window.electronAPI.enviarDadosPlacarTelao(dados);
+  }, [telaoAberto, atletaAInfo, atletaBInfo, placarA, placarB, tempoRestante, rodando, tempoEsgotado, bloqueado, area, luta]);
+
+  useEffect(() => {
+    enviarDadosTelao();
+  }, [enviarDadosTelao]);
+
+  const handleAbrirTelao = () => {
+    window.electronAPI.abrirTelao(`/admin/telao/${lutaId}`);
+    setTelaoAberto(true);
+  };
+
+  const handleFecharTelao = () => {
+    window.electronAPI.fecharTelao();
+    setTelaoAberto(false);
+  };
 
   const handleIniciarPausar = () => {
     if (bloqueado) return;
@@ -688,6 +725,26 @@ export function PlacarLuta() {
           >
             Voltar sem finalizar
           </Button>
+          {telaoAberto ? (
+            <Button
+              size="lg"
+              color="red"
+              leftSection={<IconDeviceDesktop size={18} />}
+              onClick={handleFecharTelao}
+            >
+              Fechar Telão
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              variant="light"
+              color="dark"
+              leftSection={<IconDeviceDesktop size={18} />}
+              onClick={handleAbrirTelao}
+            >
+              Telão
+            </Button>
+          )}
         </Group>
       </Stack>
 

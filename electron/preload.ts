@@ -164,6 +164,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('gerar-pdf-chaves', chaves, atletas, nomeTorneio, customizadas),
   gerarPdfResultados: (chaves: Chave[], atletas: Atleta[], arbitros: Arbitro[], medalhasPorEquipe: Record<string, { ouro: number; prata: number; bronze: number }>, nomeTorneio: string, customizadas: CategoriaCustomizada[]) =>
     ipcRenderer.invoke('gerar-pdf-resultados', chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas),
+  abrirTelao: (url: string) =>
+    ipcRenderer.invoke('abrir-telao', url),
+  enviarDadosPlacarTelao: (dados: unknown) =>
+    ipcRenderer.invoke('enviar-dados-placar-telao', dados),
+  fecharTelao: () =>
+    ipcRenderer.invoke('fechar-telao'),
+  onAtualizarPlacarTelao: (callback: (dados: unknown) => void) => {
+    ipcRenderer.on('atualizar-placar-telao', (_event, dados) => callback(dados))
+  },
 })
 
 contextBridge.exposeInMainWorld('activation', {

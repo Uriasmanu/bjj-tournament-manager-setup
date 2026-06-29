@@ -15,28 +15,32 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+### [implementado] Feature: Abrir segunda janela (Telão) do Placar a partir da tela de luta
 
+**Comportamento atual:** As telas PlacarLuta e PlacarLutaCasada não possuíam funcionalidade para exibir o placar em uma segunda janela/tela (telão). O operador não tinha como projetar o placar para o público em uma tela separada.
+
+**Comportamento esperado:** Um botão "Telão" nas telas PlacarLuta e PlacarLutaCasada que, ao clicado, abre uma segunda janela do Electron exibindo o placar + cronômetro em estilo telão (fontes grandes, layout otimizado para projeção). A segunda janela deve atualizar em tempo real quando o placar é alterado na janela principal.
+
+**Escopo:** 
+- Processo principal (`electron/main.ts`): handler IPC para criar segunda janela e transmitir dados
+- Componentes React: `PlacarLuta.tsx`, `PlacarLutaCasada.tsx` (botão Telão)
+- Nova página: `PlacarExibicao.tsx` (renderização do telão)
+- Preload/IPC: novos canais de comunicação entre janelas
 ---
 
 ## Histórico de Correções
 
-### [resolvido] Corrigir exibição de categorias customizadas como UUID
+### [implementado] Feature: Telão - Segunda janela do Placar
 **Data:** 2026-06-29
-**Comportamento anterior:** Categorias personalizadas eram exibidas como UUIDs (`custom-3f6e8e0e-...`) em vez de nomes legíveis. A função `getCategoriaLabel` retornava o ID bruto como fallback. A função `extrairPeso()` não conseguia extrair o peso de categorias customizadas (sem `masculino`/`feminino` no ID) e retornava o UUID. `getChaveTitle` no PlacarChaves não verificava `chave.nome`. Vários `useMemo` tinham dependência `customizadas` faltando.
-**Comportamento novo:** Categorias personalizadas são exibidas com nome legível em todas as telas, incluindo o placar. `extrairPeso()` usa `getCategoriaLabel` como fallback para categorias custom. `getChaveTitle` verifica `chave.nome` primeiro. Dependências de `useMemo` corrigidas.
-**Arquivos afetados:** `src/types/category.ts`, `electron/pdf.ts`, `src/pages/PlacarChaves.tsx`, `src/pages/GerenciarChaves.tsx`, `src/pages/AdminAthletes.tsx`
-**RF afetados:** RF-01 a RF-06 (exibição de categorias e títulos de chaves)
-**CA afetados:** CA-01 a CA-06 (critérios de aceite de categorias no placar)
-**Spec:** `implementado/corrigir-exibicao-categorias.md`
-
-### [resolvido] Trocar lado do azul no placar
-**Data:** 2026-06-29
-**Comportamento anterior:** Painel do Atleta A com fundo azul anil (`#1e3a8a`) à esquerda, painel do Atleta B com fundo branco à direita.
-**Comportamento novo:** Painel do Atleta B com fundo azul anil (`#1e3a8a`) à direita, painel do Atleta A com fundo branco à esquerda.
-**Arquivos afetados:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
-**RF afetados:** RF-01, RF-02, RF-03, RF-04 (requisitos de layout do placar)
-**CA afetados:** CA-01, CA-02, CA-03, CA-04 (critérios de aceite do placar)
-**Spec:** `implementado/trocar-lado-azul-placar.md`
+**Descrição:** Implementada funcionalidade de abrir uma segunda janela do Electron (telão) a partir das telas PlacarLuta e PlacarLutaCasada. O telão exibe o placar completo + cronômetro em estilo telão (fontes grandes, layout otimizado para projeção). A segunda janela atualiza em tempo real via IPC quando o placar é alterado na janela principal.
+**Arquivos afetados:**
+- `electron/main.ts` — handlers IPC `abrir-telao`, `enviar-dados-placar-telao`, `fechar-telao` + função `createTelaoWindow`
+- `electron/preload.ts` — novos canais IPC expostos ao renderer
+- `src/types/electron.d.ts` — tipos dos novos métodos
+- `src/pages/PlacarExibicao.tsx` — nova página de exibição do telão
+- `src/pages/PlacarLuta.tsx` — botão Telão/Fechar Telão + envio de dados em tempo real
+- `src/pages/PlacarLutaCasada.tsx` — botão Telão/Fechar Telão + envio de dados em tempo real
+- `src/App.tsx` — nova rota `/admin/telao/:lutaId`
 
 
 ## Feature

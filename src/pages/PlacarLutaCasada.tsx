@@ -22,9 +22,10 @@ import {
   IconFlag,
   IconAlertTriangle,
   IconArrowBack,
+  IconDeviceDesktop,
 } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import { PageLayout } from '../components/PageLayout';
 import type { PlacarLuta } from '../types/bracket';
@@ -305,6 +306,7 @@ export function PlacarLutaCasada() {
 
   const intervalRef = useRef<number | null>(null);
   const horarioInicioRef = useRef<string | null>(null);
+  const [telaoAberto, setTelaoAberto] = useState(false);
 
   useEffect(() => {
     if (!areaId || !lutaCasadaId) return;
@@ -393,6 +395,41 @@ export function PlacarLutaCasada() {
     const novoSegundos = Math.floor(minutos * 60);
     setTempoInicial(novoSegundos);
     if (!rodando) setTempoRestante(novoSegundos);
+  };
+
+  const enviarDadosTelao = useCallback(() => {
+    if (!telaoAberto || !luta) return;
+    const dados = {
+      tipo: 'luta-casada' as const,
+      nomeA: capitalize(luta.atletaASnapshot.nome),
+      nomeB: capitalize(luta.atletaBSnapshot.nome),
+      equipeA: luta.atletaASnapshot.equipe,
+      equipeB: luta.atletaBSnapshot.equipe,
+      faixaA: luta.atletaASnapshot.faixa,
+      faixaB: luta.atletaBSnapshot.faixa,
+      placarA,
+      placarB,
+      tempoRestante,
+      rodando,
+      tempoEsgotado,
+      bloqueado,
+      titulo: area ? `${area.nome} · Luta Casada` : 'Luta Casada',
+    };
+    window.electronAPI.enviarDadosPlacarTelao(dados);
+  }, [telaoAberto, luta, placarA, placarB, tempoRestante, rodando, tempoEsgotado, bloqueado, area]);
+
+  useEffect(() => {
+    enviarDadosTelao();
+  }, [enviarDadosTelao]);
+
+  const handleAbrirTelao = () => {
+    window.electronAPI.abrirTelao(`/admin/telao/${lutaCasadaId}`);
+    setTelaoAberto(true);
+  };
+
+  const handleFecharTelao = () => {
+    window.electronAPI.fecharTelao();
+    setTelaoAberto(false);
   };
 
   const handleAbrirFinalizar = () => {
@@ -631,6 +668,26 @@ export function PlacarLutaCasada() {
           >
             Voltar sem finalizar
           </Button>
+          {telaoAberto ? (
+            <Button
+              size="lg"
+              color="red"
+              leftSection={<IconDeviceDesktop size={18} />}
+              onClick={handleFecharTelao}
+            >
+              Fechar Telão
+            </Button>
+          ) : (
+            <Button
+              size="lg"
+              variant="light"
+              color="dark"
+              leftSection={<IconDeviceDesktop size={18} />}
+              onClick={handleAbrirTelao}
+            >
+              Telão
+            </Button>
+          )}
         </Group>
       </Stack>
 

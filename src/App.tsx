@@ -24,6 +24,7 @@ import { PlacarChaves } from './pages/PlacarChaves';
 import { PlacarBracket } from './pages/PlacarBracket';
 import { PlacarLuta } from './pages/PlacarLuta';
 import { PlacarLutaCasada } from './pages/PlacarLutaCasada';
+import { PlacarExibicao } from './pages/PlacarExibicao';
 import { Resultados } from './pages/Resultados';
 import { AdminLutasCasadas } from './pages/AdminLutasCasadas';
 import { CategoriasMenu } from './pages/CategoriasMenu';
@@ -46,6 +47,7 @@ function MainApp() {
           <Route path="/admin/placar/chave/:areaId/:chaveId" element={<PlacarBracket />} />
           <Route path="/admin/placar/luta/:areaId/:chaveId/:lutaId" element={<PlacarLuta />} />
           <Route path="/admin/placar/luta-casada/:areaId/:lutaCasadaId" element={<PlacarLutaCasada />} />
+          <Route path="/admin/telao/:lutaId" element={<PlacarExibicao />} />
           <Route path="/admin/resultados" element={<Resultados />} />
           <Route path="/admin/criar-torneio" element={<CriarTorneio />} />
           <Route path="/admin/importar-torneio" element={<ImportarTorneio />} />

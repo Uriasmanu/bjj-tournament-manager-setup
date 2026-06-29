@@ -73,7 +73,13 @@ electron.contextBridge.exposeInMainWorld("electronAPI", {
   deleteCategoriaCustomizada: (categoriaId) => electron.ipcRenderer.invoke("delete-categoria-customizada", categoriaId),
   gerarPdfLutasCasadas: (lutas, nomeTorneio, arbitros, customizadas) => electron.ipcRenderer.invoke("gerar-pdf-lutas-casadas", lutas, nomeTorneio, arbitros, customizadas),
   gerarPdfChaves: (chaves, atletas, nomeTorneio, customizadas) => electron.ipcRenderer.invoke("gerar-pdf-chaves", chaves, atletas, nomeTorneio, customizadas),
-  gerarPdfResultados: (chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas) => electron.ipcRenderer.invoke("gerar-pdf-resultados", chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas)
+  gerarPdfResultados: (chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas) => electron.ipcRenderer.invoke("gerar-pdf-resultados", chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas),
+  abrirTelao: (url) => electron.ipcRenderer.invoke("abrir-telao", url),
+  enviarDadosPlacarTelao: (dados) => electron.ipcRenderer.invoke("enviar-dados-placar-telao", dados),
+  fecharTelao: () => electron.ipcRenderer.invoke("fechar-telao"),
+  onAtualizarPlacarTelao: (callback) => {
+    electron.ipcRenderer.on("atualizar-placar-telao", (_event, dados) => callback(dados));
+  }
 });
 electron.contextBridge.exposeInMainWorld("activation", {
   check: () => electron.ipcRenderer.invoke("check-activation"),

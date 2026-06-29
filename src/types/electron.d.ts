@@ -107,6 +107,10 @@ interface ElectronAPI {
   gerarPdfLutasCasadas: (lutas: LutaCasada[], nomeTorneio: string, arbitros: Arbitro[], customizadas: CategoriaCustomizada[]) => Promise<number[]>;
   gerarPdfChaves: (chaves: Chave[], atletas: Atleta[], nomeTorneio: string, customizadas: CategoriaCustomizada[]) => Promise<number[]>;
   gerarPdfResultados: (chaves: Chave[], atletas: Atleta[], arbitros: Arbitro[], medalhasPorEquipe: Record<string, { ouro: number; prata: number; bronze: number }>, nomeTorneio: string, customizadas: CategoriaCustomizada[]) => Promise<number[]>;
+  abrirTelao: (url: string) => Promise<void>;
+  enviarDadosPlacarTelao: (dados: unknown) => Promise<void>;
+  fecharTelao: () => Promise<void>;
+  onAtualizarPlacarTelao: (callback: (dados: unknown) => void) => void;
 }
 
 interface ActivationAPI {
