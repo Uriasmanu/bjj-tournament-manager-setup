@@ -149937,7 +149937,9 @@ function getPerdedoresSemifinal(chave) {
 function getCategoriaLabel(categoriaId, customizadas) {
   if (categoriaLabels[categoriaId]) return categoriaLabels[categoriaId];
   const cat = customizadas == null ? void 0 : customizadas.find((c) => c.id === categoriaId);
-  return (cat == null ? void 0 : cat.nome) ?? categoriaId;
+  if (cat) return cat.nome;
+  if (categoriaId.startsWith("custom-")) return "Categoria Personalizada";
+  return categoriaId;
 }
 async function gerarPdfResultados(chaves, atletas, arbitros, medalhasPorEquipe, nomeTorneio, customizadas = []) {
   const doc = new PDFDocument({ size: "A4", margin: 30 });

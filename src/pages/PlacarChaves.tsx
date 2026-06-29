@@ -28,21 +28,24 @@ const PESO_LABEL: Record<string, string> = {
   'super-pesado': 'Super Pesado', 'pesadissimo': 'Pesadíssimo',
 };
 
-function extrairPeso(categoriaId: string): string {
+function extrairPeso(categoriaId: string, customizadas?: CategoriaCustomizada[]): string {
+  if (categoriaId.startsWith('custom-')) return getCategoriaLabel(categoriaId, customizadas);
   const parts = categoriaId.split('-');
   const genIndex = parts.findIndex(p => p === 'masculino' || p === 'feminino');
-  if (genIndex < 0) return categoriaId;
+  if (genIndex < 0) return getCategoriaLabel(categoriaId, customizadas);
   return PESO_LABEL[parts.slice(genIndex + 1).join('-')] || categoriaId;
 }
 
 function getChaveTitle(chave: Chave, athletes: Atleta[], customizadas?: CategoriaCustomizada[]): string {
+  if (chave.nome) return chave.nome;
+
   const chaveAtletas = chave.posicoesAtletas
     .map(id => athletes.find(a => a.id === id))
     .filter((a): a is Atleta => a !== undefined);
   if (chaveAtletas.length === 0) return getCategoriaLabel(chave.categoriaId, customizadas);
 
   const faixaLabel = chave.faixa ? FAIXA_LABEL[chave.faixa] : null;
-  const peso = extrairPeso(chave.categoriaId);
+  const peso = extrairPeso(chave.categoriaId, customizadas);
 
   if (faixaLabel) {
     return `${faixaLabel} - ${peso} - ${chaveAtletas.length} atleta${chaveAtletas.length > 1 ? 's' : ''}`;
@@ -125,7 +128,7 @@ export function PlacarChaves() {
     return sortedChaves.filter(chave =>
       getChaveTitle(chave, athletes, customizadas).toLowerCase().includes(q)
     );
-  }, [sortedChaves, athletes, searchQuery]);
+  }, [sortedChaves, athletes, searchQuery, customizadas]);
 
   const filteredLutasCasadas = useMemo(() => {
     if (!searchQuery.trim()) return lutasCasadas;

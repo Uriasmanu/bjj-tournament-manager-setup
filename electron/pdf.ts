@@ -432,7 +432,9 @@ function getPerdedoresSemifinal(chave: Chave): string[] {
 function getCategoriaLabel(categoriaId: string, customizadas?: CategoriaCustomizada[]): string {
   if (categoriaLabels[categoriaId]) return categoriaLabels[categoriaId]
   const cat = customizadas?.find(c => c.id === categoriaId)
-  return cat?.nome ?? categoriaId
+  if (cat) return cat.nome
+  if (categoriaId.startsWith('custom-')) return 'Categoria Personalizada'
+  return categoriaId
 }
 
 export async function gerarPdfResultados(

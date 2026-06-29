@@ -30,10 +30,11 @@ const PESO_LABEL: Record<string, string> = {
   'super-pesado': 'Super Pesado', 'pesadissimo': 'Pesadíssimo',
 };
 
-function extrairPeso(categoriaId: string): string {
+function extrairPeso(categoriaId: string, customizadas?: CategoriaCustomizada[]): string {
+  if (categoriaId.startsWith('custom-')) return getCategoriaLabel(categoriaId, customizadas);
   const parts = categoriaId.split('-');
   const genIndex = parts.findIndex(p => p === 'masculino' || p === 'feminino');
-  if (genIndex < 0) return categoriaId;
+  if (genIndex < 0) return getCategoriaLabel(categoriaId, customizadas);
   const pesoKey = parts.slice(genIndex + 1).join('-');
   return PESO_LABEL[pesoKey] || pesoKey;
 }
@@ -68,7 +69,7 @@ function getChaveTitle(chave: Chave, athletes: Atleta[], customizadas?: Categori
 
   const faixaLabel = chave.faixa ? FAIXA_LABEL[chave.faixa] : null;
 
-  const peso = extrairPeso(chave.categoriaId);
+  const peso = extrairPeso(chave.categoriaId, customizadas);
 
   if (faixaLabel) {
     return `${faixaLabel} - ${peso} - ${chaveAtletas.length} atleta${chaveAtletas.length > 1 ? 's' : ''}`;
@@ -161,7 +162,7 @@ export function GerenciarChaves() {
       const titleB = getChaveTitle(b, athletes, customizadas);
       return titleA.localeCompare(titleB);
     });
-  }, [chaves, athletes]);
+  }, [chaves, athletes, customizadas]);
 
   const filteredChaves = useMemo(() => {
     if (!searchQuery.trim()) return sortedChaves;
@@ -169,7 +170,7 @@ export function GerenciarChaves() {
     return sortedChaves.filter(chave =>
       getChaveTitle(chave, athletes, customizadas).toLowerCase().includes(q)
     );
-  }, [sortedChaves, athletes, searchQuery]);
+  }, [sortedChaves, athletes, searchQuery, customizadas]);
 
   const catCount = useMemo(() => {
     const counts = new Map<string, number>();

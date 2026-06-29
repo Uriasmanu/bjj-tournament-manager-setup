@@ -16,10 +16,18 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
 
-### [aberto] Não é para mostrar categoria como custom-3f6e8e0e-580d-44f8-8c80-e4250352dbaa. Olhe toda a aplicação e corrija
 ---
 
 ## Histórico de Correções
+
+### [resolvido] Corrigir exibição de categorias customizadas como UUID
+**Data:** 2026-06-29
+**Comportamento anterior:** Categorias personalizadas eram exibidas como UUIDs (`custom-3f6e8e0e-...`) em vez de nomes legíveis. A função `getCategoriaLabel` retornava o ID bruto como fallback. A função `extrairPeso()` não conseguia extrair o peso de categorias customizadas (sem `masculino`/`feminino` no ID) e retornava o UUID. `getChaveTitle` no PlacarChaves não verificava `chave.nome`. Vários `useMemo` tinham dependência `customizadas` faltando.
+**Comportamento novo:** Categorias personalizadas são exibidas com nome legível em todas as telas, incluindo o placar. `extrairPeso()` usa `getCategoriaLabel` como fallback para categorias custom. `getChaveTitle` verifica `chave.nome` primeiro. Dependências de `useMemo` corrigidas.
+**Arquivos afetados:** `src/types/category.ts`, `electron/pdf.ts`, `src/pages/PlacarChaves.tsx`, `src/pages/GerenciarChaves.tsx`, `src/pages/AdminAthletes.tsx`
+**RF afetados:** RF-01 a RF-06 (exibição de categorias e títulos de chaves)
+**CA afetados:** CA-01 a CA-06 (critérios de aceite de categorias no placar)
+**Spec:** `implementado/corrigir-exibicao-categorias.md`
 
 ### [resolvido] Trocar lado do azul no placar
 **Data:** 2026-06-29

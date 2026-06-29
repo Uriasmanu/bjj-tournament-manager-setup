@@ -101,7 +101,7 @@ export function AdminAthletes() {
       result = result.filter(a => a.faixa === beltFilter);
     }
     return result;
-  }, [athletes, searchQuery, beltFilter, showDeleted]);
+  }, [athletes, searchQuery, beltFilter, showDeleted, customizadas]);
 
   const faixaCounts = useMemo(() => {
     const counts: Record<string, number> = {};

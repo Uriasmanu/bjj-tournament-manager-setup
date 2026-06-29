@@ -123,6 +123,7 @@ export function getCategoriaLabel(categoriaId: string, customizadas?: CategoriaC
     const custom = customizadas.find(c => c.id === categoriaId);
     if (custom) return custom.nome;
   }
+  if (categoriaId.startsWith('custom-')) return 'Categoria Personalizada';
   return categoriaId;
 }
 
