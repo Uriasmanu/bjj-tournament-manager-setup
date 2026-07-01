@@ -648,6 +648,42 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Normalização retroativa:** Chaves legadas sem `placarA`/`placarB` carregam sem erro; `normalizeLuta` adiciona defaults.
 - **Estado bloqueado:** Lutas com `tbd`/`bye` ou `completed`/`wo` exibem placar congelado e desabilitam controles e "Finalizar Luta".
 - **Especificação detalhada:** Ver `spec/placar.md` (fluxo), `spec/placar-jiu-jitsu.md` (placar funcional), `spec/placar-voltar-bracket.md` (correção do botão Voltar) e `spec/finalizar-luta-desclassificacao.md` (confirmação de resultado e habilitação de opções).
+
+#### 3.19.3. Atalho Ctrl+Z para Zerar Placar e Restaurar Tempo (Implementado)
+
+- **Atalho:** Em qualquer tela de placar (`PlacarLuta` ou `PlacarLutaCasada`), pressionar `Ctrl+Z` (ou `Cmd+Z` no macOS) zera todos os contadores de ambos os atletas (pontos 2/3/4, vantagens, punições = 0) e restaura o cronômetro para o tempo inicial completo.
+- **Comportamento:** O atalho funciona apenas quando a luta não está bloqueada (não finalizada, com atletas definidos). O cronômetro é pausado antes de restaurar o tempo.
+- **Hook reutilizável:** `useCtrlZReset(handleZerar)` — hook customizado que registra o listener de `keydown` e limpa no unmount.
+- **Arquivos afetados:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
+
+#### 3.19.4. Layout Compacto do Placar — Botão Voltar ao Lado do Título (Implementado)
+
+- **Problema anterior:** O botão "Voltar" ficava acima do Paper header, desperdiçando espaço vertical. Existiam dois botões de iniciar o tempo (botão dedicado + cronômetro clicável), causando confusão. Vantagens e punições ficavam ocultas por falta de espaço.
+- **Solução:**
+  - Botão "Voltar" movido para dentro do Paper, ao lado esquerdo do título (mesma linha).
+  - Padding do `PageLayout` e `Container` reduzido para maximizar espaço vertical.
+  - Barra de controles compacta: botões "Zerar" e "Iniciar/Pausar" em `size="xs"`, tempo editável com `size="xs"`, badge IBJJF reduzido.
+  - Cronômetro com padding `xs`, fonte "TEMPO ESGOTADO" reduzida para `clamp(28px, 4vw, 60px)`.
+  - `AtletaPanel`: padding `md` → `xs`, gaps reduzidos, ActionIcons de 36→30px (pontos) e 28→26px (vant/pun).
+  - Footer buttons: `size="md"` → `size="xs"`, texto encurtado ("Finalizar", "Voltar", "Telão").
+  - Stack gap principal: `sm` → `xs`.
+- **Resultado:** Todo o conteúdo do placar cabe em 100% da viewport sem scroll, com vantagens e punições sempre visíveis.
+- **Arquivos afetados:** `src/components/PageLayout.tsx`, `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
+
+#### 3.19.5. Ajuste do Tamanho dos Painéis Atleta A/B — Informações Maiores (Implementado)
+
+- **Problema anterior:** Os painéis Atleta A e Atleta B tinham informações muito compactas com fontes pequenas e botões de ação diminutos, tornando a leitura difícil.
+- **Solução:**
+  - Fontes aumentadas: Total (`clamp(52px, 4vw, 90px)`), contadores (`clamp(28px, 2vw, 48px)`), vant/pun (`clamp(20px, 1.8vw, 32px)`), nome (`clamp(22px, 2vw, 36px)`).
+  - Paper padding de `xs` para `sm` (mais respiro interno).
+  - ActionIcons de pontos: 36×36px com `size="md"` (era 30×30px `size="sm"`).
+  - ActionIcons de vant/pun: 32×32px com `size="md"` (era 26×26px `size="sm"`).
+  - Labels de nome/faixa/equipe: `size="sm"` (era `size="xs"`).
+  - Gap interno do Stack: `6` (era `4`).
+  - Texto label "pts" restaurado: `+{pontos} pts` (era `+{pontos}`).
+- **Resultado:** Painéis com informações maiores, melhor distribuídas e mais legíveis, mantendo o layout sem scroll.
+- **Arquivos afetados:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
+
 - **Telão - Segunda janela do Placar (2026-06-29):** Botão "Telão" nas telas PlacarLuta e PlacarLutaCasada que abre uma segunda janela do Electron exibindo o placar em formato banner horizontal (100% largura × 10% altura da tela, sempre visível, sem moldura). Layout: lado B (branco) à esquerda com Nome + colunas [Total, Vantagem, Punição] (label acima, valor abaixo), cronômetro ao centro, lado A (azul) à direita com mesma estrutura. Vantagem e Punição são condicionais — só aparecem quando > 0. Janela posicionada na parte inferior da tela com `alwaysOnTop`. Fecha pelo botão "Fechar Telão" ou pelo X da janela (atualiza estado do botão automaticamente). Dados enviados imediatamente ao abrir (sem tela de loading visível). Atualização em tempo real via IPC. Rota: `/admin/telao/:lutaId`. Arquivos: `PlacarExibicao.tsx`, handlers IPC em `electron/main.ts`, canais em `electron/preload.ts`. Ver `implementado/telao-placar.md`.
 
 #### 3.19.2. Clarificação de WO no Placar (Implementado)

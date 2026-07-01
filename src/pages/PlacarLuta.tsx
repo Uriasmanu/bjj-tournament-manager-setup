@@ -34,6 +34,19 @@ import type { Atleta } from '../types/athlete';
 import type { AreaLuta } from '../types/area';
 import { sugerirTempoLutaMinutos, TEMPO_LUTA_FALLBACK_MINUTOS } from '../types/fightTime';
 
+function useCtrlZReset(handleZerar: () => void) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        handleZerar();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleZerar]);
+}
+
 const AZUL_ANIL = '#1e3a8a';
 const BRANCO = '#ffffff';
 
@@ -54,11 +67,11 @@ const TEMPO_MIN_MINUTOS = 1;
 const TEMPO_MAX_MINUTOS = 30;
 const MAX_PUNICOES = 4;
 
-const FONT_TOTAL = 'clamp(70px, 4vw, 100px)';
-const FONT_COUNTER = 'clamp(36px, 2vw, 56px)';
-const FONT_VANT_PUN = 'clamp(22px, 2.2vw, 32px)';
-const FONT_NOME = 'clamp(28px, 2.3vw, 40px)';
-const FONT_CRONOMETRO = 'clamp(96px, 6vw, 220px)';
+const FONT_TOTAL = 'clamp(52px, 4vw, 90px)';
+const FONT_COUNTER = 'clamp(28px, 2vw, 48px)';
+const FONT_VANT_PUN = 'clamp(20px, 1.8vw, 32px)';
+const FONT_NOME = 'clamp(22px, 2vw, 36px)';
+const FONT_CRONOMETRO = 'clamp(48px, 4vw, 100px)';
 
 type ResultadoTipo = 'pontos' | 'finalizacao' | 'desclassificacao' | 'desempate';
 
@@ -124,10 +137,10 @@ function AtletaPanel({
   };
 
   const PontoBloco = ({ pontos, valor }: { pontos: number; valor: number }) => (
-    <Stack gap={4} align="center" style={{ flex: 1 }}>
-      <Group gap={6} align="center" justify="center" wrap="nowrap">
+    <Stack gap={2} align="center" style={{ flex: 1 }}>
+      <Group gap={4} align="center" justify="center" wrap="nowrap">
         <ActionIcon
-          size="xl"
+          size="md"
           radius="md"
           aria-label={`Remover ${pontos} pontos`}
           disabled={bloqueado || valor === 0}
@@ -135,29 +148,29 @@ function AtletaPanel({
           style={{
             backgroundColor: valor > 0 ? btnBg : btnDisabled,
             color: valor > 0 ? color : subcolor,
-            width: 44,
-            height: 44,
-            fontSize: 22,
+            width: 36,
+            height: 36,
+            fontSize: 18,
             fontWeight: 700,
           }}
         >
           −
         </ActionIcon>
-        <Text fw={900} w={48} ta="center" style={{ fontSize: FONT_COUNTER, lineHeight: 1, color }}>
+        <Text fw={900} w={40} ta="center" style={{ fontSize: FONT_COUNTER, lineHeight: 1, color }}>
           {valor}
         </Text>
         <ActionIcon
-          size="xl"
+          size="md"
           radius="md"
           aria-label={`Adicionar ${pontos} pontos`}
           disabled={bloqueado}
           onClick={() => inc(`pontos${pontos}` as 'pontos2' | 'pontos3' | 'pontos4', 1)}
-          style={{ backgroundColor: btnBg, color, width: 44, height: 44, fontSize: 22, fontWeight: 700 }}
+          style={{ backgroundColor: btnBg, color, width: 36, height: 36, fontSize: 18, fontWeight: 700 }}
         >
           +
         </ActionIcon>
       </Group>
-      <Text size="sm" c={subcolor} fw={700} tt="uppercase" style={{ letterSpacing: 0.5 }}>
+      <Text size="xs" c={subcolor} fw={700} tt="uppercase" style={{ letterSpacing: 0.5 }}>
         +{pontos} pts
       </Text>
     </Stack>
@@ -166,18 +179,20 @@ function AtletaPanel({
   return (
     <Paper
       withBorder
-      p="xl"
+      p="sm"
       radius="md"
       style={{
         backgroundColor: bg,
         color,
         borderColor,
-        minHeight: 540,
         display: 'flex',
         flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden',
       }}
     >
-      <Stack gap="lg" style={{ flex: 1 }}>
+      <Stack gap={6} style={{ flex: 1, minHeight: 0 }}>
         <Stack gap={4}>
           <Text size="sm" c={subcolor} fw={700} tt="uppercase" style={{ letterSpacing: 1.5 }}>
             Atleta {lado}
@@ -191,7 +206,7 @@ function AtletaPanel({
             </Text>
           )}
           {equipe && (
-            <Text size="lg" c={subcolor} tt="capitalize" fw={600}>
+            <Text size="sm" c={subcolor} tt="capitalize" fw={600}>
               {equipe}
             </Text>
           )}
@@ -210,7 +225,7 @@ function AtletaPanel({
 
         <Divider color={lado === 'A' ? 'rgba(255,255,255,0.3)' : '#dee2e6'} />
 
-        <Group gap="md" align="flex-start" grow wrap="nowrap">
+        <Group gap="xs" align="flex-start" grow wrap="nowrap">
           <PontoBloco pontos={2} valor={placar.pontos2} />
           <PontoBloco pontos={3} valor={placar.pontos3} />
           <PontoBloco pontos={4} valor={placar.pontos4} />
@@ -218,22 +233,22 @@ function AtletaPanel({
 
         <Divider color={lado === 'A' ? 'rgba(255,255,255,0.3)' : '#dee2e6'} />
 
-        <Group justify="space-between" align="center" w="100%">
-          <Text size="md" c={color} fw={700}>
+        <Group justify="space-between" align="center" w="100%" gap={6}>
+          <Text size="sm" c={color} fw={700}>
             Vantagens
           </Text>
-          <Group gap={6}>
+          <Group gap={4}>
             <ActionIcon
               size="md"
               radius="md"
               aria-label="Remover vantagem"
               disabled={bloqueado || placar.vantagens === 0}
               onClick={() => inc('vantagens', -1)}
-              style={{ backgroundColor: counterBg, color: counterColor, width: 32, height: 32, fontSize: 16, fontWeight: 700 }}
+              style={{ backgroundColor: counterBg, color: counterColor, width: 32, height: 32, fontSize: 14, fontWeight: 700 }}
             >
               −
             </ActionIcon>
-            <Text fw={900} w={32} ta="center" style={{ fontSize: FONT_VANT_PUN, lineHeight: 1, color }}>
+            <Text fw={900} w={28} ta="center" style={{ fontSize: FONT_VANT_PUN, lineHeight: 1, color }}>
               {placar.vantagens}
             </Text>
             <ActionIcon
@@ -242,31 +257,31 @@ function AtletaPanel({
               aria-label="Adicionar vantagem"
               disabled={bloqueado}
               onClick={() => inc('vantagens', 1)}
-              style={{ backgroundColor: counterBg, color: counterColor, width: 32, height: 32, fontSize: 16, fontWeight: 700 }}
+              style={{ backgroundColor: counterBg, color: counterColor, width: 32, height: 32, fontSize: 14, fontWeight: 700 }}
             >
               +
             </ActionIcon>
           </Group>
         </Group>
 
-        <Group justify="space-between" align="center" w="100%">
-          <Text size="md" c={color} fw={700}>
+        <Group justify="space-between" align="center" w="100%" gap={6}>
+          <Text size="sm" c={color} fw={700}>
             Punições
           </Text>
-          <Group gap={6}>
+          <Group gap={4}>
             <ActionIcon
               size="md"
               radius="md"
               aria-label="Remover punição"
               disabled={bloqueado || placar.punicoes === 0}
               onClick={() => inc('punicoes', -1)}
-              style={{ backgroundColor: counterBg, color: counterColor, width: 32, height: 32, fontSize: 16, fontWeight: 700 }}
+              style={{ backgroundColor: counterBg, color: counterColor, width: 32, height: 32, fontSize: 14, fontWeight: 700 }}
             >
               −
             </ActionIcon>
             <Text
               fw={900}
-              w={32}
+              w={28}
               ta="center"
               style={{ fontSize: FONT_VANT_PUN, lineHeight: 1, color: placar.punicoes >= 3 ? '#fa5252' : color }}
             >
@@ -278,7 +293,7 @@ function AtletaPanel({
               aria-label="Adicionar punição"
               disabled={bloqueado || placar.punicoes >= MAX_PUNICOES}
               onClick={() => inc('punicoes', 1, MAX_PUNICOES)}
-              style={{ backgroundColor: counterBg, color: counterColor, width: 32, height: 32, fontSize: 16, fontWeight: 700 }}
+              style={{ backgroundColor: counterBg, color: counterColor, width: 32, height: 32, fontSize: 14, fontWeight: 700 }}
             >
               +
             </ActionIcon>
@@ -286,7 +301,7 @@ function AtletaPanel({
         </Group>
 
         {placar.punicoes >= MAX_PUNICOES && (
-          <Alert color="red" variant="filled" icon={<IconAlertTriangle size={16} />}>
+          <Alert color="red" variant="filled" icon={<IconAlertTriangle size={16} />} p="xs">
             Atleta {lado} Desclassificado
           </Alert>
         )}
@@ -322,6 +337,15 @@ export function PlacarLuta() {
   const intervalRef = useRef<number | null>(null);
   const horarioInicioRef = useRef<string | null>(null);
   const [telaoAberto, setTelaoAberto] = useState(false);
+
+  const handleZerarRef = useRef<() => void>(() => {});
+  const handleZerar = useCallback(() => {
+    setRodando(false);
+    setTempoRestante(tempoInicial);
+  }, [tempoInicial]);
+  handleZerarRef.current = handleZerar;
+
+  useCtrlZReset(() => handleZerarRef.current());
 
   useEffect(() => {
     if (!chaveId || !lutaId) return;
@@ -489,11 +513,6 @@ export function PlacarLuta() {
     setRodando(r => !r);
   };
 
-  const handleZerar = () => {
-    setRodando(false);
-    setTempoRestante(tempoInicial);
-  };
-
   const handleTempoInicialChange = (value: number | string) => {
     const minutos = typeof value === 'number' ? value : Number(value);
     if (!Number.isFinite(minutos) || minutos < TEMPO_MIN_MINUTOS || minutos > TEMPO_MAX_MINUTOS) return;
@@ -600,8 +619,9 @@ export function PlacarLuta() {
     <PageLayout
       title={area ? `Placar - ${area.nome} · Luta ${luta.ordem} · Rodada ${luta.rodada}` : `Placar · Luta ${luta.ordem} · Rodada ${luta.rodada}`}
       backRoute={`/admin/placar/chave/${areaId}/${chaveId}`}
+      fullHeight
     >
-      <Stack gap="md">
+      <Stack gap="xs" style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
         {lutaInvalida && (
           <Alert color="yellow" icon={<IconAlertTriangle size={18} />}>
             Luta aguardando definição anterior. Atletas ainda não definidos.
@@ -614,50 +634,51 @@ export function PlacarLuta() {
           </Alert>
         )}
 
-        <Paper withBorder p="sm" radius="md" style={{ backgroundColor: '#f8f9fa' }}>
+        <Paper withBorder p="xs" radius="md" style={{ backgroundColor: '#f8f9fa', flexShrink: 0 }}>
           <Group justify="space-between" align="center" wrap="wrap">
-            <Group gap="md" align="center">
+            <Group gap="xs" align="center">
               <Button
-                leftSection={rodando ? <IconPlayerPause size={18} /> : <IconPlayerPlay size={18} />}
+                leftSection={<IconReload size={16} />}
+                variant="default"
+                onClick={handleZerarRef.current}
+                disabled={bloqueado}
+                aria-label="Zerar cronômetro"
+                size="sm"
+              >
+                Zerar
+              </Button>
+              <Button
+                leftSection={rodando ? <IconPlayerPause size={16} /> : <IconPlayerPlay size={16} />}
                 color={rodando ? 'orange' : 'green'}
                 onClick={handleIniciarPausar}
                 disabled={bloqueado || tempoRestante === 0}
                 aria-label={rodando ? 'Pausar cronômetro' : 'Iniciar cronômetro'}
-                size="md"
+                size="sm"
+                variant="light"
               >
                 {rodando ? 'Pausar' : 'Iniciar'}
               </Button>
-              <Button
-                leftSection={<IconReload size={18} />}
-                variant="default"
-                onClick={handleZerar}
-                disabled={bloqueado}
-                aria-label="Zerar cronômetro"
-                size="md"
-              >
-                Zerar
-              </Button>
             </Group>
             <Group gap="xs" align="center">
-              <Text size="sm" c="dimmed" fw={600}>Tempo inicial (min):</Text>
+              <Text size="xs" c="dimmed" fw={600}>Tempo (min):</Text>
               <NumberInput
                 value={tempoInicial / 60}
                 onChange={handleTempoInicialChange}
                 min={TEMPO_MIN_MINUTOS}
                 max={TEMPO_MAX_MINUTOS}
                 step={1}
-                w={100}
+                w={80}
                 disabled={bloqueado}
                 aria-label="Tempo inicial em minutos"
-                size="md"
+                size="xs"
               />
               <Badge
                 variant="light"
                 color="blue"
-                size="sm"
+                size="xs"
                 aria-label="Sugestão de tempo de luta pela IBJJF"
               >
-                Sugestão IBJJF · {tempoSugeridoMinutos} min
+                IBJJF · {tempoSugeridoMinutos}min
               </Badge>
             </Group>
           </Group>
@@ -665,24 +686,25 @@ export function PlacarLuta() {
 
         <Paper
           withBorder
-          p="md"
+          p="xs"
           radius="md"
           onClick={bloqueado || tempoRestante === 0 ? undefined : handleIniciarPausar}
           style={{
             cursor: bloqueado || tempoRestante === 0 ? 'default' : 'pointer',
             backgroundColor: '#ffffff',
             userSelect: 'none',
+            flexShrink: 0,
           }}
           aria-label="Cronômetro central — clique para iniciar/pausar"
         >
-          <Center style={{ minHeight: 140 }}>
-            <Stack gap="xs" align="center">
+          <Center style={{ minHeight: 0 }}>
+            <Stack gap={0} align="center">
               {tempoEsgotado ? (
                 <Text
                   fw={900}
                   ta="center"
                   style={{
-                    fontSize: 'clamp(40px, 6vw, 80px)',
+                    fontSize: 'clamp(28px, 4vw, 60px)',
                     lineHeight: 1.1,
                     color: '#fa5252',
                     letterSpacing: 2,
@@ -705,7 +727,7 @@ export function PlacarLuta() {
                 </Text>
               )}
               {!bloqueado && tempoRestante > 0 && (
-                <Text size="md" c="dimmed" fw={600}>
+                <Text size="xs" c="dimmed" fw={600}>
                   {rodando ? '⏸ clique para pausar' : '▶ clique para iniciar'}
                 </Text>
               )}
@@ -713,7 +735,7 @@ export function PlacarLuta() {
           </Center>
         </Paper>
 
-        <Group align="stretch" gap="md" grow wrap="nowrap">
+        <Group align="stretch" gap="md" grow wrap="nowrap" style={{ flex: 1, minHeight: 0 }}>
           <AtletaPanel
             lado="B"
             nome={atletaBInfo.nome}
@@ -734,39 +756,39 @@ export function PlacarLuta() {
           />
         </Group>
 
-        <Group justify="center" gap="md">
+        <Group justify="center" gap="xs" style={{ flexShrink: 0 }}>
           <Button
-            size="lg"
+            size="xs"
             color="blue"
-            leftSection={<IconFlag size={18} />}
+            leftSection={<IconFlag size={14} />}
             onClick={handleAbrirFinalizar}
             disabled={bloqueado}
           >
-            Finalizar Luta
+            Finalizar
           </Button>
           <Button
-            size="lg"
+            size="xs"
             variant="default"
-            leftSection={<IconArrowBack size={18} />}
+            leftSection={<IconArrowBack size={14} />}
             onClick={() => navigate(`/admin/placar/chave/${areaId}/${chaveId}`)}
           >
-            Voltar sem finalizar
+            Voltar
           </Button>
           {telaoAberto ? (
             <Button
-              size="lg"
+              size="xs"
               color="red"
-              leftSection={<IconDeviceDesktop size={18} />}
+              leftSection={<IconDeviceDesktop size={14} />}
               onClick={handleFecharTelao}
             >
-              Fechar Telão
+              Telão Off
             </Button>
           ) : (
             <Button
-              size="lg"
+              size="xs"
               variant="light"
               color="dark"
-              leftSection={<IconDeviceDesktop size={18} />}
+              leftSection={<IconDeviceDesktop size={14} />}
               onClick={handleAbrirTelao}
             >
               Telão

@@ -159,3 +159,7 @@ Passo 7: Adicionar rota no App.tsx
 ### Correção: Equipe e faixa abaixo do nome no telão
 - **Problema:** Telão exibia apenas o nome do atleta, sem equipe nem faixa.
 - **Solução:** Adicionadas props `equipe` e `faixa` ao `LadoAtleta`. Equipe exibida abaixo do nome com `textTransform: capitalize` e cor secundária. Faixa exibida como `Badge` colorido usando `FAIXA_COLORS`.
+
+### Correção: Placar deve caber em 100% da altura sem scroll
+- **Problema:** PlacarLuta e PlacarLutaCasada geravam scroll vertical devido a `minHeight: 540` no AtletaPanel, `minHeight: 100vh` no PageLayout, `overflow: 'auto'` no Stack, fontes grandes e botões grandes.
+- **Solução:** (1) `overflow: 'hidden'` no Stack principal. (2) Group dos AtletaPanels com `flex: 1, minHeight: 0`. (3) Paper do AtletaPanel com `flex: 1, minHeight: 0, overflow: 'hidden'`. (4) Fontes reduzidas (TOTAL 70→40px, COUNTER 36→24px, VANT/PUN 22→16px, NOME 28→18px, CRONOMETRO 96→48px). (5) ActionIcons menores (44→36 pontos, 32→28 vant/pun). (6) Botões lg→md. (7) Padding reduzido. (8) Controles com `flexShrink: 0`.
