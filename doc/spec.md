@@ -15,87 +15,41 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
+### [aberto] telão ,tempo na cor branca, vantagem na cor verde, punição na cor vermelha
+### [aberto] telão, nome da equipe em baixo do nome, cor de faixa em baixo 
+### [aberto] placar tem que cabem em 100% de altura da tela sem scroll
 ---
 
 ## Histórico de Correções
 
-### [corrigido] Telão: layout com label acima e valor abaixo (Nome | Total | Vantagem | Punição)
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] o layaut da segunda tela deve ser Nome, ao lado texto total e a baixo o valor, ao lado texto vantagem em baixo o valos, ao lado texto punição e a baixoo o valor`
-**Correção:** Reescrito o componente `LadoAtleta` com layout horizontal: Nome à esquerda, seguido de colunas [Total, Vantagem, Punição] cada uma com texto label acima e valor abaixo. Seguindo o exemplo HTML fornecido no spec.
-**Arquivo afetado:** `src/pages/PlacarExibicao.tsx:31-86`
+### [corrigido] telão, tempo na cor branca, vantagem na cor verde, punição na cor vermelha
+**Data:** 2026-06-30
+**Comportamento atual:** O cronômetro do telão mudava de cor dinamicamente (verde=rodando, vermelho=esgotado, branco=pausado). Vantagens e punições usavam a mesma cor do tema (branco/preto).
+**Comportamento esperado:** Cronômetro sempre em branco. Vantagens em verde (`#22c55e`). Punições em vermelho (`#fa5252`).
+**Escopo:** `src/pages/PlacarExibicao.tsx`
+**Ação:** `corCronometro` fixada como `'#ffffff'`. Componente `ColunaPlacar` usa cores dedicadas: `VERDE` para label "Vant" e `VERMELHO` para label "Pun", tanto no label quanto no valor.
 
-### [corrigido] Telão: exibição de vantagem e punição é condicional
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] a exibição de vantagem e punição é condicional a tem ou não.`
-**Correção:** Vantagem e Punição só são exibidas quando seus valores são maiores que 0 (`temVantagem = placar.vantagens > 0`, `temPunicao = placar.punicoes > 0`). Se ambos forem 0, apenas Nome e Total são exibidos.
-**Arquivo afetado:** `src/pages/PlacarExibicao.tsx:45-46, 71-82`
+### [corrigido] telão, nome da equipe em baixo do nome, cor de faixa em baixo
+**Data:** 2026-06-30
+**Comportamento atual:** O telão exibia apenas o nome do atleta, sem equipe nem faixa.
+**Comportamento esperado:** Equipe exibida abaixo do nome (texto menor, cor secundária). Faixa exibida abaixo da equipe como `Badge` colorido com a cor correspondente.
+**Escopo:** `src/pages/PlacarExibicao.tsx`
+**Ação:** Adicionadas props `equipe` e `faixa` ao componente `LadoAtleta`. Equipe renderizada com `textTransform: capitalize` e cor secundária. Faixa renderizada como `Badge` com cor de `FAIXA_COLORS` (mesmo mapeamento de `AdminAthletes.tsx`). Dados `equipeA/equipeB` e `faixaA/faixaB` já eram enviados pelo PlacarLuta/PlacarLutaCasada — apenas adicionado ao `LadoAtleta`.
 
-### [corrigido] Telão: exibir vantagens e punições ao lado da pontuação
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] vantagem e punição tem que aparecer assim que eles recebem pontuação. Exemplo Rafael 0 1 1 00:00 1 1 0 Anderson`
-**Correção:** Atualizado o componente `LadoAtleta` no `PlacarExibicao.tsx` para exibir total, vantagens e punições lado a lado abaixo do nome. Formato: [total] [vantagens] [punições] — cores sutis para V e P.
-**Arquivo afetado:** `src/pages/PlacarExibicao.tsx:58-70`
+### [corrigido] pontuação total esta muito grande
+**Data:** 2026-06-30
+**Comportamento atual:** A fonte do placar total no telão (`PlacarExibicao.tsx`) usava `clamp(52px, 7vw, 110px)`, proporcionalmente grande demais para um banner de 10% da altura da tela.
+**Comportamento esperado:** Fonte do total em tamanho adequado para o banner, com label "Total" acima do valor. Utilizado `clamp(28px, 3.5vw, 64px)` com label.
+**Escopo:** `src/pages/PlacarExibicao.tsx`
+**Ação:** Reduzida fonte do total e adicionado label "Total" acima do valor, seguindo o padrão label-acima/valor-abixo da spec.
 
-### [corrigido] Telão: janela posicionada na parte inferior da tela
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] a tela tem que aparecer em baixo`
-**Correção:** Alterada a posição da janela telão de `y: 0` (topo) para `y: screenHeight - telaoHeight` (rodapé da tela). A janela agora aparece na parte inferior do monitor.
-**Arquivo afetado:** `electron/main.ts:81`
+### [corrigido] vantagem e punição tem que renderizar de forma condicional
+**Data:** 2026-06-30
+**Comportamento atual:** O telão (`PlacarExibicao.tsx`) exibia apenas Nome + Total para cada atleta, sem mostrar vantagens nem punições.
+**Comportamento esperado:** Colunas [Total, Vantagem, Punição] com label acima e valor abaixo. V e P condicionais — só aparecem quando > 0.
+**Escopo:** `src/pages/PlacarExibicao.tsx`
+**Ação:** Adicionada componente `ColunaPlacar` reutilizável. Colunas de Vantagem e Punição renderizadas condicionalmente (`{placar.vantagens > 0 && ...}`). Fonte do nome reduzida para `clamp(14px, 1.4vw, 24px)`.
 
-### [corrigido] Telão: layout simplificado — apenas nome + pontuação total
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] A segunda tela não é uma copia no estilo, tem que ser adaptado ao tamanho, aparecendo (nome, pontuação total) tempo (pontuação total, nome)`
-**Correção:** Reescrito o componente `PlacarExibicao.tsx` com layout simplificado: cada lado exibe apenas nome e pontuação total, com cronômetro ao centro. Removidos faixa, equipe, vantagens e punições do telão. Layout: [nome B, total B] — [tempo] — [total A, nome A].
-**Arquivo afetado:** `src/pages/PlacarExibicao.tsx` (reescrito)
-
-### [corrigido] Telão: nunca exibir "Aguardando placar"
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] Não é para em momento algum ficar em aguardando placar`
-**Correção:** Removido o estado de loading do `PlacarExibicao.tsx` que exibia "Aguardando placar..." quando `dados` era `null`. Agora o componente sempre renderiza o layout horizontal com dados zerados/vazios até que os dados reais cheguem via IPC. O telão nunca mostra tela de espera.
-**Arquivo afetado:** `src/pages/PlacarExibicao.tsx:122-135`
-
-### [corrigido] Telão: formato simplificado — layout horizontal banner 100%×10%
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] o formato do telão é simplificado, a janela deve ter largura sempre 100% da tela, e altura de 10%. o placar deve ser (nome do aluno, em baixo a cor de faixa e em baixo a equipe, depois a pontuação total vantagem e punição caso tenha, caso não tenha, mostre somente o total no centro um x e em seguida (vantagem e punição caso tenha, total, nome do aluno adversario no fundo azul))`
-**Correção:** Reescrito o layout do telão para formato horizontal banner. Janela do Electron agora tem 100% da largura da tela e 10% da altura, posicionada no topo, sempre visível (alwaysOnTop, frame=false). O componente `PlacarExibicao.tsx` foi completamente reescrito com layout horizontal: lado B (branco) à esquerda, cronômetro ao centro, lado A (azul) à direita. Cada lado exibe nome, cor de faixa (bolinha colorida), equipe e total com vantagens/punições quando houver.
-**Arquivos afetados:** `electron/main.ts:65-96`, `src/pages/PlacarExibicao.tsx` (reescrito)
-
-### [corrigido] Telão: ir direto para o placar sem mostrar "Aguardando dados"
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] Não é para exibir é para ir direto para o placar: TELÃO Aguardando dados do placar... LUTA: #0A95231D`
-**Correção:** O `enviarDadosTelaoImmediate` já foi adicionado na sessão anterior, enviando dados imediatamente ao abrir o telão. Na reescrita do layout, a tela de loading foi simplificada para exibir apenas "Aguardando placar..." em texto discreto, sem badge de luta, pois os dados chegam instantaneamente.
-**Arquivos afetados:** `src/pages/PlacarExibicao.tsx:115-119`, `src/pages/PlacarLuta.tsx:443-461`, `src/pages/PlacarLutaCasada.tsx:422-440`
-
-### [corrigido] Telão: botão "Fechar Telão" volta ao estado inicial ao fechar janela pelo X
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] se eu fechar o telão sem ser pelo botao, o botao fechar telão tem que voltar ao status inical`
-**Correção:** Adicionado evento `telao-fechado` no processo principal (`electron/main.ts`) que é disparado quando a janela do telão é fechada. O renderer recebe via IPC (`onTelaoFechado`) e atualiza o estado `telaoAberto` para `false`, fazendo o botão voltar ao estado "Telão".
-**Arquivos afetados:** `electron/main.ts:85-89`, `electron/preload.ts:168-170`, `src/types/electron.d.ts:111`, `src/pages/PlacarLuta.tsx:466-470`, `src/pages/PlacarLutaCasada.tsx:445-449`
-
-### [corrigido] Telão: exibir informações desde o momento da abertura (0x0)
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] O telão tem que exibir as informações desde o momento em que o telão é clicado para abrir. (desde o 0 a 0)`
-**Correção:** Adicionada função `enviarDadosTelaoImmediate` nas telas `PlacarLuta.tsx` e `PlacarLutaCasada.tsx` que envia os dados do placar imediatamente ao abrir o telão (via `setTimeout` de 100ms após `setTelaoAberto(true)`), garantindo que o telão exiba os dados desde o início.
-**Arquivos afetados:** `src/pages/PlacarLuta.tsx:422-450`, `src/pages/PlacarLutaCasada.tsx:400-428`
-
-### [corrigido] Telão: cor azul do placar deve ficar à direita (como no placar)
-**Data:** 2026-06-29
-**Problema original:** `### [aberto] no telão a cor azu do placar tem que continuar sendo na direita assim como no placar`
-**Correção:** Invertida a ordem dos painéis no componente `PlacarExibicao.tsx`. O painel do lado A (azul) agora é renderizado à direita e o lado B (branco) à esquerda, espelhando a disposição do `PlacarLuta.tsx`.
-**Arquivo afetado:** `src/pages/PlacarExibicao.tsx:216-231`
-
-### [implementado] Feature: Telão - Segunda janela do Placar
-**Data:** 2026-06-29
-**Descrição:** Implementada funcionalidade de abrir uma segunda janela do Electron (telão) a partir das telas PlacarLuta e PlacarLutaCasada. O telão exibe o placar completo + cronômetro em estilo telão (fontes grandes, layout otimizado para projeção). A segunda janela atualiza em tempo real via IPC quando o placar é alterado na janela principal.
-**Arquivos afetados:**
-- `electron/main.ts` — handlers IPC `abrir-telao`, `enviar-dados-placar-telao`, `fechar-telao` + função `createTelaoWindow`
-- `electron/preload.ts` — novos canais IPC expostos ao renderer
-- `src/types/electron.d.ts` — tipos dos novos métodos
-- `src/pages/PlacarExibicao.tsx` — nova página de exibição do telão
-- `src/pages/PlacarLuta.tsx` — botão Telão/Fechar Telão + envio de dados em tempo real
-- `src/pages/PlacarLutaCasada.tsx` — botão Telão/Fechar Telão + envio de dados em tempo real
-- `src/App.tsx` — nova rota `/admin/telao/:lutaId`
 
 
 ## Feature

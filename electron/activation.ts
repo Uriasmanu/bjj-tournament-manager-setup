@@ -15,11 +15,14 @@ export type ActivationInfo = {
   daysRemaining: number | null
 }
 
+let _machineId: string | null = null
+
 function getActivationPath(): string {
   return path.join(app.getPath('userData'), ACTIVATION_FILE)
 }
 
 function getMachineId(): string {
+  if (_machineId) return _machineId
   try {
     const uuid = execSync('wmic csproduct get uuid', {
       encoding: 'utf-8',
@@ -27,7 +30,10 @@ function getMachineId(): string {
       windowsHide: true,
     })
     const lines = uuid.split('\n').map(l => l.trim()).filter(Boolean)
-    if (lines[1]) return lines[1]
+    if (lines[1]) {
+      _machineId = lines[1]
+      return _machineId
+    }
   } catch {
     // wmic may be slow or unavailable on newer Windows
   }
@@ -37,11 +43,15 @@ function getMachineId(): string {
       { encoding: 'utf-8', timeout: 3000, windowsHide: true }
     )
     const match = reg.match(/MachineGuid\s+REG_SZ\s+(\S+)/i)
-    if (match?.[1]) return match[1]
+    if (match?.[1]) {
+      _machineId = match[1]
+      return _machineId
+    }
   } catch {
     // fallback failed
   }
-  return crypto.randomUUID()
+  _machineId = crypto.randomUUID()
+  return _machineId
 }
 
 function isExpired(expiresAt: string | undefined): boolean {
@@ -60,7 +70,7 @@ export function checkActivation(): boolean {
     if (!fs.existsSync(filePath)) return false
     const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'))
     if (isExpired(data.expiresAt)) return false
-    const machineId = getMachineId()
+    const machineId = data.machineId || getMachineId()
     const expectedToken = crypto
       .createHmac('sha256', MASTER_PASSWORD_HASH)
       .update(machineId)
@@ -116,7 +126,7 @@ export function activateLicense(): boolean {
     const filePath = getActivationPath()
     fs.writeFileSync(
       filePath,
-      JSON.stringify({ token, activatedAt: activatedAt.toISOString(), expiresAt: expiresAt.toISOString() }, null, 2),
+      JSON.stringify({ token, machineId, activatedAt: activatedAt.toISOString(), expiresAt: expiresAt.toISOString() }, null, 2),
       'utf-8'
     )
     return true

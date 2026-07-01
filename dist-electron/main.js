@@ -152449,10 +152449,12 @@ function deleteCategoriaCustomizada(torneioId, categoriaId) {
 const MASTER_PASSWORD_HASH = process.env.MASTER_PASSWORD_HASH || "f83244662ee78bf661577ecd28343bc4ff6538b6f249d6d7b1bf34817ec0ced4";
 const ACTIVATION_FILE = "activation.json";
 const EXPIRATION_YEARS = 1;
+let _machineId = null;
 function getActivationPath() {
   return path.join(app.getPath("userData"), ACTIVATION_FILE);
 }
 function getMachineId() {
+  if (_machineId) return _machineId;
   try {
     const uuid = execSync("wmic csproduct get uuid", {
       encoding: "utf-8",
@@ -152460,7 +152462,10 @@ function getMachineId() {
       windowsHide: true
     });
     const lines = uuid.split("\n").map((l) => l.trim()).filter(Boolean);
-    if (lines[1]) return lines[1];
+    if (lines[1]) {
+      _machineId = lines[1];
+      return _machineId;
+    }
   } catch {
   }
   try {
@@ -152469,10 +152474,14 @@ function getMachineId() {
       { encoding: "utf-8", timeout: 3e3, windowsHide: true }
     );
     const match = reg.match(/MachineGuid\s+REG_SZ\s+(\S+)/i);
-    if (match == null ? void 0 : match[1]) return match[1];
+    if (match == null ? void 0 : match[1]) {
+      _machineId = match[1];
+      return _machineId;
+    }
   } catch {
   }
-  return crypto.randomUUID();
+  _machineId = crypto.randomUUID();
+  return _machineId;
 }
 function isExpired(expiresAt) {
   if (!expiresAt) return true;
@@ -152488,7 +152497,7 @@ function checkActivation() {
     if (!fs.existsSync(filePath)) return false;
     const data2 = JSON.parse(fs.readFileSync(filePath, "utf-8"));
     if (isExpired(data2.expiresAt)) return false;
-    const machineId = getMachineId();
+    const machineId = data2.machineId || getMachineId();
     const expectedToken = crypto.createHmac("sha256", MASTER_PASSWORD_HASH).update(machineId).digest("hex");
     return data2.token === expectedToken;
   } catch {
@@ -152535,7 +152544,7 @@ function activateLicense() {
     const filePath = getActivationPath();
     fs.writeFileSync(
       filePath,
-      JSON.stringify({ token, activatedAt: activatedAt.toISOString(), expiresAt: expiresAt.toISOString() }, null, 2),
+      JSON.stringify({ token, machineId, activatedAt: activatedAt.toISOString(), expiresAt: expiresAt.toISOString() }, null, 2),
       "utf-8"
     );
     return true;

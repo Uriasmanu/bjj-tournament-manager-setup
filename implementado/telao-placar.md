@@ -141,3 +141,21 @@ Passo 7: Adicionar rota no App.tsx
 - [x] Documentação atualizada (spec.md, requisitos.md)
 - [x] Sem warnings ou erros não tratados introduzidos (apenas erro pré-existente em brackets.ts)
 - [x] Seção Histórico de Correções atualizada em spec.md
+
+## 13. Correções (2026-06-30)
+
+### Correção: Pontuação total muito grande no telão
+- **Problema:** Fonte do placar total usava `clamp(52px, 7vw, 110px)`, excessiva para banner de 10% da altura.
+- **Solução:** Fonte reduzida para `clamp(28px, 3.5vw, 64px)`. Adicionado label "Total" acima do valor (padrão label-acima/valor-abixo).
+
+### Correção: Vantagem e punição não renderizavam condicionalmente
+- **Problema:** Telão exibia apenas Nome + Total, sem vantagens nem punições.
+- **Solução:** Adicionada componente `ColunaPlacar` reutilizável. Colunas Vant/Pun renderizadas condicionalmente (`{placar.vantagens > 0 && ...}`) com label acima e valor abaixo. Fonte do nome reduzida para `clamp(14px, 1.4vw, 24px)` para acomodar as colunas extras.
+
+### Correção: Cores no telão (tempo=branco, vantagem=verde, punição=vermelho)
+- **Problema:** Cronômetro mudava de cor dinamicamente. Vantagens e punições usavam cor do tema.
+- **Solução:** `corCronometro` fixada como `'#ffffff'`. `ColunaPlacar` usa cores dedicadas: `#22c55e` (verde) para Vant, `#fa5252` (vermelho) para Pun, tanto no label quanto no valor.
+
+### Correção: Equipe e faixa abaixo do nome no telão
+- **Problema:** Telão exibia apenas o nome do atleta, sem equipe nem faixa.
+- **Solução:** Adicionadas props `equipe` e `faixa` ao `LadoAtleta`. Equipe exibida abaixo do nome com `textTransform: capitalize` e cor secundária. Faixa exibida como `Badge` colorido usando `FAIXA_COLORS`.
