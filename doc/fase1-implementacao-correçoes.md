@@ -28,6 +28,8 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 ### [aberto] aumente o temepo de validação da pontuação para 5s
 
 ### [aberto] Ele esta considerando quase todos os gestos como 4 pontos
+
+### [aberto] as pontuações de 2,3 e 4 alem dos dedos tambem tem o gesto de estar com o braço etenditdo para cima
 ---
 
 ## Histórico de Correções
