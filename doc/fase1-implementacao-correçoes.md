@@ -15,7 +15,7 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Comportamento esperado:** o que deveria acontecer.
 **Escopo:** onde no código isso precisa ser resolvido (geração, exibição, ambos...).
 -->
-### [aberto] O gesto de punição está descrito e implementado incorretamente
+### [aberto] O gesto de punição está descrito e implementado incorretamente (ainda não esta funcionando)
 
 **Comportamento atual:** O documento `implementacao-gestos-webcam.md` descreve o gesto de punição como "Braço estendido para baixo (pulso abaixo do cotovelo, ângulo > 150°)", e o código em `gestureDetection.ts` implementa `isArmPointingDown()` para detectar punição. Isso está errado — o gesto de punição na IBJJF não é o braço apontando para baixo.
 
@@ -23,14 +23,12 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 
 **Escopo:** Detecção de gestos — `src/services/gestureDetection.ts`, `doc/implementacao-gestos-webcam.md`, `src/types/gesture.ts`
 
+### [aberto] gesto de vantagem O braço fica estendido na linha do peito/cintura (paralelo ao solo ou levemente inclinado para baixo)
 ---
 
 ## Histórico de Correções
 
-### Correção do gesto de punição (2026-08-04)
-- **Problema:** O gesto de punição estava descrito e implementado como "braço estendido para baixo" (`isArmPointingDown`), mas o correto segundo a IBJJF é "braço elevado à altura do ombro com punho fechado".
-- **Correção:** Alterada a detecção de punição para `isArmRaisedToShoulderWithFist()` — verifica braço estendido horizontalmente à altura do ombro com punho fechado.
-- **Arquivos afetados:** `src/services/gestureDetection.ts`, `doc/implementacao-gestos-webcam.md`, `src/types/gesture.ts`.
+
 ---
 
 ## Feature
