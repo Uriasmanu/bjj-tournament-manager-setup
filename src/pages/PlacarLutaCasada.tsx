@@ -23,11 +23,15 @@ import {
   IconAlertTriangle,
   IconArrowBack,
   IconDeviceDesktop,
+  IconCamera,
 } from '@tabler/icons-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import { PageLayout } from '../components/PageLayout';
+import { useGestureScoring } from '../hooks/useGestureScoring';
+import { showNotification } from '@mantine/notifications';
+import type { GestureType } from '../types/gesture';
 import type { PlacarLuta } from '../types/bracket';
 import type { LutaCasada, AtletaSnapshot } from '../types/lutaCasada';
 import type { Atleta } from '../types/athlete';
@@ -323,6 +327,7 @@ export function PlacarLutaCasada() {
   const intervalRef = useRef<number | null>(null);
   const horarioInicioRef = useRef<string | null>(null);
   const [telaoAberto, setTelaoAberto] = useState(false);
+  const [gestureEnabled, setGestureEnabled] = useState(false);
 
   const handleZerarRef = useRef<() => void>(() => {});
   const handleZerar = useCallback(() => {
@@ -416,6 +421,85 @@ export function PlacarLutaCasada() {
     setTempoInicial(novoSegundos);
     if (!rodando) setTempoRestante(novoSegundos);
   };
+
+  const handleGestureScore = useCallback(
+    (side: 'A' | 'B', type: GestureType) => {
+      if (bloqueado) return;
+      const setter = side === 'A' ? setPlacarA : setPlacarB;
+      setter((prev) => {
+        const novo = { ...prev };
+        switch (type) {
+          case 'points_2':
+            novo.pontos2 += 1;
+            break;
+          case 'points_3':
+            novo.pontos3 += 1;
+            break;
+          case 'points_4':
+            novo.pontos4 += 1;
+            break;
+          case 'advantage':
+            novo.vantagens += 1;
+            break;
+          case 'penalty':
+            novo.punicoes = Math.min(4, novo.punicoes + 1);
+            break;
+        }
+        novo.total = novo.pontos2 * 2 + novo.pontos3 * 3 + novo.pontos4 * 4;
+        return novo;
+      });
+      const labels: Record<string, string> = {
+        points_2: '+2',
+        points_3: '+3',
+        points_4: '+4',
+        advantage: 'Vantagem',
+        penalty: 'Punição',
+      };
+      showNotification({
+        title: labels[type] ?? type,
+        message: `→ Atleta ${side}`,
+        color: type === 'penalty' ? 'red' : 'green',
+        autoClose: 2500,
+      });
+    },
+    [bloqueado]
+  );
+
+  const handleGestureTimer = useCallback(
+    (action: 'start' | 'pause') => {
+      if (bloqueado) return;
+      if (action === 'start') {
+        if (!rodando && horarioInicioRef.current === null) {
+          horarioInicioRef.current = dayjs().format('DD/MM/YYYY HH:mm:ss');
+        }
+        setRodando(true);
+      } else {
+        setRodando(false);
+      }
+      showNotification({
+        title: action === 'start' ? 'Luta Iniciada' : 'Luta Pausada',
+        message: 'Cronômetro ajustado por gesto',
+        color: 'blue',
+        autoClose: 2500,
+      });
+    },
+    [bloqueado, rodando]
+  );
+
+  const gesture = useGestureScoring({
+    enabled: gestureEnabled,
+    dwellTimeMs: 3000,
+    onScoreUpdate: handleGestureScore,
+    onTimerControl: handleGestureTimer,
+  });
+
+  useEffect(() => {
+    if (gestureEnabled) {
+      gesture.start();
+    } else {
+      gesture.stop();
+    }
+  }, [gestureEnabled, gesture.start, gesture.stop]);
 
   const enviarDadosTelao = useCallback(() => {
     if (!telaoAberto || !luta) return;
@@ -717,6 +801,16 @@ export function PlacarLutaCasada() {
             onClick={() => navigate(`/admin/placar/chaves/${areaId}`)}
           >
             Voltar
+          </Button>
+          <Button
+            size="xs"
+            variant={gestureEnabled ? 'filled' : 'light'}
+            color={gestureEnabled ? 'green' : 'dark'}
+            leftSection={<IconCamera size={14} />}
+            onClick={() => setGestureEnabled((g) => !g)}
+            disabled={bloqueado}
+          >
+            {gestureEnabled ? 'Câmera On' : 'Câmera'}
           </Button>
           {telaoAberto ? (
             <Button
