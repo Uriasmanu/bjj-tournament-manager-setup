@@ -115,7 +115,7 @@ export type GestureType =
   | 'points_3'      // 3 dedos → +3 pontos
   | 'points_4'      // 4 dedos → +4 pontos
   | 'advantage'     // braço horizontal → vantagem
-  | 'penalty'       // braço para baixo → punição
+  | 'penalty'       // braço elevado à altura do ombro com punho fechado → punição
   | 'start_fight';  // punho fechado descendo → iniciar/retomar luta
 
 export interface GestureResult {
@@ -155,7 +155,7 @@ whichHandHasBracelet(leftLandmarks, rightLandmarks, frame) → 'left' | 'right'
 | +3 pontos | Mão com 3 dedos estendidos (indicador + médio + anelar) |
 | +4 pontos | Mão com 4 dedos estendidos (indicador + médio + anelar + mínimo) |
 | Vantagem | Braço estendido horizontalmente (ângulo > 160°, diferença Y ombro-pulso < 8%) |
-| Punição | Braço estendido para baixo (pulso abaixo do cotovelo, ângulo > 150°) |
+| Punição | Braço elevado à altura do ombro com punho fechado (ângulo > 160°, diferença Y ombro-pulso < 8%, todos os dedos fechados) |
 | **Iniciar/Retomar** | **Punho fechado + movimento rápido para baixo (velocidade Y > threshold)** |
 
 **Gesto "Iniciar/Retomar Luta" — detalhes:**
@@ -404,12 +404,23 @@ function calculateAngle(a: Landmark, b: Landmark, c: Landmark): number {
 }
 ```
 
-### 6.3 Detecção de Braço para Baixo (Punição)
+### 6.3 Detecção de Braço Elevado à Altura do Ombro com Punho Fechado (Punição)
 
 ```typescript
-function isArmPointingDown(shoulder: Landmark, elbow: Landmark, wrist: Landmark): boolean {
+function isArmRaisedToShoulderWithFist(landmarks: Landmark[]): boolean {
+  const shoulder = landmarks[11];
+  const elbow = landmarks[13];
+  const wrist = landmarks[15];
+
+  // 1. Braço estendido horizontalmente (mesmo critério de vantagem)
   const angle = calculateAngle(shoulder, elbow, wrist);
-  return wrist.y > elbow.y && angle > 150;
+  const shoulderWristDy = Math.abs(shoulder.y - wrist.y);
+  const armHorizontal = angle > 160 && shoulderWristDy < 0.08;
+
+  // 2. Punho fechado (todos os dedos curvados)
+  const fistClosed = isFistClosed(landmarks);
+
+  return armHorizontal && fistClosed;
 }
 ```
 
@@ -567,7 +578,7 @@ src/
 ### Fase 2 — Detecção de Gestos (2-3 dias)
 1. Implementar `countExtendedFingers()`
 2. Implementar detecção de braço horizontal (vantagem)
-3. Implementar detecção de braço para baixo (punição)
+3. Implementar detecção de braço elevado à altura do ombro com punho fechado (punição)
 4. Implementar detecção de punho fechado descendente (iniciar luta)
 5. Criar `src/services/braceletDetection.ts`
 6. Testar: cada gesto é logado corretamente no console

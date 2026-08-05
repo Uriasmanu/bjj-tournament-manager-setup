@@ -46,12 +46,15 @@ function isArmHorizontal(landmarks: import('@mediapipe/hands').NormalizedLandmar
   return angle > 160 && shoulderWristDy < 0.08;
 }
 
-function isArmPointingDown(landmarks: import('@mediapipe/hands').NormalizedLandmarkList): boolean {
+function isArmRaisedToShoulderWithFist(landmarks: import('@mediapipe/hands').NormalizedLandmarkList): boolean {
   const shoulder = landmarks[11];
   const elbow = landmarks[13];
   const wrist = landmarks[15];
   const angle = calculateAngle(shoulder, elbow, wrist);
-  return wrist.y > elbow.y && angle > 150;
+  const shoulderWristDy = Math.abs(shoulder.y - wrist.y);
+  const armHorizontal = angle > 160 && shoulderWristDy < 0.08;
+  const fistClosed = isFistClosed(landmarks);
+  return armHorizontal && fistClosed;
 }
 
 const wristHistory: { y: number; timestamp: number }[] = [];
@@ -85,7 +88,7 @@ function classifyGesture(
     return { type: 'advantage', confidence: 0.80 };
   }
 
-  if (isArmPointingDown(landmarks)) {
+  if (isArmRaisedToShoulderWithFist(landmarks)) {
     return { type: 'penalty', confidence: 0.80 };
   }
 

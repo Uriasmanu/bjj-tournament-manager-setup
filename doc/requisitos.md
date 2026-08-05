@@ -684,6 +684,14 @@ Todas as telas do sistema devem ocupar no mínimo **95% da largura** e **90% da 
 - **Resultado:** Painéis com informações maiores, melhor distribuídas e mais legíveis, mantendo o layout sem scroll.
 - **Arquivos afetados:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
 
+#### 3.19.6. Correção do Gestos de Punição (Implementado)
+
+- **Problema:** O gesto de punição estava descrito e implementado incorretamente como "braço estendido para baixo" (`isArmPointingDown`). Segundo as regras da IBJJF, o gesto de punição é o árbitro **elevando o braço à altura do ombro com o punho fechado (mão fechada)**.
+- **Correção:** Substituída a função `isArmPointingDown()` por `isArmRaisedToShoulderWithFist()` em `src/services/gestureDetection.ts`. A nova função verifica: (1) braço estendido horizontalmente à altura do ombro (ângulo > 160°, diferença Y ombro-pulso < 8%), (2) punho fechado (todos os dedos curvados).
+- **Documentação atualizada:** `doc/implementacao-gestos-webcam.md` corrigido para refletir a descrição correta do gesto de punição.
+- **Arquivos afetados:** `src/services/gestureDetection.ts`, `doc/implementacao-gestos-webcam.md`
+- **Spec:** `implementado/gesto-punicao-correcao.md`
+
 - **Telão - Segunda janela do Placar (2026-06-29):** Botão "Telão" nas telas PlacarLuta e PlacarLutaCasada que abre uma segunda janela do Electron exibindo o placar em formato banner horizontal (100% largura × 10% altura da tela, sempre visível, sem moldura). Layout: lado B (branco) à esquerda com Nome + colunas [Total, Vantagem, Punição] (label acima, valor abaixo), cronômetro ao centro, lado A (azul) à direita com mesma estrutura. Vantagem e Punição são condicionais — só aparecem quando > 0. Janela posicionada na parte inferior da tela com `alwaysOnTop`. Fecha pelo botão "Fechar Telão" ou pelo X da janela (atualiza estado do botão automaticamente). Dados enviados imediatamente ao abrir (sem tela de loading visível). Atualização em tempo real via IPC. Rota: `/admin/telao/:lutaId`. Arquivos: `PlacarExibicao.tsx`, handlers IPC em `electron/main.ts`, canais em `electron/preload.ts`. Ver `implementado/telao-placar.md`.
 
 #### 3.19.2. Clarificação de WO no Placar (Implementado)
