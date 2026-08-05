@@ -24,6 +24,8 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 **Escopo:** Detecção de gestos — `src/services/gestureDetection.ts`, `doc/implementacao-gestos-webcam.md`, `src/types/gesture.ts`
 
 ### [aberto] gesto de vantagem O braço fica estendido na linha do peito/cintura (paralelo ao solo ou levemente inclinado para baixo)
+
+### [aberto] aumente o temepo de validação da pontuação para 5s
 ---
 
 ## Histórico de Correções
