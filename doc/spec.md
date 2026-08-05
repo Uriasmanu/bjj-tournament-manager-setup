@@ -20,62 +20,6 @@ NÃO alterar os comentario e NÃO apagar algo, apenas adicione suas observaçoes
 
 ## Histórico de Correções
 
-### [corrigido] Ajuste do tamanho do placar Atleta A/B — informações maiores e melhor distribuição
-**Data:** 2026-06-30
-**Comportamento atual:** Os painéis Atleta A e Atleta B tinham informações muito compactas e com muito espaçamento entre elas. Fontes pequenas (Total, pontuações, vantagens, nome) e botões de ação diminutos (30px pontos, 26px vant/pun) tornavam a leitura difícil.
-**Comportamento esperado:** Painéis com informações maiores e melhor distribuídos. Fontes maiores para Total, contadores, vantagens/punições e nome do atleta. Botões de ação maiores para facilitar uso. Padding generoso mas sem desperdiçar espaço.
-**Escopo:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
-**Ação:** (1) Fontes aumentadas: `FONT_TOTAL` de `clamp(40px, 3vw, 72px)` para `clamp(52px, 4vw, 90px)`, `FONT_COUNTER` de `clamp(24px, 1.6vw, 40px)` para `clamp(28px, 2vw, 48px)`, `FONT_VANT_PUN` de `clamp(16px, 1.4vw, 24px)` para `clamp(20px, 1.8vw, 32px)`, `FONT_NOME` de `clamp(18px, 1.6vw, 28px)` para `clamp(22px, 2vw, 36px)`. (2) Paper padding de `xs` para `sm`. (3) ActionIcons de pontos aumentados de 30×30 para 36×36px (`size="md"`). (4) ActionIcons de vant/pun aumentados de 26×26 para 32×32px (`size="md"`). (5) Texto label "pts" restaurado para `+{pontos} pts` (era `+{pontos}`). (6) Labels de nome/faixa/equipe aumentados de `size="xs"` para `size="sm"`. (7) Gap interno do Stack aumentado de `4` para `6`. (8) Alert de desclassificação com `IconAlertTriangle size={16}` (era 14).
-
-### [corrigido] placar 100% altura sem scroll + botão voltar ao lado do título + sem botão duplicado + Ctrl+Z
-**Data:** 2026-06-30
-**Comportamento atual:** (1) O placar gerava scroll porque o `PageLayout` tinha padding excessivo e o botão voltar ficava acima do Paper, desperdiçando espaço vertical. (2) Existiam dois botões de iniciar o tempo: um dedicado no barra de controles e o cronômetro clicável — redundância confusa. (3) Vantagens e punições ficavam ocultas por falta de espaço. (4) Não havia atalho para zerar placar e restaurar tempo.
-**Comportamento esperado:** Todo o conteúdo do placar cabe em 100% da viewport sem scroll. Botão voltar ao lado esquerdo do título dentro do Paper. Apenas uma forma de iniciar/pausar o tempo (cronômetro clicável + barra de controles compacta com Zerar/Iniciar pequenos). Ctrl+Z zera placar e restaura tempo cheio. Vantagens e punições sempre visíveis.
-**Escopo:** `src/components/PageLayout.tsx`, `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
-**Ação:** (1) `PageLayout`: botão voltar movido para dentro do Paper ao lado do título (`Group gap="xs" wrap="nowrap"`), padding reduzido de `clamp(12px, 2vw, 24px)` para `clamp(8px, 1.5vw, 16px)`, Container padding reduzido. (2) `PlacarLuta`/`PlacarLutaCasada`: barra de controles compacta com botões `size="xs"`, cronômetro com `p="xs"`, fonte "TEMPO ESGOTADO" reduzida para `clamp(28px, 4vw, 60px)`. (3) `AtletaPanel`: padding `p="md"` → `p="xs"`, gaps reduzidos (`gap="sm"` → `gap={4}`), ActionIcons de 36→30px (pontos) e 28→26px (vant/pun), fonte labels reduzida. (4) Footer buttons `size="md"` → `size="xs"`, texto encurtado ("Finalizar", "Voltar", "Telão"). (5) Hook `useCtrlZReset` adicionado para Ctrl+Z zerar placar e restaurar tempo. (6) `Stack gap="sm"` → `gap="xs"` no container principal.
-
-### [corrigido] placar tem que caber em 100% de altura da tela sem scroll, ajuste das alturas
-**Data:** 2026-06-30
-**Comportamento atual:** O placar ainda gerava scroll porque o `Stack` usava `overflow: 'auto'`, os `AtletaPanel` não flexionavam, as fontes eram grandes demais e os botões/controles tinham tamanhos fixos excessivos.
-**Comportamento esperado:** Todo o conteúdo do placar cabe em 100% da viewport sem scroll em nenhum lugar.
-**Escopo:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`
-**Ação:** (1) `overflow: 'auto'` → `overflow: 'hidden'` no Stack principal. (2) Group dos AtletaPanels com `flex: 1, minHeight: 0`. (3) Paper do AtletaPanel com `flex: 1, minHeight: 0, overflow: 'hidden'`. (4) Fontes reduzidas: TOTAL `clamp(40px, 3vw, 72px)`, COUNTER `clamp(24px, 1.6vw, 40px)`, VANT/PUN `clamp(16px, 1.4vw, 24px)`, NOME `clamp(18px, 1.6vw, 28px)`, CRONOMETRO `clamp(48px, 4vw, 100px)`. (5) ActionIcons de 44→36 (pontos) e 32→28 (vant/pun). (6) Botões de `lg`→`md`. (7) Padding reduzido (`xl`→`md` no Paper, `sm`→`xs` nos controles). (8) Todos os elementos de controle com `flexShrink: 0`.
-
-### [corrigido] placar tem que caber em 100% de altura da tela sem scroll
-**Data:** 2026-06-30
-**Comportamento atual:** As telas PlacarLuta e PlacarLutaCasada geravam scroll vertical porque `AtletaPanel` tinha `minHeight: 540`, o cronômetro `minHeight: 140` e o `PageLayout` usava `minHeight: 100vh` sem restrição de overflow.
-**Comportamento esperado:** Todo o conteúdo do placar deve caber em 100% da altura da viewport sem scroll.
-**Escopo:** `src/pages/PlacarLuta.tsx`, `src/pages/PlacarLutaCasada.tsx`, `src/components/PageLayout.tsx`
-**Ação:** (1) Removido `minHeight: 540` do `AtletaPanel`. (2) Reduzido `minHeight` do cronômetro de 140 para 100. (3) Adicionada prop `fullHeight` ao `PageLayout` que usa `height: 100vh` + `overflow: hidden` em vez de `minHeight`. (4) `Stack` principal com `overflow: auto` para permitir scroll interno se necessário. (5) Aplicado `fullHeight` em PlacarLuta e PlacarLutaCasada.
-
-### [corrigido] telão, tempo na cor branca, vantagem na cor verde, punição na cor vermelha
-**Data:** 2026-06-30
-**Comportamento atual:** O cronômetro do telão mudava de cor dinamicamente (verde=rodando, vermelho=esgotado, branco=pausado). Vantagens e punições usavam a mesma cor do tema (branco/preto).
-**Comportamento esperado:** Cronômetro sempre em branco. Vantagens em verde (`#22c55e`). Punições em vermelho (`#fa5252`).
-**Escopo:** `src/pages/PlacarExibicao.tsx`
-**Ação:** `corCronometro` fixada como `'#ffffff'`. Componente `ColunaPlacar` usa cores dedicadas: `VERDE` para label "Vant" e `VERMELHO` para label "Pun", tanto no label quanto no valor.
-
-### [corrigido] telão, nome da equipe em baixo do nome, cor de faixa em baixo
-**Data:** 2026-06-30
-**Comportamento atual:** O telão exibia apenas o nome do atleta, sem equipe nem faixa.
-**Comportamento esperado:** Equipe exibida abaixo do nome (texto menor, cor secundária). Faixa exibida abaixo da equipe como `Badge` colorido com a cor correspondente.
-**Escopo:** `src/pages/PlacarExibicao.tsx`
-**Ação:** Adicionadas props `equipe` e `faixa` ao componente `LadoAtleta`. Equipe renderizada com `textTransform: capitalize` e cor secundária. Faixa renderizada como `Badge` com cor de `FAIXA_COLORS` (mesmo mapeamento de `AdminAthletes.tsx`). Dados `equipeA/equipeB` e `faixaA/faixaB` já eram enviados pelo PlacarLuta/PlacarLutaCasada — apenas adicionado ao `LadoAtleta`.
-
-### [corrigido] pontuação total esta muito grande
-**Data:** 2026-06-30
-**Comportamento atual:** A fonte do placar total no telão (`PlacarExibicao.tsx`) usava `clamp(52px, 7vw, 110px)`, proporcionalmente grande demais para um banner de 10% da altura da tela.
-**Comportamento esperado:** Fonte do total em tamanho adequado para o banner, com label "Total" acima do valor. Utilizado `clamp(28px, 3.5vw, 64px)` com label.
-**Escopo:** `src/pages/PlacarExibicao.tsx`
-**Ação:** Reduzida fonte do total e adicionado label "Total" acima do valor, seguindo o padrão label-acima/valor-abixo da spec.
-
-### [corrigido] vantagem e punição tem que renderizar de forma condicional
-**Data:** 2026-06-30
-**Comportamento atual:** O telão (`PlacarExibicao.tsx`) exibia apenas Nome + Total para cada atleta, sem mostrar vantagens nem punições.
-**Comportamento esperado:** Colunas [Total, Vantagem, Punição] com label acima e valor abaixo. V e P condicionais — só aparecem quando > 0.
-**Escopo:** `src/pages/PlacarExibicao.tsx`
-**Ação:** Adicionada componente `ColunaPlacar` reutilizável. Colunas de Vantagem e Punição renderizadas condicionalmente (`{placar.vantagens > 0 && ...}`). Fonte do nome reduzida para `clamp(14px, 1.4vw, 24px)`.
-
 
 
 ## Feature
