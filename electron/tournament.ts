@@ -9,6 +9,7 @@ import type { AreaLuta } from '../src/types/area';
 import type { Chave } from '../src/types/bracket';
 import type { LutaCasada } from '../src/types/lutaCasada';
 import { CATEGORIAS_IBJJF } from '../src/types/category';
+import { readTorneioMeta, writeTorneioMeta, listTournamentIds, migrateLegacyTorneioIfNeeded, getTorneioDir } from './storage/torneioStorage';
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios');
@@ -152,34 +153,29 @@ export function registerTournamentHandlers(): void {
       data: data.data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      atletas: [],
       categoriasDesabilitadas,
     };
-    fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), 'utf-8');
+    writeTorneioMeta(torneio);
     return torneio;
   });
 
   ipcMain.handle('list-tournaments', (): Torneio[] => {
     ensureDirs();
-    const files = fs.readdirSync(TORNEIOS_DIR).filter(f => f.endsWith('.json'));
-    return files.map(f => {
-      const content = fs.readFileSync(path.join(TORNEIOS_DIR, f), 'utf-8');
-      return JSON.parse(content) as Torneio;
+    return listTournamentIds().map(id => {
+      migrateLegacyTorneioIfNeeded(id);
+      return readTorneioMeta(id);
     });
   });
 
   ipcMain.handle('start-tournament', (_event, payload: { id: string; mode: 'admin' | 'area' }): Torneio => {
     ensureDirs();
+    migrateLegacyTorneioIfNeeded(payload.id);
     fs.writeFileSync(ATIVO_FILE, JSON.stringify({ id: payload.id, mode: payload.mode }), 'utf-8');
-    const filePath = getTorneioPath(payload.id);
-    if (fs.existsSync(filePath)) {
-      const torneio = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Torneio;
-      torneio.startedAt = new Date().toISOString();
-      torneio.updatedAt = new Date().toISOString();
-      fs.writeFileSync(filePath, JSON.stringify(torneio, null, 2), 'utf-8');
-      return torneio;
-    }
-    throw new Error('Torneio não encontrado');
+    const meta = readTorneioMeta(payload.id);
+    meta.startedAt = new Date().toISOString();
+    meta.updatedAt = new Date().toISOString();
+    writeTorneioMeta(meta);
+    return meta;
   });
 
   ipcMain.handle('get-tournament-mode', (): 'admin' | 'area' | null => {
@@ -339,9 +335,16 @@ export function registerTournamentHandlers(): void {
 
   ipcMain.handle('delete-tournament', (_event, id: string): void => {
     ensureDirs();
-    const filePath = getTorneioPath(id);
-    if (!fs.existsSync(filePath)) throw new Error('Torneio não encontrado');
-    fs.unlinkSync(filePath);
+    migrateLegacyTorneioIfNeeded(id);
+    const dirPath = getTorneioDir(id);
+    const legacyPath = getTorneioPath(id);
+    const migratedPath = `${legacyPath}.migrated`;
+    if (!fs.existsSync(dirPath) && !fs.existsSync(legacyPath) && !fs.existsSync(migratedPath)) {
+      throw new Error('Torneio não encontrado');
+    }
+    if (fs.existsSync(dirPath)) fs.rmSync(dirPath, { recursive: true, force: true });
+    if (fs.existsSync(legacyPath)) fs.unlinkSync(legacyPath);
+    if (fs.existsSync(migratedPath)) fs.unlinkSync(migratedPath);
 
     if (fs.existsSync(ATIVO_FILE)) {
       try {

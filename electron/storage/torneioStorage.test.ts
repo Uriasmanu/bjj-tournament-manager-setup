@@ -10,7 +10,18 @@ import {
   deleteRecordFile,
   migrateLegacyTorneioIfNeeded,
   readTorneioMeta,
+  loadTorneioCompat,
+  saveTorneioCompat,
 } from './torneioStorage'
+import type { Torneio } from '../../src/types/tournament'
+
+interface TestRecord {
+  id: string
+  updatedAt: string
+  deletedAt?: string | null
+  nome?: string
+  [key: string]: unknown
+}
 
 describe('torneioStorage', () => {
   let dataDir: string
@@ -25,31 +36,31 @@ describe('torneioStorage', () => {
   })
 
   it('writeRecord grava um arquivo por registro e atualiza updatedAt', () => {
-    const saved = writeRecord('t1', 'atletas', { id: 'a1', nome: 'joao', updatedAt: '2000-01-01T00:00:00.000Z' } as any)
+    const saved = writeRecord<TestRecord>('t1', 'atletas', { id: 'a1', nome: 'joao', updatedAt: '2000-01-01T00:00:00.000Z' })
     expect(saved.updatedAt).not.toBe('2000-01-01T00:00:00.000Z')
-    expect(readRecord('t1', 'atletas', 'a1')).toEqual(saved)
+    expect(readRecord<TestRecord>('t1', 'atletas', 'a1')).toEqual(saved)
   })
 
   it('listRecords ignora registros com deletedAt preenchido', () => {
-    writeRecord('t1', 'atletas', { id: 'a1', updatedAt: '', deletedAt: null } as any)
-    writeRecord('t1', 'atletas', { id: 'a2', updatedAt: '', deletedAt: new Date().toISOString() } as any)
-    expect(listRecords('t1', 'atletas').map((r: any) => r.id)).toEqual(['a1'])
+    writeRecord<TestRecord>('t1', 'atletas', { id: 'a1', updatedAt: '', deletedAt: null })
+    writeRecord<TestRecord>('t1', 'atletas', { id: 'a2', updatedAt: '', deletedAt: new Date().toISOString() })
+    expect(listRecords<TestRecord>('t1', 'atletas').map(r => r.id)).toEqual(['a1'])
   })
 
   it('listAllRecords inclui registros deletados', () => {
-    writeRecord('t1', 'atletas', { id: 'a1', updatedAt: '', deletedAt: new Date().toISOString() } as any)
-    expect(listAllRecords('t1', 'atletas').map((r: any) => r.id)).toEqual(['a1'])
+    writeRecord<TestRecord>('t1', 'atletas', { id: 'a1', updatedAt: '', deletedAt: new Date().toISOString() })
+    expect(listAllRecords<TestRecord>('t1', 'atletas').map(r => r.id)).toEqual(['a1'])
   })
 
   it('deleteRecordFile remove o arquivo do disco', () => {
-    writeRecord('t1', 'atletas', { id: 'a1', updatedAt: '' } as any)
+    writeRecord<TestRecord>('t1', 'atletas', { id: 'a1', updatedAt: '' })
     deleteRecordFile('t1', 'atletas', 'a1')
-    expect(readRecord('t1', 'atletas', 'a1')).toBeNull()
+    expect(readRecord<TestRecord>('t1', 'atletas', 'a1')).toBeNull()
   })
 
   it('listRecords com parentPath lê lutas aninhadas em uma chave', () => {
-    writeRecord('t1', 'lutas', { id: 'l1', updatedAt: '' } as any, 'chaves/c1')
-    expect(listRecords('t1', 'lutas', 'chaves/c1').map((r: any) => r.id)).toEqual(['l1'])
+    writeRecord<TestRecord>('t1', 'lutas', { id: 'l1', updatedAt: '' }, 'chaves/c1')
+    expect(listRecords<TestRecord>('t1', 'lutas', 'chaves/c1').map(r => r.id)).toEqual(['l1'])
   })
 
   it('migra um torneio no formato antigo (arquivo único) para o novo formato', () => {
@@ -63,14 +74,66 @@ describe('torneioStorage', () => {
     migrateLegacyTorneioIfNeeded('t1')
 
     expect(readTorneioMeta('t1').nome).toBe('Copa X')
-    expect(listRecords('t1', 'atletas').map((r: any) => r.id)).toEqual(['a1'])
+    expect(listRecords<TestRecord>('t1', 'atletas').map(r => r.id)).toEqual(['a1'])
     expect(existsSync(path.join(legacyDir, 't1.json.migrated'))).toBe(true)
     expect(existsSync(path.join(legacyDir, 't1.json'))).toBe(false)
   })
 
   it('migrateLegacyTorneioIfNeeded não faz nada se já está no formato novo', () => {
-    writeRecord('t2', 'atletas', { id: 'a1', updatedAt: '' } as any)
+    writeRecord<TestRecord>('t2', 'atletas', { id: 'a1', updatedAt: '' })
     migrateLegacyTorneioIfNeeded('t2') // não deve lançar nem apagar nada
-    expect(listRecords('t2', 'atletas').map((r: any) => r.id)).toEqual(['a1'])
+    expect(listRecords<TestRecord>('t2', 'atletas').map(r => r.id)).toEqual(['a1'])
+  })
+
+  describe('loadTorneioCompat / saveTorneioCompat', () => {
+    it('faz round-trip de um torneio completo (atletas, arbitros, areas, lutasCasadas, chaves com lutas)', () => {
+      saveTorneioCompat({
+        id: 't3', nome: 'Copa Y', data: '2026-02-01', createdAt: '', updatedAt: '',
+        atletas: [{ id: 'a1', nome: 'joao', updatedAt: '' }] as unknown as Torneio['atletas'],
+        arbitros: [{ id: 'r1', nome: 'carlos', updatedAt: '' }] as unknown as Torneio['arbitros'],
+        areas: [{ id: 'ar1', nome: 'Área 1', updatedAt: '' }] as unknown as Torneio['areas'],
+        lutasCasadas: [{ id: 'lc1', updatedAt: '' }] as unknown as Torneio['lutasCasadas'],
+        chaves: [{ id: 'c1', updatedAt: '', lutas: [{ id: 'l1', updatedAt: '' }] }] as unknown as Torneio['chaves'],
+      })
+
+      const loaded = loadTorneioCompat('t3')
+
+      expect(loaded.nome).toBe('Copa Y')
+      expect(loaded.atletas?.map(a => a.id)).toEqual(['a1'])
+      expect(loaded.arbitros?.map(a => a.id)).toEqual(['r1'])
+      expect(loaded.areas?.map(a => a.id)).toEqual(['ar1'])
+      expect(loaded.lutasCasadas?.map(l => l.id)).toEqual(['lc1'])
+      expect(loaded.chaves?.[0]?.id).toBe('c1')
+      expect(loaded.chaves?.[0]?.lutas?.map(l => l.id)).toEqual(['l1'])
+    })
+
+    it('não altera updatedAt de um registro que não mudou entre dois saveTorneioCompat', () => {
+      saveTorneioCompat({
+        id: 't4', nome: 'Copa Z', data: '2026-03-01', createdAt: '', updatedAt: '',
+        atletas: [{ id: 'a1', nome: 'joao', updatedAt: '' }] as unknown as Torneio['atletas'],
+      })
+      const primeiraGravacao = readRecord<TestRecord>('t4', 'atletas', 'a1')
+
+      saveTorneioCompat(loadTorneioCompat('t4'))
+      const segundaGravacao = readRecord<TestRecord>('t4', 'atletas', 'a1')
+
+      expect(segundaGravacao?.updatedAt).toBe(primeiraGravacao?.updatedAt)
+    })
+
+    it('atualiza updatedAt quando um registro realmente muda', () => {
+      saveTorneioCompat({
+        id: 't5', nome: 'Copa W', data: '2026-04-01', createdAt: '', updatedAt: '',
+        atletas: [{ id: 'a1', nome: 'joao', updatedAt: '' }] as unknown as Torneio['atletas'],
+      })
+      const primeiraGravacao = readRecord<TestRecord>('t5', 'atletas', 'a1')
+
+      const torneio = loadTorneioCompat('t5')
+      torneio.atletas = [{ ...(torneio.atletas?.[0] as NonNullable<Torneio['atletas']>[number]), nome: 'joao alterado' }]
+      saveTorneioCompat(torneio)
+      const segundaGravacao = readRecord<TestRecord>('t5', 'atletas', 'a1')
+
+      expect(segundaGravacao?.updatedAt).not.toBe(primeiraGravacao?.updatedAt)
+      expect(segundaGravacao?.nome).toBe('joao alterado')
+    })
   })
 })

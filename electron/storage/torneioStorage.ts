@@ -130,6 +130,19 @@ export function deleteRecordFile(
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
 }
 
+function pickTorneioMeta(torneio: Torneio): Torneio {
+  return {
+    id: torneio.id,
+    nome: torneio.nome,
+    data: torneio.data,
+    createdAt: torneio.createdAt,
+    updatedAt: torneio.updatedAt,
+    startedAt: torneio.startedAt,
+    categoriasDesabilitadas: torneio.categoriasDesabilitadas,
+    categoriasCustomizadas: torneio.categoriasCustomizadas,
+  }
+}
+
 const LEGACY_COLLECTIONS: Array<{ key: keyof Torneio; collection: string }> = [
   { key: 'atletas', collection: 'atletas' },
   { key: 'arbitros', collection: 'arbitros' },
@@ -143,8 +156,8 @@ export function migrateLegacyTorneioIfNeeded(torneioId: string): void {
 
   const legacy: Torneio = JSON.parse(fs.readFileSync(legacyPath, 'utf-8'))
 
-  const { atletas, arbitros, areas, lutasCasadas, chaves, ...meta } = legacy
-  writeTorneioMeta(meta as Torneio)
+  writeTorneioMeta(pickTorneioMeta(legacy))
+  const { chaves } = legacy
 
   for (const { key, collection } of LEGACY_COLLECTIONS) {
     const list = (legacy[key] as StampedRecord[] | undefined) ?? []
@@ -171,6 +184,67 @@ export function migrateLegacyTorneioIfNeeded(torneioId: string): void {
   }
 
   fs.renameSync(legacyPath, `${legacyPath}.migrated`)
+}
+
+const COMPAT_COLLECTIONS: Array<{ key: 'atletas' | 'arbitros' | 'areas' | 'lutasCasadas'; collection: string }> = [
+  { key: 'atletas', collection: 'atletas' },
+  { key: 'arbitros', collection: 'arbitros' },
+  { key: 'areas', collection: 'areas' },
+  { key: 'lutasCasadas', collection: 'lutasCasadas' },
+]
+
+export function loadTorneioCompat(torneioId: string): Torneio {
+  migrateLegacyTorneioIfNeeded(torneioId)
+  const meta = readTorneioMeta(torneioId)
+  const chaves = listAllRecords<Record<string, unknown> & StampedRecord>(torneioId, 'chaves').map(chaveMeta => ({
+    ...chaveMeta,
+    lutas: listAllRecords(torneioId, 'lutas', `chaves/${chaveMeta.id}`),
+  }))
+
+  return {
+    ...meta,
+    atletas: listAllRecords(torneioId, 'atletas'),
+    arbitros: listAllRecords(torneioId, 'arbitros'),
+    areas: listAllRecords(torneioId, 'areas'),
+    lutasCasadas: listAllRecords(torneioId, 'lutasCasadas'),
+    chaves: chaves as Torneio['chaves'],
+  } as Torneio
+}
+
+function sameRecordIgnoringUpdatedAt(a: unknown, b: unknown): boolean {
+  const strip = (x: unknown) => JSON.stringify(x, (key, value) => (key === 'updatedAt' ? undefined : value))
+  return strip(a) === strip(b)
+}
+
+function writeRecordIfChanged<T extends StampedRecord>(
+  torneioId: string,
+  collection: string,
+  record: T,
+  parentPath?: string
+): void {
+  const existing = readRecord<T>(torneioId, collection, record.id, parentPath)
+  if (existing && sameRecordIgnoringUpdatedAt(existing, record)) return
+  writeRecord(torneioId, collection, record, parentPath)
+}
+
+export function saveTorneioCompat(torneio: Torneio): void {
+  const { atletas, arbitros, areas, lutasCasadas, chaves, ...meta } = torneio
+  writeTorneioMeta(meta as Torneio)
+
+  const byKey: Record<string, StampedRecord[] | undefined> = { atletas, arbitros, areas, lutasCasadas }
+  for (const { key, collection } of COMPAT_COLLECTIONS) {
+    for (const record of (byKey[key] as StampedRecord[] | undefined) ?? []) {
+      writeRecordIfChanged(torneio.id, collection, record)
+    }
+  }
+
+  for (const chave of chaves ?? []) {
+    const { lutas, ...chaveMeta } = chave as unknown as { id: string; lutas?: StampedRecord[] } & Record<string, unknown>
+    writeRecordIfChanged(torneio.id, 'chaves', chaveMeta as unknown as StampedRecord)
+    for (const luta of lutas ?? []) {
+      writeRecordIfChanged(torneio.id, 'lutas', luta, `chaves/${chaveMeta.id}`)
+    }
+  }
 }
 
 export function listTournamentIds(): string[] {

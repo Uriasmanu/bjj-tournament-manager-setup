@@ -1,31 +1,13 @@
-import { app, dialog } from 'electron'
-import path from 'node:path'
+import { dialog } from 'electron'
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import type { Atleta } from '../src/types/athlete'
-import type { Torneio } from '../src/types/tournament'
+import type { Chave } from '../src/types/bracket'
 import { CATEGORIAS_IBJJF } from '../src/types/category'
-
-const DATA_DIR = path.join(app.getPath('userData'), 'data')
-const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios')
-
-function getTorneioPath(torneioId: string): string {
-  return path.join(TORNEIOS_DIR, `${torneioId}.json`)
-}
-
-function loadTorneio(torneioId: string): Torneio {
-  const filePath = getTorneioPath(torneioId)
-  if (!fs.existsSync(filePath)) throw new Error('Torneio não encontrado')
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-}
-
-function saveTorneio(torneio: Torneio): void {
-  fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), 'utf-8')
-}
+import { listRecords, listAllRecords, readRecord, writeRecord, readTorneioMeta, deleteRecordFile } from './storage/torneioStorage'
 
 function loadAthletes(torneioId: string): Atleta[] {
-  const torneio = loadTorneio(torneioId)
-  const list = torneio.atletas ?? []
+  const list = listAllRecords<Atleta>(torneioId, 'atletas')
   let modified = false
   for (const a of list) {
     if (!a.id) {
@@ -36,175 +18,101 @@ function loadAthletes(torneioId: string): Atleta[] {
       a.createdAt = new Date().toISOString()
       modified = true
     }
-    if (!a.updatedAt) {
-      a.updatedAt = new Date().toISOString()
-      modified = true
-    }
     if (a.deletedAt === undefined) {
       a.deletedAt = null
       modified = true
     }
   }
   if (modified) {
-    torneio.updatedAt = new Date().toISOString()
-    saveTorneio(torneio)
+    for (const a of list) writeRecord(torneioId, 'atletas', a)
   }
   return list.filter(a => a.deletedAt == null)
 }
 
 function saveAthlete(torneioId: string, athlete: Atleta): Atleta[] {
-  const torneio = loadTorneio(torneioId)
-  const list = torneio.atletas ?? []
   const now = new Date().toISOString()
-  const existingIndex = list.findIndex(a => a.id === athlete.id)
-  if (existingIndex !== -1) {
-    const previous = list[existingIndex]
-    list[existingIndex] = {
-      ...athlete,
-      createdAt: previous.createdAt,
-      deletedAt: previous.deletedAt ?? null,
-      updatedAt: now,
-    }
-  } else {
-    const data: Atleta = {
-      ...athlete,
-      id: athlete.id || crypto.randomUUID(),
-      createdAt: athlete.createdAt || now,
-      updatedAt: now,
-      deletedAt: null,
-    }
-    list.push(data)
-  }
-  torneio.atletas = list
-  torneio.updatedAt = now
-  saveTorneio(torneio)
-  return list.filter(a => a.deletedAt == null)
+  const existing = athlete.id ? readRecord<Atleta>(torneioId, 'atletas', athlete.id) : null
+  const data: Atleta = existing
+    ? { ...athlete, createdAt: existing.createdAt, deletedAt: existing.deletedAt ?? null, updatedAt: now }
+    : { ...athlete, id: athlete.id || crypto.randomUUID(), createdAt: athlete.createdAt || now, updatedAt: now, deletedAt: null }
+  writeRecord(torneioId, 'atletas', data)
+  return listRecords<Atleta>(torneioId, 'atletas')
 }
 
 function updateAthlete(torneioId: string, updated: Atleta): Atleta[] {
-  const torneio = loadTorneio(torneioId)
-  const list = torneio.atletas ?? []
-  const index = list.findIndex(a => a.id === updated.id)
-  if (index === -1) throw new Error('Atleta não encontrado')
-  const previous = list[index]
-  list[index] = {
+  const previous = readRecord<Atleta>(torneioId, 'atletas', updated.id)
+  if (!previous) throw new Error('Atleta não encontrado')
+  writeRecord(torneioId, 'atletas', {
     ...updated,
     createdAt: previous.createdAt,
     deletedAt: previous.deletedAt ?? null,
-    updatedAt: new Date().toISOString(),
-  }
-  torneio.atletas = list
-  torneio.updatedAt = new Date().toISOString()
-  saveTorneio(torneio)
-  return list.filter(a => a.deletedAt == null)
+  })
+  return listRecords<Atleta>(torneioId, 'atletas')
 }
 
-function removeAthleteFromChaves(torneio: Torneio, athleteId: string): void {
-  const chaves = torneio.chaves ?? []
-  const now = new Date().toISOString()
+function removeAthleteFromChaves(torneioId: string, athleteId: string): void {
+  const chaves = listAllRecords<Chave>(torneioId, 'chaves')
   for (const chave of chaves) {
     const posIdx = chave.posicoesAtletas.indexOf(athleteId)
+    let changed = false
     if (posIdx !== -1) {
       chave.posicoesAtletas.splice(posIdx, 1)
       chave.totalAtletas = chave.posicoesAtletas.length
-      chave.updatedAt = now
+      changed = true
     }
-    for (const luta of chave.lutas) {
-      if (luta.atletaAId === athleteId) luta.atletaAId = 'tbd'
-      if (luta.atletaBId === athleteId) luta.atletaBId = 'tbd'
-      luta.updatedAt = now
+    const lutas = listAllRecords<{ id: string; updatedAt: string; atletaAId: string; atletaBId: string } & Record<string, unknown>>(torneioId, 'lutas', `chaves/${chave.id}`)
+    for (const luta of lutas) {
+      let lutaChanged = false
+      if (luta.atletaAId === athleteId) { luta.atletaAId = 'tbd'; lutaChanged = true }
+      if (luta.atletaBId === athleteId) { luta.atletaBId = 'tbd'; lutaChanged = true }
+      if (lutaChanged) writeRecord(torneioId, 'lutas', luta, `chaves/${chave.id}`)
     }
+    if (changed) writeRecord(torneioId, 'chaves', chave)
   }
 }
 
 function deleteAthlete(torneioId: string, id: string): Atleta[] {
-  const torneio = loadTorneio(torneioId)
-  const list = torneio.atletas ?? []
+  const existing = readRecord<Atleta>(torneioId, 'atletas', id)
+  if (!existing) throw new Error('Atleta não encontrado')
   const now = new Date().toISOString()
-  const index = list.findIndex(a => a.id === id)
-  if (index === -1) throw new Error('Atleta não encontrado')
-  list[index] = {
-    ...list[index],
-    deletedAt: now,
-    updatedAt: now,
-  }
-  removeAthleteFromChaves(torneio, id)
-  torneio.atletas = list
-  torneio.updatedAt = now
-  saveTorneio(torneio)
-  return list.filter(a => a.deletedAt == null)
+  writeRecord(torneioId, 'atletas', { ...existing, deletedAt: now })
+  removeAthleteFromChaves(torneioId, id)
+  return listRecords<Atleta>(torneioId, 'atletas')
 }
 
 function deleteAthletes(torneioId: string, ids: string[]): Atleta[] {
-  const torneio = loadTorneio(torneioId)
-  const idSet = new Set(ids)
-  const list = torneio.atletas ?? []
   const now = new Date().toISOString()
-  for (let i = 0; i < list.length; i += 1) {
-    if (idSet.has(list[i].id)) {
-      list[i] = {
-        ...list[i],
-        deletedAt: now,
-        updatedAt: now,
-      }
-    }
-  }
   for (const id of ids) {
-    removeAthleteFromChaves(torneio, id)
+    const existing = readRecord<Atleta>(torneioId, 'atletas', id)
+    if (existing) writeRecord(torneioId, 'atletas', { ...existing, deletedAt: now })
+    removeAthleteFromChaves(torneioId, id)
   }
-  torneio.atletas = list
-  torneio.updatedAt = now
-  saveTorneio(torneio)
-  return list.filter(a => a.deletedAt == null)
+  return listRecords<Atleta>(torneioId, 'atletas')
 }
 
 function restoreAthlete(torneioId: string, id: string): Atleta[] {
-  const torneio = loadTorneio(torneioId)
-  const list = torneio.atletas ?? []
-  const now = new Date().toISOString()
-  const index = list.findIndex(a => a.id === id)
-  if (index === -1) throw new Error('Atleta não encontrado')
-  list[index] = {
-    ...list[index],
-    deletedAt: null,
-    updatedAt: now,
-  }
-  torneio.atletas = list
-  torneio.updatedAt = now
-  saveTorneio(torneio)
-  return list.filter(a => a.deletedAt == null)
+  const existing = readRecord<Atleta>(torneioId, 'atletas', id)
+  if (!existing) throw new Error('Atleta não encontrado')
+  writeRecord(torneioId, 'atletas', { ...existing, deletedAt: null })
+  return listRecords<Atleta>(torneioId, 'atletas')
 }
 
 function loadDeletedAthletes(torneioId: string): Atleta[] {
-  const torneio = loadTorneio(torneioId)
-  const list = torneio.atletas ?? []
-  return list.filter(a => a.deletedAt != null)
+  return listAllRecords<Atleta>(torneioId, 'atletas').filter(a => a.deletedAt != null)
 }
 
 function permanentlyDeleteAthlete(torneioId: string, id: string): Atleta[] {
-  const torneio = loadTorneio(torneioId)
-  const list = torneio.atletas ?? []
-  const index = list.findIndex(a => a.id === id)
-  if (index === -1) throw new Error('Atleta não encontrado')
-  list.splice(index, 1)
-  removeAthleteFromChaves(torneio, id)
-  torneio.atletas = list
-  torneio.updatedAt = new Date().toISOString()
-  saveTorneio(torneio)
-  return list.filter(a => a.deletedAt == null)
+  deleteRecordFile(torneioId, 'atletas', id)
+  removeAthleteFromChaves(torneioId, id)
+  return listRecords<Atleta>(torneioId, 'atletas')
 }
 
 function permanentlyDeleteAthletes(torneioId: string, ids: string[]): Atleta[] {
-  const torneio = loadTorneio(torneioId)
-  const idSet = new Set(ids)
-  const list = torneio.atletas ?? []
-  torneio.atletas = list.filter(a => !idSet.has(a.id))
   for (const id of ids) {
-    removeAthleteFromChaves(torneio, id)
+    deleteRecordFile(torneioId, 'atletas', id)
+    removeAthleteFromChaves(torneioId, id)
   }
-  torneio.updatedAt = new Date().toISOString()
-  saveTorneio(torneio)
-  return torneio.atletas.filter(a => a.deletedAt == null)
+  return listRecords<Atleta>(torneioId, 'atletas')
 }
 
 function importAthletesFromFile(torneioId: string, filePath: string): { imported: number; skipped: number } {
@@ -215,9 +123,9 @@ function importAthletesFromFile(torneioId: string, filePath: string): { imported
     throw new Error('Arquivo inválido: o conteúdo deve ser um array de atletas.')
   }
 
-  const torneio = loadTorneio(torneioId)
+  const meta = readTorneioMeta(torneioId)
   const categoriasValidas = new Set(CATEGORIAS_IBJJF.map(c => c.id))
-  for (const c of (torneio.categoriasCustomizadas ?? [])) {
+  for (const c of (meta.categoriasCustomizadas ?? [])) {
     categoriasValidas.add(c.id)
   }
 
@@ -230,37 +138,36 @@ function importAthletesFromFile(torneioId: string, filePath: string): { imported
     }
   }
 
-  const current = torneio.atletas ?? []
+  const current = listAllRecords<Atleta>(torneioId, 'atletas')
   let imported = 0
   let skipped = 0
 
   for (const a of incoming) {
     const nomeLower = a.nome.trim().toLowerCase()
-    const equipeLower = a.equipe.trim().toLowerCase()
     const exists = current.some(
       ex =>
         (a.id && ex.id === a.id) ||
         (ex.nome.trim().toLowerCase() === nomeLower && ex.anoNascimento === a.anoNascimento)
     )
     if (!exists) {
-      a.nome = nomeLower
-      a.equipe = equipeLower
-      current.push({
+      const equipeLower = a.equipe.trim().toLowerCase()
+      const data: Atleta = {
         ...a,
+        nome: nomeLower,
+        equipe: equipeLower,
         id: a.id || crypto.randomUUID(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         deletedAt: null,
-      })
+      }
+      writeRecord(torneioId, 'atletas', data)
+      current.push(data)
       imported++
     } else {
       skipped++
     }
   }
 
-  torneio.atletas = current
-  torneio.updatedAt = new Date().toISOString()
-  saveTorneio(torneio)
   return { imported, skipped }
 }
 
