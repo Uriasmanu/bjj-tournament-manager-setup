@@ -11,6 +11,8 @@ import { categoriaLabels, getCategoriaLabel, type CategoriaCustomizada } from '.
 import { PageLayout } from '../components/PageLayout';
 import { gerarPdfChaves } from '../utils/pdfGenerator';
 import { ModalCriarChaveManual } from '../components/ModalCriarChaveManual';
+import { pushChaveMetaToFirestore, pushLutaToFirestore, subscribeChavesFromFirestore } from '../services/sync/chavesSync';
+import { resolveConflict } from '../services/sync/resolveConflict';
 
 const FAIXA_ORDER: Record<string, number> = {
   'branca': 0, 'cinza': 1, 'amarela': 2, 'laranja': 3,
@@ -153,6 +155,14 @@ export function GerenciarChaves() {
   const [configGerarOpen, { open: openConfigGerar, close: closeConfigGerar }] = useDisclosure(false);
   const [manualModalOpen, { open: openManualModal, close: closeManualModal }] = useDisclosure(false);
   const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
+  const [torneioId, setTorneioId] = useState<string | null>(null);
+
+  const pushChave = (chave: Chave) => {
+    if (!torneioId) return;
+    const { lutas, ...meta } = chave;
+    pushChaveMetaToFirestore(torneioId, meta);
+    for (const luta of lutas) pushLutaToFirestore(torneioId, chave.id, luta);
+  };
 
   const triggerRefresh = () => setRefreshKey(k => k + 1);
 
@@ -231,6 +241,22 @@ export function GerenciarChaves() {
     });
   }, [refreshKey]);
 
+  useEffect(() => {
+    window.electronAPI.getActiveTournament().then(t => setTorneioId(t?.id ?? null)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!torneioId) return;
+    const unsubscribe = subscribeChavesFromFirestore(torneioId, (remoteChaveMeta) => {
+      setChaves(prev => prev.map(c => {
+        if (c.id !== remoteChaveMeta.id) return c;
+        const winner = resolveConflict(c, remoteChaveMeta);
+        return winner === remoteChaveMeta ? { ...c, ...remoteChaveMeta } : c;
+      }));
+    });
+    return unsubscribe;
+  }, [torneioId]);
+
   const getAtletaNome = (id: string): string => {
     if (id === 'bye') return '(bye)';
     const atleta = athletes.find(a => a.id === id);
@@ -263,6 +289,7 @@ export function GerenciarChaves() {
         const updated = await window.electronAPI.atribuirArbitroChave({ chaveId, arbitroId: primeiroArbitroId });
         setChaves(prev => prev.map(c => c.id === chaveId ? updated : c));
         setViewChave(prev => prev?.id === chaveId ? updated : prev);
+        pushChave(updated);
         triggerRefresh();
         const nomeArea = area?.nome ?? 'área';
         notifications.show({
@@ -274,6 +301,7 @@ export function GerenciarChaves() {
         const updated = await window.electronAPI.atribuirArbitroChave({ chaveId, arbitroId: null });
         setChaves(prev => prev.map(c => c.id === chaveId ? updated : c));
         setViewChave(prev => prev?.id === chaveId ? updated : prev);
+        pushChave(updated);
         triggerRefresh();
         notifications.show({
           color: 'blue',
@@ -294,6 +322,7 @@ export function GerenciarChaves() {
       setChaves(result.chaves);
       setAtletasSemChave(result.atletasSemChave ?? []);
       setChavesGeradas(true);
+      for (const chave of result.chaves) pushChave(chave);
       const qtd = result.chaves.length;
       const solos = (result.atletasSemChave ?? []).length;
       const msg = solos > 0
@@ -312,6 +341,7 @@ export function GerenciarChaves() {
       const result = await window.electronAPI.gerarTodasChaves(max) as { chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] };
       setChaves(result.chaves);
       setAtletasSemChave(result.atletasSemChave ?? []);
+      for (const chave of result.chaves) pushChave(chave);
       const qtd = result.chaves.length;
       const solos = (result.atletasSemChave ?? []).length;
       const msg = solos > 0
@@ -326,6 +356,7 @@ export function GerenciarChaves() {
   const handleCriarChaveManual = (chave: Chave) => {
     setChaves(prev => [...prev, chave]);
     setChavesGeradas(true);
+    pushChave(chave);
     // Update emChave on athletes in the new key
     setAthletes(prev => prev.map(a =>
       chave.posicoesAtletas.includes(a.id) ? { ...a, emChave: true } : a
@@ -338,6 +369,7 @@ export function GerenciarChaves() {
       const updated = await window.electronAPI.randomizarChave({ chaveId });
       setChaves(prev => prev.map(c => c.id === chaveId ? updated : c));
       setViewChave(prev => prev?.id === chaveId ? updated : prev);
+      pushChave(updated);
       notifications.show({ color: 'green', title: 'Sucesso', message: 'Chave embaralhada com separação de equipes.' });
     } catch (err: unknown) {
       notifications.show({ color: 'red', title: 'Erro', message: err instanceof Error ? err.message : 'Erro ao embaralhar chave' });
@@ -360,6 +392,7 @@ export function GerenciarChaves() {
     try {
       const updated = await window.electronAPI.atribuirArbitroChave({ chaveId, arbitroId });
       setChaves(prev => prev.map(c => c.id === chaveId ? updated : c));
+      pushChave(updated);
       triggerRefresh();
       const nome = arbitroId ? getArbitroNome(arbitroId) : 'Sem árbitro';
       notifications.show({

@@ -37,6 +37,7 @@ import type { Chave, Luta, PlacarLuta } from '../types/bracket';
 import type { Atleta } from '../types/athlete';
 import type { AreaLuta } from '../types/area';
 import { sugerirTempoLutaMinutos, TEMPO_LUTA_FALLBACK_MINUTOS } from '../types/fightTime';
+import { pushChaveMetaToFirestore, pushLutaToFirestore } from '../services/sync/chavesSync';
 
 function useCtrlZReset(handleZerar: () => void) {
   useEffect(() => {
@@ -342,6 +343,7 @@ export function PlacarLuta() {
   const horarioInicioRef = useRef<string | null>(null);
   const [telaoAberto, setTelaoAberto] = useState(false);
   const [gestureEnabled, setGestureEnabled] = useState(false);
+  const [torneioId, setTorneioId] = useState<string | null>(null);
 
   const handleZerarRef = useRef<() => void>(() => {});
   const handleZerar = useCallback(() => {
@@ -386,6 +388,7 @@ export function PlacarLuta() {
       }
       setLoading(false);
     }).catch(() => setLoading(false));
+    window.electronAPI.getActiveTournament().then(t => setTorneioId(t?.id ?? null)).catch(() => {});
   }, [chaveId, lutaId, areaId]);
 
   useEffect(() => {
@@ -669,6 +672,11 @@ export function PlacarLuta() {
       setChave(updatedChave);
       const updatedLuta = updatedChave.lutas.find(l => l.id === luta.id) ?? null;
       setLuta(updatedLuta);
+      if (torneioId) {
+        const { lutas, ...meta } = updatedChave;
+        pushChaveMetaToFirestore(torneioId, meta);
+        for (const l of lutas) pushLutaToFirestore(torneioId, updatedChave.id, l);
+      }
       closeFinalizar();
       closeConfirmarResultado();
       navigate(`/admin/placar/chave/${areaId}/${chaveId}`);
