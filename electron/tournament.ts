@@ -9,7 +9,7 @@ import type { AreaLuta } from '../src/types/area';
 import type { Chave } from '../src/types/bracket';
 import type { LutaCasada } from '../src/types/lutaCasada';
 import { CATEGORIAS_IBJJF } from '../src/types/category';
-import { readTorneioMeta, writeTorneioMeta, listTournamentIds, migrateLegacyTorneioIfNeeded, getTorneioDir } from './storage/torneioStorage';
+import { readTorneioMeta, writeTorneioMeta, listTournamentIds, migrateLegacyTorneioIfNeeded, getTorneioDir, loadTorneioCompat, saveTorneioCompat } from './storage/torneioStorage';
 
 const DATA_DIR = path.join(app.getPath('userData'), 'data');
 const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios');
@@ -193,17 +193,18 @@ export function registerTournamentHandlers(): void {
     ensureDirs();
     const id = getActiveTournamentId();
     if (!id) return null;
-    const filePath = getTorneioPath(id);
-    if (!fs.existsSync(filePath)) return null;
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Torneio;
+    migrateLegacyTorneioIfNeeded(id);
+    try {
+      return loadTorneioCompat(id);
+    } catch {
+      return null;
+    }
   });
 
   ipcMain.handle('export-tournament', async (_event, id: string): Promise<void> => {
     ensureDirs();
-    const sourcePath = getTorneioPath(id);
-    if (!fs.existsSync(sourcePath)) throw new Error('Torneio não encontrado');
-
-    const torneio = JSON.parse(fs.readFileSync(sourcePath, 'utf-8')) as Torneio;
+    migrateLegacyTorneioIfNeeded(id);
+    const torneio = loadTorneioCompat(id);
     const defaultName = torneio.nome || `Torneio ${torneio.data}`;
 
     const result = await dialog.showSaveDialog({
@@ -213,7 +214,7 @@ export function registerTournamentHandlers(): void {
     });
 
     if (!result.canceled && result.filePath) {
-      fs.copyFileSync(sourcePath, result.filePath);
+      fs.writeFileSync(result.filePath, JSON.stringify(torneio, null, 2), 'utf-8');
     }
   });
 
@@ -228,12 +229,15 @@ export function registerTournamentHandlers(): void {
         throw new Error('Estrutura inválida');
       }
 
-      const dest = getTorneioPath(data.id);
+      migrateLegacyTorneioIfNeeded(data.id);
       const now = new Date().toISOString();
 
-      const existing = fs.existsSync(dest)
-        ? (JSON.parse(fs.readFileSync(dest, 'utf-8')) as Torneio)
-        : null;
+      let existing: Torneio | null = null;
+      try {
+        existing = loadTorneioCompat(data.id);
+      } catch {
+        existing = null;
+      }
 
       if (!existing) {
         const defaultDesabilitadas = CATEGORIAS_IBJJF
@@ -251,7 +255,7 @@ export function registerTournamentHandlers(): void {
           categoriasDesabilitadas: data.categoriasDesabilitadas ?? defaultDesabilitadas,
           categoriasCustomizadas: data.categoriasCustomizadas ?? [],
         };
-        fs.writeFileSync(dest, JSON.stringify(torneio, null, 2), 'utf-8');
+        saveTorneioCompat(torneio);
         return { success: true, merged: false, created: 0, updated: 0, kept: 0, removed: 0 };
       }
 
@@ -316,20 +320,20 @@ export function registerTournamentHandlers(): void {
           : (existing.categoriasCustomizadas ?? data.categoriasCustomizadas ?? []),
       };
 
-      fs.writeFileSync(dest, JSON.stringify(merged, null, 2), 'utf-8');
+      saveTorneioCompat(merged);
       return { success: true, merged: true, ...counters };
     }
   );
 
   ipcMain.handle('update-tournament', (_event, data: Torneio): Torneio => {
     ensureDirs();
-    const filePath = getTorneioPath(data.id);
-    if (!fs.existsSync(filePath)) throw new Error('Torneio não encontrado');
+    migrateLegacyTorneioIfNeeded(data.id);
+    loadTorneioCompat(data.id); // lança 'Torneio não encontrado' se não existir
     const torneio: Torneio = {
       ...data,
       updatedAt: new Date().toISOString(),
     };
-    fs.writeFileSync(filePath, JSON.stringify(torneio, null, 2), 'utf-8');
+    saveTorneioCompat(torneio);
     return torneio;
   });
 

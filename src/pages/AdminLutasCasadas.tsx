@@ -13,6 +13,8 @@ import type { AreaLuta } from '../types/area';
 import type { Torneio } from '../types/tournament';
 import type { CategoriaCustomizada } from '../types/category';
 import { getTipoVitoria } from '../utils/vitoria';
+import { pushLutaCasadaToFirestore, subscribeLutasCasadasFromFirestore } from '../services/sync/lutasCasadasSync';
+import { resolveConflict } from '../services/sync/resolveConflict';
 
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—';
@@ -85,6 +87,24 @@ export function AdminLutasCasadas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDeleted]);
 
+  useEffect(() => {
+    if (!torneio?.id) return;
+    const unsubscribe = subscribeLutasCasadasFromFirestore(torneio.id, async (remoteLuta) => {
+      const local = lutas.find(l => l.id === remoteLuta.id) ?? null;
+      const winner = resolveConflict(local, remoteLuta);
+      if (winner === remoteLuta) {
+        try {
+          await window.electronAPI.updateLutaCasada(winner);
+          await loadList();
+        } catch {
+          // ignora — tentativa seguinte de sincronização corrige
+        }
+      }
+    });
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [torneio?.id]);
+
   const allSelected = lutas.length > 0 && selectedIds.length === lutas.length;
 
   const toggleSelect = (id: string) => {
@@ -130,6 +150,7 @@ export function AdminLutasCasadas() {
   const handleDelete = async (luta: LutaCasada) => {
     try {
       await window.electronAPI.deleteLutaCasada(luta.id);
+      if (torneio) pushLutaCasadaToFirestore(torneio.id, { ...luta, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
       notifications.show({ title: 'Sucesso', message: 'Luta casada movida para os deletados.', color: 'green' });
       await loadList();
     } catch {
@@ -140,6 +161,7 @@ export function AdminLutasCasadas() {
   const handleRestore = async (luta: LutaCasada) => {
     try {
       await window.electronAPI.restoreLutaCasada(luta.id);
+      if (torneio) pushLutaCasadaToFirestore(torneio.id, { ...luta, deletedAt: null, updatedAt: new Date().toISOString() });
       notifications.show({ title: 'Sucesso', message: 'Luta casada restaurada com sucesso!', color: 'green' });
       await loadList();
     } catch {

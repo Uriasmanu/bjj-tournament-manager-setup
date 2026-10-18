@@ -38,6 +38,7 @@ import type { Atleta } from '../types/athlete';
 import type { AreaLuta } from '../types/area';
 import { sugerirTempoLutaMinutos, TEMPO_LUTA_FALLBACK_MINUTOS } from '../types/fightTime';
 import { getTipoVitoria } from '../utils/vitoria';
+import { pushLutaCasadaToFirestore } from '../services/sync/lutasCasadasSync';
 
 function useCtrlZReset(handleZerar: () => void) {
   useEffect(() => {
@@ -626,6 +627,8 @@ export function PlacarLutaCasada() {
       };
       const updated = await window.electronAPI.updateLutaCasada(atualizada);
       setLuta(updated);
+      const torneio = await window.electronAPI.getActiveTournament();
+      if (torneio) pushLutaCasadaToFirestore(torneio.id, updated);
       closeFinalizar();
       closeConfirmarResultado();
       navigate(`/admin/placar/chaves/${areaId}`);

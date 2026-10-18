@@ -6,6 +6,7 @@ import type { Arbitro } from '../types/referee';
 import type { AreaLuta } from '../types/area';
 import type { LutaCasada, AtletaSnapshot } from '../types/lutaCasada';
 import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
+import { pushLutaCasadaToFirestore } from '../services/sync/lutasCasadasSync';
 
 const FAIXA_LABEL: Record<string, string> = {
   'branca': 'Branca', 'cinza': 'Cinza', 'amarela': 'Amarela', 'laranja': 'Laranja',
@@ -138,6 +139,8 @@ export function ModalCriarLutaCasada({ opened, onClose, area, atletas, arbitros,
         desempateArbitro: false,
         dataFinalizacao: null,
       });
+      const torneio = await window.electronAPI.getActiveTournament();
+      if (torneio) pushLutaCasadaToFirestore(torneio.id, nova);
       onCriada(nova);
       onClose();
     } catch (err) {
