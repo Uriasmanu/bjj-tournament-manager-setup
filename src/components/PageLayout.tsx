@@ -1,6 +1,8 @@
-import { Container, Paper, ActionIcon, Group, Title } from '@mantine/core';
-import { IconArrowLeft } from '@tabler/icons-react';
+import { Container, Paper, ActionIcon, Group, Title, Tooltip } from '@mantine/core';
+import { IconArrowLeft, IconCloud, IconCloudOff } from '@tabler/icons-react';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { subscribeSyncStatus, type SyncStatus } from '../services/sync/syncStatus';
 
 interface PageLayoutProps {
   title: string;
@@ -12,6 +14,9 @@ interface PageLayoutProps {
 
 export function PageLayout({ title, children, backRoute, headerExtras, fullHeight }: PageLayoutProps) {
   const navigate = useNavigate();
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(navigator.onLine ? 'online' : 'offline');
+
+  useEffect(() => subscribeSyncStatus(setSyncStatus), []);
 
   return (
     <div style={{ height: fullHeight ? '100vh' : 'min-content', minHeight: fullHeight ? undefined : '100vh', display: 'flex', flexDirection: 'column', overflow: fullHeight ? 'hidden' : undefined }}>
@@ -43,7 +48,14 @@ export function PageLayout({ title, children, backRoute, headerExtras, fullHeigh
               )}
               <Title order={4} style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</Title>
             </Group>
-            {headerExtras}
+            <Group gap="xs" align="center" wrap="nowrap">
+              {headerExtras}
+              <Tooltip label={syncStatus === 'online' ? 'Conectado' : 'Sem conexão — sincroniza quando a rede voltar'}>
+                {syncStatus === 'online'
+                  ? <IconCloud size={18} color="var(--mantine-color-green-6)" aria-label="Conectado" />
+                  : <IconCloudOff size={18} color="var(--mantine-color-gray-5)" aria-label="Sem conexão" />}
+              </Tooltip>
+            </Group>
           </Group>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: fullHeight ? 'hidden' : undefined, minHeight: 0 }}>
             {children}
