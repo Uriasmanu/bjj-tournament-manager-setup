@@ -16,15 +16,37 @@ export function validateMintTokenInput(data: unknown): asserts data is MintToken
   }
 }
 
+export interface MintTokenDeps {
+  getTorneioDoc: (torneioId: string) => Promise<{ exists: boolean }>
+  createTorneioDoc: (torneioId: string) => Promise<void>
+  createCustomToken: (torneioId: string) => Promise<string>
+}
+
+/**
+ * Se o torneio ainda não existe no Firestore (primeira vez que este PC sincroniza
+ * um torneio criado localmente), cria um documento mínimo via Admin SDK antes de
+ * emitir o token — sem isso, nenhum cliente jamais conseguiria autenticar, porque
+ * a regra de segurança exige o claim do token para criar o próprio documento que
+ * o token depende de já existir.
+ */
+export async function mintTournamentTokenHandler(torneioId: string, deps: MintTokenDeps): Promise<{ token: string }> {
+  const doc = await deps.getTorneioDoc(torneioId)
+  if (!doc.exists) {
+    await deps.createTorneioDoc(torneioId)
+  }
+  const token = await deps.createCustomToken(torneioId)
+  return { token }
+}
+
 export const mintTournamentToken = onCall<MintTokenInput>(async (request) => {
   validateMintTokenInput(request.data)
   const { torneioId } = request.data
 
-  const doc = await getFirestore().collection('torneios').doc(torneioId).get()
-  if (!doc.exists) {
-    throw new HttpsError('not-found', 'Torneio não encontrado')
-  }
-
-  const token = await getAuth().createCustomToken(torneioId, { torneioId })
-  return { token }
+  return mintTournamentTokenHandler(torneioId, {
+    getTorneioDoc: async (id) => getFirestore().collection('torneios').doc(id).get(),
+    createTorneioDoc: async (id) => {
+      await getFirestore().collection('torneios').doc(id).set({ id }, { merge: true })
+    },
+    createCustomToken: async (id) => getAuth().createCustomToken(id, { torneioId: id }),
+  })
 })

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, type ReactNode } from 'react';
+import { signInForTournament } from '../services/firestore/auth';
 
 type TournamentMode = 'admin' | 'area' | null;
 
@@ -19,6 +20,7 @@ const TournamentModeContext = createContext<TournamentModeContextValue>({
 export function TournamentModeProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<TournamentMode>(null);
   const [loading, setLoading] = useState(true);
+  const signedInTorneioId = useRef<string | null>(null);
 
   const refresh = async () => {
     try {
@@ -29,6 +31,17 @@ export function TournamentModeProvider({ children }: { children: ReactNode }) {
       setMode(null);
     } finally {
       setLoading(false);
+    }
+
+    try {
+      const torneio = await window.electronAPI.getActiveTournament();
+      if (torneio && signedInTorneioId.current !== torneio.id) {
+        signedInTorneioId.current = torneio.id;
+        await signInForTournament(torneio.id);
+      }
+    } catch (err) {
+      // best-effort: sem rede ou sem config do Firebase, o app continua funcionando local
+      console.error('[TournamentModeContext] falha ao autenticar para sincronização', err);
     }
   };
 

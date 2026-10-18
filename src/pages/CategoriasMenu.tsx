@@ -7,6 +7,7 @@ import { notifications } from '@mantine/notifications';
 import { CATEGORIAS_IBJJF, type CategoriaCustomizada, type FaixaEtaria } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
 import { CategoriaForm } from '../components/CategoriaForm';
+import { pushTorneioMetaToFirestore } from '../services/sync/categoriasSync';
 
 function tempoLutaFaixaEtaria(faixaEtaria: FaixaEtaria): string {
   switch (faixaEtaria) {
@@ -77,6 +78,17 @@ export function CategoriasMenu() {
     try {
       const updated = await window.electronAPI.toggleCategoria(categoriaId);
       setDesabilitadas(updated);
+      const torneio = await window.electronAPI.getActiveTournament();
+      if (torneio) {
+        pushTorneioMetaToFirestore({
+          id: torneio.id,
+          nome: torneio.nome,
+          data: torneio.data,
+          categoriasDesabilitadas: updated,
+          categoriasCustomizadas: customizadas,
+          updatedAt: torneio.updatedAt,
+        });
+      }
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao alternar categoria.', color: 'red' });
     }
