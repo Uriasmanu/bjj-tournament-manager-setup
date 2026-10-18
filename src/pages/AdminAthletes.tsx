@@ -7,6 +7,8 @@ import type { Atleta, Faixa } from '../types/athlete';
 import { getCategoriaLabel, type CategoriaCustomizada } from '../types/category';
 import { AthleteForm } from '../components/AthleteForm';
 import { PageLayout } from '../components/PageLayout';
+import { pushAthleteToFirestore, subscribeAthletesFromFirestore } from '../services/sync/atletasSync';
+import { resolveConflict } from '../services/sync/resolveConflict';
 
 const faixaLabels: Record<Faixa, string> = {
   branca: 'Branca',
@@ -60,6 +62,7 @@ export function AdminAthletes() {
   const [showDeleted, setShowDeleted] = useState(false);
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
   const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
+  const [torneioId, setTorneioId] = useState<string | null>(null);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
   const [permanentOpened, { open: openPermanent, close: closePermanent }] = useDisclosure(false);
 
@@ -113,7 +116,26 @@ export function AdminAthletes() {
 
   useEffect(() => {
     loadAll();
+    window.electronAPI.getActiveTournament().then(t => setTorneioId(t?.id ?? null)).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!torneioId) return;
+    const unsubscribe = subscribeAthletesFromFirestore(torneioId, async (remoteAtleta) => {
+      const local = [...activeAthletes, ...deletedAthletes].find(a => a.id === remoteAtleta.id) ?? null;
+      const winner = resolveConflict(local, remoteAtleta);
+      if (winner === remoteAtleta && winner.id) {
+        try {
+          await window.electronAPI.updateAthlete(winner);
+          await loadAll();
+        } catch {
+          // ignora — tentativa seguinte de sincronização corrige
+        }
+      }
+    });
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [torneioId]);
 
   const handleNew = () => {
     setSelectedAthlete(null);
@@ -135,6 +157,7 @@ export function AdminAthletes() {
       const activeList = await window.electronAPI.restoreAthlete(athlete.id);
       setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
       setDeletedAthletes(prev => prev.filter(a => a.id !== athlete.id));
+      if (torneioId) pushAthleteToFirestore(torneioId, { ...athlete, deletedAt: null, updatedAt: new Date().toISOString() });
       notifications.show({ title: 'Sucesso', message: 'Atleta restaurado com sucesso!', color: 'green' });
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao restaurar o atleta.', color: 'red' });
@@ -161,10 +184,14 @@ export function AdminAthletes() {
       if (selectedAthlete) {
         const activeList = await window.electronAPI.updateAthlete(athlete);
         setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
+        const salvo = activeList.find(a => a.id === athlete.id);
+        if (torneioId && salvo) pushAthleteToFirestore(torneioId, salvo);
         notifications.show({ title: 'Sucesso', message: 'Atleta atualizado com sucesso!', color: 'green' });
       } else {
         const activeList = await window.electronAPI.saveAthlete(athlete);
         setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
+        const salvo = activeList.find(a => a.nome === athlete.nome && a.anoNascimento === athlete.anoNascimento);
+        if (torneioId && salvo) pushAthleteToFirestore(torneioId, salvo);
         notifications.show({ title: 'Sucesso', message: 'Atleta cadastrado com sucesso!', color: 'green' });
       }
       return true;
@@ -180,10 +207,9 @@ export function AdminAthletes() {
       const activeList = await window.electronAPI.deleteAthlete(deleteTarget.id);
       setActiveAthletes(activeList.sort((a, b) => a.nome.localeCompare(b.nome)));
       const now = new Date().toISOString();
-      setDeletedAthletes(prev => [
-        ...prev,
-        { ...deleteTarget, deletedAt: now, updatedAt: now },
-      ].sort((a, b) => a.nome.localeCompare(b.nome)));
+      const deletado = { ...deleteTarget, deletedAt: now, updatedAt: now };
+      setDeletedAthletes(prev => [...prev, deletado].sort((a, b) => a.nome.localeCompare(b.nome)));
+      if (torneioId) pushAthleteToFirestore(torneioId, deletado);
       closeDelete();
       setDeleteTarget(null);
       notifications.show({ title: 'Sucesso', message: 'Atleta movido para os deletados.', color: 'green' });
