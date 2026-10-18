@@ -7,6 +7,8 @@ import type { AreaLuta } from '../types/area';
 import type { Arbitro } from '../types/referee';
 import { AreaForm } from '../components/AreaForm';
 import { PageLayout } from '../components/PageLayout';
+import { pushAreaToFirestore, subscribeAreasFromFirestore } from '../services/sync/areasSync';
+import { resolveConflict } from '../services/sync/resolveConflict';
 
 function formatDeletedAt(iso: string | null | undefined): string {
   if (!iso) return '';
@@ -27,6 +29,7 @@ export function AdminAreas() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkPermanentOpen, setBulkPermanentOpen] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [torneioId, setTorneioId] = useState<string | null>(null);
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
   const [permanentOpened, { open: openPermanent, close: closePermanent }] = useDisclosure(false);
@@ -64,6 +67,28 @@ export function AdminAreas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDeleted]);
 
+  useEffect(() => {
+    window.electronAPI.getActiveTournament().then(t => setTorneioId(t?.id ?? null)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!torneioId) return;
+    const unsubscribe = subscribeAreasFromFirestore(torneioId, async (remoteArea) => {
+      const local = areas.find(a => a.id === remoteArea.id) ?? null;
+      const winner = resolveConflict(local, remoteArea);
+      if (winner === remoteArea) {
+        try {
+          await window.electronAPI.updateArea(winner);
+          await loadData();
+        } catch {
+          // ignora — tentativa seguinte de sincronização corrige
+        }
+      }
+    });
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [torneioId]);
+
   const getArbitroNome = (arbitroId: string): string => {
     if (!arbitroId) return '-';
     const arbitro = arbitros.find(a => a.id === arbitroId);
@@ -89,6 +114,7 @@ export function AdminAreas() {
   const handleRestore = async (area: AreaLuta) => {
     try {
       await window.electronAPI.restoreArea(area.id);
+      if (torneioId) pushAreaToFirestore(torneioId, { ...area, deletedAt: null, updatedAt: new Date().toISOString() });
       notifications.show({ title: 'Sucesso', message: 'Área de luta restaurada com sucesso!', color: 'green' });
       await loadData();
     } catch {
@@ -119,13 +145,15 @@ export function AdminAreas() {
     }
     try {
       if (selectedArea) {
-        await window.electronAPI.updateArea(area);
+        const salvo = await window.electronAPI.updateArea(area);
+        if (torneioId) pushAreaToFirestore(torneioId, salvo);
         notifications.show({ title: 'Sucesso', message: 'Área de luta atualizada com sucesso!', color: 'green' });
       } else {
-        await window.electronAPI.saveArea({
+        const salvo = await window.electronAPI.saveArea({
           nome: area.nome,
           arbitroIds: area.arbitroIds ?? [],
         });
+        if (torneioId) pushAreaToFirestore(torneioId, salvo);
         notifications.show({ title: 'Sucesso', message: 'Área de luta cadastrada com sucesso!', color: 'green' });
       }
       await loadData();
@@ -163,6 +191,7 @@ export function AdminAreas() {
     if (!deleteTarget) return;
     try {
       await window.electronAPI.deleteArea(deleteTarget.id);
+      if (torneioId) pushAreaToFirestore(torneioId, { ...deleteTarget, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
       closeDelete();
       setDeleteTarget(null);
       notifications.show({ title: 'Sucesso', message: 'Área de luta movida para os deletados.', color: 'green' });
