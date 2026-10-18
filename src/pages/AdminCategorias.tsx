@@ -8,6 +8,8 @@ import { IconPencil, IconTrash, IconSearch, IconPlus } from '@tabler/icons-react
 import type { CategoriaCustomizada } from '../types/category';
 import { PageLayout } from '../components/PageLayout';
 import { CategoriaForm } from '../components/CategoriaForm';
+import { pushTorneioMetaToFirestore, subscribeTorneioMetaFromFirestore } from '../services/sync/categoriasSync';
+import { resolveConflict } from '../services/sync/resolveConflict';
 
 export function AdminCategorias() {
   const [customizadas, setCustomizadas] = useState<CategoriaCustomizada[]>([]);
@@ -17,6 +19,7 @@ export function AdminCategorias() {
   const [editingCategoria, setEditingCategoria] = useState<CategoriaCustomizada | null>(null);
   const [deleteModalOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
   const [deletingCategoria, setDeletingCategoria] = useState<CategoriaCustomizada | null>(null);
+  const [torneioId, setTorneioId] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -26,7 +29,46 @@ export function AdminCategorias() {
     setLoading(false);
   };
 
+  const syncMeta = async (customizadasAtuais: CategoriaCustomizada[], desabilitadasAtuais: string[]) => {
+    if (!torneioId) return;
+    const torneio = await window.electronAPI.getActiveTournament();
+    if (!torneio) return;
+    pushTorneioMetaToFirestore({
+      id: torneio.id,
+      nome: torneio.nome,
+      data: torneio.data,
+      categoriasDesabilitadas: desabilitadasAtuais,
+      categoriasCustomizadas: customizadasAtuais,
+      updatedAt: torneio.updatedAt,
+    });
+  };
+
   useEffect(() => { loadData(); }, []);
+
+  useEffect(() => {
+    window.electronAPI.getActiveTournament().then(t => setTorneioId(t?.id ?? null)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!torneioId) return;
+    const unsubscribe = subscribeTorneioMetaFromFirestore(torneioId, async (remoteMeta) => {
+      const local = { updatedAt: (await window.electronAPI.getActiveTournament())?.updatedAt };
+      const winner = resolveConflict(local, remoteMeta);
+      if (winner === remoteMeta) {
+        try {
+          await window.electronAPI.applyRemoteCategoriasMeta({
+            desabilitadas: remoteMeta.categoriasDesabilitadas ?? [],
+            customizadas: remoteMeta.categoriasCustomizadas ?? [],
+            updatedAt: remoteMeta.updatedAt,
+          });
+          await loadData();
+        } catch {
+          // ignora — tentativa seguinte de sincronização corrige
+        }
+      }
+    });
+    return unsubscribe;
+  }, [torneioId]);
 
   const handleNew = () => {
     setEditingCategoria(null);
@@ -51,6 +93,8 @@ export function AdminCategorias() {
         notifications.show({ title: 'Sucesso', message: 'Categoria criada com sucesso!', color: 'green' });
       }
       await loadData();
+      const atualizadas = await window.electronAPI.loadCategorias();
+      syncMeta(atualizadas.customizadas, atualizadas.desabilitadas);
       return true;
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao salvar categoria.', color: 'red' });
@@ -69,6 +113,8 @@ export function AdminCategorias() {
       await window.electronAPI.deleteCategoriaCustomizada(deletingCategoria.id);
       notifications.show({ title: 'Sucesso', message: 'Categoria excluída com sucesso!', color: 'green' });
       await loadData();
+      const atualizadas = await window.electronAPI.loadCategorias();
+      syncMeta(atualizadas.customizadas, atualizadas.desabilitadas);
     } catch {
       notifications.show({ title: 'Erro', message: 'Erro ao excluir categoria.', color: 'red' });
     }

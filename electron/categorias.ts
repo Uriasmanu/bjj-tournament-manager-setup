@@ -1,25 +1,15 @@
-import { app } from 'electron'
-import path from 'node:path'
-import fs from 'node:fs'
 import crypto from 'node:crypto'
 import type { Torneio } from '../src/types/tournament'
 import type { CategoriaCustomizada } from '../src/types/category'
-
-const DATA_DIR = path.join(app.getPath('userData'), 'data')
-const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios')
-
-function getTorneioPath(torneioId: string): string {
-  return path.join(TORNEIOS_DIR, `${torneioId}.json`)
-}
+import { readTorneioMeta, writeTorneioMeta, migrateLegacyTorneioIfNeeded } from './storage/torneioStorage'
 
 function loadTorneio(torneioId: string): Torneio {
-  const filePath = getTorneioPath(torneioId)
-  if (!fs.existsSync(filePath)) throw new Error('Torneio não encontrado')
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
+  migrateLegacyTorneioIfNeeded(torneioId)
+  return readTorneioMeta(torneioId)
 }
 
 function saveTorneio(torneio: Torneio): void {
-  fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), 'utf-8')
+  writeTorneioMeta(torneio)
 }
 
 function loadCategorias(torneioId: string): { desabilitadas: string[]; customizadas: CategoriaCustomizada[] } {
@@ -90,10 +80,24 @@ function deleteCategoriaCustomizada(torneioId: string, categoriaId: string): voi
   saveTorneio(torneio)
 }
 
+function applyRemoteCategoriasMeta(
+  torneioId: string,
+  desabilitadas: string[],
+  customizadas: CategoriaCustomizada[],
+  updatedAt: string
+): void {
+  const torneio = loadTorneio(torneioId)
+  torneio.categoriasDesabilitadas = desabilitadas
+  torneio.categoriasCustomizadas = customizadas
+  torneio.updatedAt = updatedAt
+  saveTorneio(torneio)
+}
+
 export {
   loadCategorias,
   toggleCategoria,
   saveCategoriaCustomizada,
   updateCategoriaCustomizada,
   deleteCategoriaCustomizada,
+  applyRemoteCategoriasMeta,
 }

@@ -158,6 +158,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('update-categoria-customizada', data),
   deleteCategoriaCustomizada: (categoriaId: string) =>
     ipcRenderer.invoke('delete-categoria-customizada', categoriaId),
+  applyRemoteCategoriasMeta: (data: { desabilitadas: string[]; customizadas: CategoriaCustomizada[]; updatedAt: string }) =>
+    ipcRenderer.invoke('apply-remote-categorias-meta', data),
   gerarPdfLutasCasadas: (lutas: LutaCasada[], nomeTorneio: string, arbitros: Arbitro[], customizadas: CategoriaCustomizada[]) =>
     ipcRenderer.invoke('gerar-pdf-lutas-casadas', lutas, nomeTorneio, arbitros, customizadas),
   gerarPdfChaves: (chaves: Chave[], atletas: Atleta[], nomeTorneio: string, customizadas: CategoriaCustomizada[]) =>

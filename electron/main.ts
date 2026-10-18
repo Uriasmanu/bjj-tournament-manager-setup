@@ -7,7 +7,7 @@ import { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteAr
 import { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas } from './areas'
 import { registerBracketHandlers } from './brackets'
 import { loadLutasCasadas, loadDeletedLutasCasadas, loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada, deleteLutasCasadas, permanentlyDeleteLutaCasada, permanentlyDeleteLutasCasadas, restoreLutaCasada, restoreLutasCasadas } from './lutasCasadas'
-import { loadCategorias, toggleCategoria, saveCategoriaCustomizada, updateCategoriaCustomizada, deleteCategoriaCustomizada } from './categorias'
+import { loadCategorias, toggleCategoria, saveCategoriaCustomizada, updateCategoriaCustomizada, deleteCategoriaCustomizada, applyRemoteCategoriasMeta } from './categorias'
 import { checkActivation, validatePassword, activateLicense, getActivationInfo } from './activation'
 import type { AreaLuta } from '../src/types/area'
 import type { Chave } from '../src/types/bracket'
@@ -380,6 +380,12 @@ function registerCategoriaHandlers(): void {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return deleteCategoriaCustomizada(torneioId, categoriaId)
+  })
+
+  ipcMain.handle('apply-remote-categorias-meta', (_event, data: { desabilitadas: string[]; customizadas: CategoriaCustomizada[]; updatedAt: string }): void => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return applyRemoteCategoriasMeta(torneioId, data.desabilitadas, data.customizadas, data.updatedAt)
   })
 }
 
