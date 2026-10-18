@@ -1,6 +1,6 @@
 import { Text, Button, Stack, Group, Table, ActionIcon, Loader, Center, Modal, Checkbox, TextInput } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
-import { IconPlayerPlay, IconDownload, IconTrash, IconSearch, IconUserShield, IconDeviceGamepad } from '@tabler/icons-react';
+import { IconPlayerPlay, IconDownload, IconTrash, IconSearch, IconUserShield, IconDeviceGamepad, IconCloudUpload } from '@tabler/icons-react';
 import { notifications } from '@mantine/notifications';
 import { useNavigate } from 'react-router-dom';
 import { useEffect, useState, useMemo } from 'react';
@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import type { Torneio } from '../types/tournament';
 import { PageLayout } from '../components/PageLayout';
 import { useTournamentMode } from '../utils/TournamentModeContext';
+import { enviarTorneioParaNuvem } from '../services/sync/enviarTorneioParaNuvem';
 
 export function ListarTorneios() {
   const navigate = useNavigate();
@@ -22,6 +23,8 @@ export function ListarTorneios() {
   const [startTarget, setStartTarget] = useState<Torneio | null>(null);
   const [startModalOpen, setStartModalOpen] = useState(false);
   const { refresh } = useTournamentMode();
+  const [activeTorneioId, setActiveTorneioId] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState<string | null>(null);
 
   const loadTorneios = async () => {
     setLoading(true);
@@ -39,7 +42,20 @@ export function ListarTorneios() {
 
   useEffect(() => {
     loadTorneios();
+    window.electronAPI.getActiveTournament().then(t => setActiveTorneioId(t?.id ?? null)).catch(() => {});
   }, []);
+
+  const handleEnviarParaNuvem = async (torneio: Torneio) => {
+    setEnviando(torneio.id);
+    try {
+      const { enviados } = await enviarTorneioParaNuvem(torneio.id);
+      notifications.show({ title: 'Sucesso', message: `${enviados} registro(s) enviado(s) para a nuvem.`, color: 'green' });
+    } catch {
+      notifications.show({ title: 'Erro', message: 'Erro ao enviar torneio para a nuvem.', color: 'red' });
+    } finally {
+      setEnviando(null);
+    }
+  };
 
   const handleStartClick = (torneio: Torneio) => {
     setStartTarget(torneio);
@@ -254,6 +270,16 @@ export function ListarTorneios() {
                         aria-label={`Exportar ${t.nome || formatDate(t.data)}`}
                       >
                         <IconDownload size={18} />
+                      </ActionIcon>
+                      <ActionIcon
+                        variant="light"
+                        color="cyan"
+                        disabled={t.id !== activeTorneioId || enviando === t.id}
+                        onClick={() => handleEnviarParaNuvem(t)}
+                        aria-label={`Enviar ${t.nome || formatDate(t.data)} para a nuvem`}
+                        title={t.id === activeTorneioId ? 'Enviar para a nuvem' : 'Inicie este torneio para poder enviá-lo à nuvem'}
+                      >
+                        <IconCloudUpload size={18} />
                       </ActionIcon>
                       <ActionIcon
                         variant="light"
