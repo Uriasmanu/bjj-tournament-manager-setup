@@ -1564,8 +1564,11 @@ function registrarResultadoHandler(
   }
 
   const now = new Date().toISOString();
+  const lutasAntes = new Map(chaves[chaveIndex].lutas.map(l => [l.id, JSON.stringify(l, (k, v) => (k === 'updatedAt' ? undefined : v))]));
   for (const l of chave.lutas) {
-    l.updatedAt = now;
+    const antes = lutasAntes.get(l.id);
+    const depois = JSON.stringify(l, (k, v) => (k === 'updatedAt' ? undefined : v));
+    if (antes !== depois) l.updatedAt = now;
   }
   chave.updatedAt = now;
   chaves[chaveIndex] = chave;
