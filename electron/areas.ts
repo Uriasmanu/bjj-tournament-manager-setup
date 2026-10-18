@@ -2,7 +2,7 @@ import { dialog } from 'electron'
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import type { AreaLuta } from '../src/types/area'
-import { loadTorneioCompat as loadTorneio, saveTorneioCompat as saveTorneio } from './storage/torneioStorage'
+import { loadTorneioCompat as loadTorneio, saveTorneioCompat as saveTorneio, writeRecordRaw, listRecords } from './storage/torneioStorage'
 
 function gerarNomeAreaPadrao(areas: AreaLuta[]): string {
   const usados = new Set<number>()
@@ -253,4 +253,9 @@ async function exportAreas(torneioId: string): Promise<void> {
   }
 }
 
-export { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas }
+function applyRemoteArea(torneioId: string, area: AreaLuta): AreaLuta[] {
+  writeRecordRaw(torneioId, 'areas', area)
+  return listRecords<AreaLuta>(torneioId, 'areas')
+}
+
+export { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas, applyRemoteArea }

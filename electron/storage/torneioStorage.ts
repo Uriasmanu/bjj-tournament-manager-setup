@@ -121,6 +121,16 @@ export function writeRecord<T extends StampedRecord>(
   return stamped
 }
 
+export function writeRecordRaw<T extends StampedRecord>(
+  torneioId: string,
+  collection: string,
+  record: T,
+  parentPath?: string
+): T {
+  atomicWriteFile(getRecordPath(torneioId, collection, record.id, parentPath), JSON.stringify(record, null, 2))
+  return record
+}
+
 export function deleteRecordFile(
   torneioId: string,
   collection: string,

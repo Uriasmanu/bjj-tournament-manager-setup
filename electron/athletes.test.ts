@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { saveAthlete, loadAthletes, deleteAthlete } from './athletes'
+import { saveAthlete, loadAthletes, deleteAthlete, applyRemoteAtleta } from './athletes'
 import { writeRecord, readRecord } from './storage/torneioStorage'
 import type { Atleta } from '../src/types/athlete'
 
@@ -43,5 +43,19 @@ describe('athletes (file-per-record storage)', () => {
 
     const a1Depois = readRecord<Atleta>('t1', 'atletas', 'a1')
     expect(a1Depois?.updatedAt).toBe(a1Antes?.updatedAt)
+  })
+
+  it('applyRemoteAtleta cria um atleta que só existia em outro PC (upsert), preservando o updatedAt remoto', () => {
+    const remoto: Atleta = { id: 'a9', nome: 'remoto', equipe: 'x', genero: 'masculino', categoria: 'adulto-masculino-leve', pesoKg: 70, faixa: 'azul', anoNascimento: 1990, createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' }
+    applyRemoteAtleta('t1', remoto)
+    const salvo = readRecord<Atleta>('t1', 'atletas', 'a9')
+    expect(salvo?.updatedAt).toBe('2025-01-01T00:00:00.000Z')
+    expect(loadAthletes('t1').map(a => a.id)).toContain('a9')
+  })
+
+  it('applyRemoteAtleta aplica uma exclusão (deletedAt) vinda de outro PC', () => {
+    const [local] = saveAthlete('t1', { id: '', nome: 'Carlos', equipe: 'X', genero: 'masculino', categoria: 'adulto-masculino-leve', pesoKg: 80, faixa: 'azul', anoNascimento: 1988, createdAt: '', updatedAt: '' })
+    applyRemoteAtleta('t1', { ...local, deletedAt: '2025-02-01T00:00:00.000Z', updatedAt: '2025-02-01T00:00:00.000Z' })
+    expect(loadAthletes('t1').find(a => a.id === local.id)).toBeUndefined()
   })
 })

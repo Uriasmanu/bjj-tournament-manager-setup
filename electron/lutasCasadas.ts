@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import type { LutaCasada, AtletaSnapshot, LutaCasadaStatus } from '../src/types/lutaCasada'
-import { loadTorneioCompat as loadTorneio, saveTorneioCompat as saveTorneio } from './storage/torneioStorage'
+import { loadTorneioCompat as loadTorneio, saveTorneioCompat as saveTorneio, writeRecordRaw, listRecords } from './storage/torneioStorage'
 
 function normalizeLutaCasada(raw: Record<string, unknown>): LutaCasada {
   const status = (raw.status as LutaCasadaStatus) ?? 'pending'
@@ -175,6 +175,11 @@ function restoreLutasCasadas(torneioId: string, ids: string[]): void {
   saveTorneio(torneio)
 }
 
+function applyRemoteLutaCasada(torneioId: string, lutaCasada: LutaCasada): LutaCasada[] {
+  writeRecordRaw(torneioId, 'lutasCasadas', lutaCasada)
+  return listRecords<LutaCasada>(torneioId, 'lutasCasadas')
+}
+
 export {
   loadLutasCasadas,
   loadDeletedLutasCasadas,
@@ -187,4 +192,5 @@ export {
   permanentlyDeleteLutasCasadas,
   restoreLutaCasada,
   restoreLutasCasadas,
+  applyRemoteLutaCasada,
 }

@@ -86,15 +86,19 @@ export function AdminArbitros() {
   useEffect(() => {
     if (!torneioId) return;
     const unsubscribe = subscribeArbitrosFromFirestore(torneioId, async (remoteArbitro) => {
-      const local = arbitros.find(a => a.id === remoteArbitro.id) ?? null;
-      const winner = resolveConflict(local, remoteArbitro);
-      if (winner === remoteArbitro) {
-        try {
-          await window.electronAPI.updateArbitro(winner);
+      try {
+        const [ativos, deletados] = await Promise.all([
+          window.electronAPI.loadArbitros(),
+          window.electronAPI.loadDeletedArbitros(),
+        ]);
+        const local = [...ativos, ...deletados].find(a => a.id === remoteArbitro.id) ?? null;
+        const winner = resolveConflict(local, remoteArbitro);
+        if (winner === remoteArbitro) {
+          await window.electronAPI.applyRemoteArbitro(winner);
           await loadList();
-        } catch {
-          // ignora — tentativa seguinte de sincronização corrige
         }
+      } catch {
+        // ignora — tentativa seguinte de sincronização corrige
       }
     });
     return unsubscribe;

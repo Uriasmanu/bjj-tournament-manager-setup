@@ -50,6 +50,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('import-athletes'),
   exportAthletes: () =>
     ipcRenderer.invoke('export-athletes'),
+  applyRemoteAtleta: (atleta: Atleta) =>
+    ipcRenderer.invoke('apply-remote-atleta', atleta),
   saveArbitro: (data: { nome: string; equipe: string; faixa: string; chaveIds: string[] }) =>
     ipcRenderer.invoke('save-arbitro', data),
   updateArbitro: (data: { id: string; nome: string; equipe: string; faixa: string; chaveIds: string[]; createdAt: string; updatedAt: string }) =>
@@ -72,6 +74,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('import-arbitros'),
   exportArbitros: () =>
     ipcRenderer.invoke('export-arbitros'),
+  applyRemoteArbitro: (arbitro: Arbitro) =>
+    ipcRenderer.invoke('apply-remote-arbitro', arbitro),
   gerarTodasChaves: (maxAtletas?: number, faixas?: string[], categorias?: string[]) =>
     ipcRenderer.invoke('gerar-todas-chaves', maxAtletas, faixas, categorias),
   gerarChave: (data: { categoriaId: string; faixa?: string; atletaIds?: string[]; nome?: string }) =>
@@ -112,6 +116,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('import-areas'),
   exportAreas: () =>
     ipcRenderer.invoke('export-areas'),
+  applyRemoteArea: (area: AreaLuta) =>
+    ipcRenderer.invoke('apply-remote-area', area),
   loadChavesPorArea: (areaId: string) =>
     ipcRenderer.invoke('load-chaves-por-area', areaId),
   registrarResultado: (data: {
@@ -148,6 +154,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('restore-luta-casada', lutaCasadaId),
   restoreLutasCasadas: (ids: string[]) =>
     ipcRenderer.invoke('restore-lutas-casadas', ids),
+  applyRemoteLutaCasada: (lutaCasada: LutaCasada) =>
+    ipcRenderer.invoke('apply-remote-luta-casada', lutaCasada),
   loadCategorias: () =>
     ipcRenderer.invoke('load-categorias'),
   toggleCategoria: (categoriaId: string) =>

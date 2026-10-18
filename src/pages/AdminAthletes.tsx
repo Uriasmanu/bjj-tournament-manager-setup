@@ -122,19 +122,22 @@ export function AdminAthletes() {
   useEffect(() => {
     if (!torneioId) return;
     const unsubscribe = subscribeAthletesFromFirestore(torneioId, async (remoteAtleta) => {
-      const local = [...activeAthletes, ...deletedAthletes].find(a => a.id === remoteAtleta.id) ?? null;
-      const winner = resolveConflict(local, remoteAtleta);
-      if (winner === remoteAtleta && winner.id) {
-        try {
-          await window.electronAPI.updateAthlete(winner);
+      try {
+        const [ativos, deletados] = await Promise.all([
+          window.electronAPI.loadAthletes(),
+          window.electronAPI.loadDeletedAthletes(),
+        ]);
+        const local = [...ativos, ...deletados].find(a => a.id === remoteAtleta.id) ?? null;
+        const winner = resolveConflict(local, remoteAtleta);
+        if (winner === remoteAtleta) {
+          await window.electronAPI.applyRemoteAtleta(winner);
           await loadAll();
-        } catch {
-          // ignora — tentativa seguinte de sincronização corrige
         }
+      } catch {
+        // ignora — tentativa seguinte de sincronização corrige
       }
     });
     return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [torneioId]);
 
   const handleNew = () => {

@@ -2,11 +2,11 @@ import { app, BrowserWindow, ipcMain, screen } from 'electron'
 import path from 'node:path'
 import { registerTournamentHandlers, getActiveTournamentId } from './tournament'
 import { gerarPdfLutasCasadas, gerarPdfChaves, gerarPdfResultados } from './pdf'
-import { loadAthletes, loadDeletedAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, restoreAthlete, permanentlyDeleteAthlete, permanentlyDeleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes } from './athletes'
-import { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, restoreArbitro, permanentlyDeleteArbitro, permanentlyDeleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros } from './referees'
-import { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas } from './areas'
+import { loadAthletes, loadDeletedAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, restoreAthlete, permanentlyDeleteAthlete, permanentlyDeleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes, applyRemoteAtleta } from './athletes'
+import { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, restoreArbitro, permanentlyDeleteArbitro, permanentlyDeleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros, applyRemoteArbitro } from './referees'
+import { loadAreas, loadDeletedAreas, saveArea, updateArea, deleteArea, deleteAreas, restoreArea, permanentlyDeleteArea, permanentlyDeleteAreas, importAreasFromFile, openAreaFileDialog, exportAreas, applyRemoteArea } from './areas'
 import { registerBracketHandlers } from './brackets'
-import { loadLutasCasadas, loadDeletedLutasCasadas, loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada, deleteLutasCasadas, permanentlyDeleteLutaCasada, permanentlyDeleteLutasCasadas, restoreLutaCasada, restoreLutasCasadas } from './lutasCasadas'
+import { loadLutasCasadas, loadDeletedLutasCasadas, loadLutasCasadasPorArea, saveLutaCasada, updateLutaCasada, deleteLutaCasada, deleteLutasCasadas, permanentlyDeleteLutaCasada, permanentlyDeleteLutasCasadas, restoreLutaCasada, restoreLutasCasadas, applyRemoteLutaCasada } from './lutasCasadas'
 import { loadCategorias, toggleCategoria, saveCategoriaCustomizada, updateCategoriaCustomizada, deleteCategoriaCustomizada, applyRemoteCategoriasMeta } from './categorias'
 import { checkActivation, validatePassword, activateLicense, getActivationInfo } from './activation'
 import type { AreaLuta } from '../src/types/area'
@@ -191,6 +191,12 @@ function registerAthleteHandlers(): void {
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return exportAthletes(torneioId)
   })
+
+  ipcMain.handle('apply-remote-atleta', (_event, atleta: Atleta): ReturnType<typeof applyRemoteAtleta> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return applyRemoteAtleta(torneioId, atleta)
+  })
 }
 
 function registerRefereeHandlers(): void {
@@ -261,6 +267,12 @@ function registerRefereeHandlers(): void {
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return exportArbitros(torneioId)
   })
+
+  ipcMain.handle('apply-remote-arbitro', (_event, arbitro: Arbitro): ReturnType<typeof applyRemoteArbitro> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return applyRemoteArbitro(torneioId, arbitro)
+  })
 }
 
 function registerAreaHandlers(): void {
@@ -330,6 +342,12 @@ function registerAreaHandlers(): void {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return exportAreas(torneioId)
+  })
+
+  ipcMain.handle('apply-remote-area', (_event, area: AreaLuta): ReturnType<typeof applyRemoteArea> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return applyRemoteArea(torneioId, area)
   })
 }
 
@@ -454,6 +472,12 @@ function registerLutasCasadasHandlers(): void {
     const torneioId = getActiveTournamentId()
     if (!torneioId) throw new Error('Nenhum torneio ativo')
     return restoreLutasCasadas(torneioId, ids)
+  })
+
+  ipcMain.handle('apply-remote-luta-casada', (_event, lutaCasada: LutaCasada): ReturnType<typeof applyRemoteLutaCasada> => {
+    const torneioId = getActiveTournamentId()
+    if (!torneioId) throw new Error('Nenhum torneio ativo')
+    return applyRemoteLutaCasada(torneioId, lutaCasada)
   })
 }
 

@@ -4,6 +4,7 @@ import path from 'node:path'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   writeRecord,
+  writeRecordRaw,
   readRecord,
   listRecords,
   listAllRecords,
@@ -57,6 +58,12 @@ describe('torneioStorage', () => {
     writeRecord<TestRecord>('t1', 'atletas', { id: 'a1', updatedAt: '' })
     deleteRecordFile('t1', 'atletas', 'a1')
     expect(readRecord<TestRecord>('t1', 'atletas', 'a1')).toBeNull()
+  })
+
+  it('writeRecordRaw grava exatamente o registro dado, sem re-carimbar updatedAt (cria quando não existe)', () => {
+    const saved = writeRecordRaw<TestRecord>('t1', 'atletas', { id: 'a1', updatedAt: '2020-01-01T00:00:00.000Z', deletedAt: null })
+    expect(saved.updatedAt).toBe('2020-01-01T00:00:00.000Z')
+    expect(readRecord<TestRecord>('t1', 'atletas', 'a1')?.updatedAt).toBe('2020-01-01T00:00:00.000Z')
   })
 
   it('listRecords com parentPath lê lutas aninhadas em uma chave', () => {

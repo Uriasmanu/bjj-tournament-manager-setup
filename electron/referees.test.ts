@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { saveArbitro, loadArbitros, deleteArbitro } from './referees'
+import { saveArbitro, loadArbitros, deleteArbitro, applyRemoteArbitro } from './referees'
 import { writeTorneioMeta, writeRecord, readRecord } from './storage/torneioStorage'
 import type { Arbitro } from '../src/types/referee'
 
@@ -41,5 +41,13 @@ describe('referees (file-per-record storage)', () => {
 
     const r1Depois = readRecord<Arbitro>('t1', 'arbitros', 'r1')
     expect(r1Depois?.updatedAt).toBe(r1Antes?.updatedAt)
+  })
+
+  it('applyRemoteArbitro cria um árbitro que só existia em outro PC, preservando o updatedAt remoto', () => {
+    const remoto: Arbitro = { id: 'r9', nome: 'remoto', equipe: 'x', faixa: 'preta', chaveIds: [], createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' }
+    applyRemoteArbitro('t1', remoto)
+    const salvo = readRecord<Arbitro>('t1', 'arbitros', 'r9')
+    expect(salvo?.updatedAt).toBe('2025-01-01T00:00:00.000Z')
+    expect(loadArbitros('t1').map(a => a.id)).toContain('r9')
   })
 })

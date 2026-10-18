@@ -4,7 +4,7 @@ import crypto from 'node:crypto'
 import type { Atleta } from '../src/types/athlete'
 import type { Chave } from '../src/types/bracket'
 import { CATEGORIAS_IBJJF } from '../src/types/category'
-import { listRecords, listAllRecords, readRecord, writeRecord, readTorneioMeta, deleteRecordFile } from './storage/torneioStorage'
+import { listRecords, listAllRecords, readRecord, writeRecord, writeRecordRaw, readTorneioMeta, deleteRecordFile } from './storage/torneioStorage'
 
 function loadAthletes(torneioId: string): Atleta[] {
   const list = listAllRecords<Atleta>(torneioId, 'atletas')
@@ -189,4 +189,9 @@ async function exportAthletes(torneioId: string): Promise<void> {
   }
 }
 
-export { loadAthletes, loadDeletedAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, restoreAthlete, permanentlyDeleteAthlete, permanentlyDeleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes }
+function applyRemoteAtleta(torneioId: string, atleta: Atleta): Atleta[] {
+  writeRecordRaw(torneioId, 'atletas', atleta)
+  return listRecords<Atleta>(torneioId, 'atletas')
+}
+
+export { loadAthletes, loadDeletedAthletes, saveAthlete, updateAthlete, deleteAthlete, deleteAthletes, restoreAthlete, permanentlyDeleteAthlete, permanentlyDeleteAthletes, importAthletesFromFile, openAthleteFileDialog, exportAthletes, applyRemoteAtleta }

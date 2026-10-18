@@ -2,7 +2,7 @@ import { dialog } from 'electron'
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import type { Arbitro } from '../src/types/referee'
-import { loadTorneioCompat as loadTorneio, saveTorneioCompat as saveTorneio } from './storage/torneioStorage'
+import { loadTorneioCompat as loadTorneio, saveTorneioCompat as saveTorneio, writeRecordRaw, listRecords } from './storage/torneioStorage'
 
 function loadArbitros(torneioId: string): Arbitro[] {
   const torneio = loadTorneio(torneioId)
@@ -233,4 +233,9 @@ async function exportArbitros(torneioId: string): Promise<void> {
   }
 }
 
-export { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, restoreArbitro, permanentlyDeleteArbitro, permanentlyDeleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros }
+function applyRemoteArbitro(torneioId: string, arbitro: Arbitro): Arbitro[] {
+  writeRecordRaw(torneioId, 'arbitros', arbitro)
+  return listRecords<Arbitro>(torneioId, 'arbitros')
+}
+
+export { loadArbitros, loadDeletedArbitros, saveArbitro, updateArbitro, deleteArbitro, deleteArbitros, restoreArbitro, permanentlyDeleteArbitro, permanentlyDeleteArbitros, importArbitrosFromFile, openArbitroFileDialog, exportArbitros, applyRemoteArbitro }

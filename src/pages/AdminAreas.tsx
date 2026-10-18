@@ -74,15 +74,19 @@ export function AdminAreas() {
   useEffect(() => {
     if (!torneioId) return;
     const unsubscribe = subscribeAreasFromFirestore(torneioId, async (remoteArea) => {
-      const local = areas.find(a => a.id === remoteArea.id) ?? null;
-      const winner = resolveConflict(local, remoteArea);
-      if (winner === remoteArea) {
-        try {
-          await window.electronAPI.updateArea(winner);
+      try {
+        const [ativas, deletadas] = await Promise.all([
+          window.electronAPI.loadAreas(),
+          window.electronAPI.loadDeletedAreas(),
+        ]);
+        const local = [...ativas, ...deletadas].find(a => a.id === remoteArea.id) ?? null;
+        const winner = resolveConflict(local, remoteArea);
+        if (winner === remoteArea) {
+          await window.electronAPI.applyRemoteArea(winner);
           await loadData();
-        } catch {
-          // ignora — tentativa seguinte de sincronização corrige
         }
+      } catch {
+        // ignora — tentativa seguinte de sincronização corrige
       }
     });
     return unsubscribe;

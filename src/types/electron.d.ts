@@ -42,6 +42,7 @@ interface ElectronAPI {
   permanentlyDeleteAthletes: (ids: string[]) => Promise<Atleta[]>;
   importAthletes: () => Promise<{ imported: number; skipped: number }>;
   exportAthletes: () => Promise<void>;
+  applyRemoteAtleta: (atleta: Atleta) => Promise<Atleta[]>;
   saveArbitro: (data: Omit<Arbitro, 'id' | 'createdAt' | 'updatedAt'>) => Promise<Arbitro>;
   updateArbitro: (data: Arbitro) => Promise<Arbitro>;
   deleteArbitro: (arbitroId: string) => Promise<void>;
@@ -53,6 +54,7 @@ interface ElectronAPI {
   loadDeletedArbitros: () => Promise<Arbitro[]>;
   importArbitros: () => Promise<{ imported: number; skipped: number }>;
   exportArbitros: () => Promise<void>;
+  applyRemoteArbitro: (arbitro: Arbitro) => Promise<Arbitro[]>;
   gerarTodasChaves: (maxAtletas?: number, faixas?: string[], categorias?: string[]) => Promise<{ chaves: Chave[]; metadados: unknown[]; atletasSemChave: Atleta[] }>;
   gerarChave: (data: { categoriaId: string; faixa?: string; atletaIds?: string[]; nome?: string }) => Promise<Chave>;
   loadChaves: () => Promise<Chave[]>;
@@ -73,6 +75,7 @@ interface ElectronAPI {
   permanentlyDeleteAreas: (areaIds: string[]) => Promise<void>;
   importAreas: () => Promise<{ imported: number; skipped: number }>;
   exportAreas: () => Promise<void>;
+  applyRemoteArea: (area: AreaLuta) => Promise<AreaLuta[]>;
   loadChavesPorArea: (areaId: string) => Promise<Chave[]>;
   registrarResultado: (data: {
     chaveId: string;
@@ -99,6 +102,7 @@ interface ElectronAPI {
   permanentlyDeleteLutasCasadas: (ids: string[]) => Promise<void>;
   restoreLutaCasada: (lutaCasadaId: string) => Promise<void>;
   restoreLutasCasadas: (ids: string[]) => Promise<void>;
+  applyRemoteLutaCasada: (lutaCasada: LutaCasada) => Promise<LutaCasada[]>;
   loadCategorias: () => Promise<{ desabilitadas: string[]; customizadas: CategoriaCustomizada[] }>;
   toggleCategoria: (categoriaId: string) => Promise<string[]>;
   saveCategoriaCustomizada: (data: Omit<CategoriaCustomizada, 'id' | 'createdAt' | 'updatedAt'>) => Promise<CategoriaCustomizada>;

@@ -90,15 +90,19 @@ export function AdminLutasCasadas() {
   useEffect(() => {
     if (!torneio?.id) return;
     const unsubscribe = subscribeLutasCasadasFromFirestore(torneio.id, async (remoteLuta) => {
-      const local = lutas.find(l => l.id === remoteLuta.id) ?? null;
-      const winner = resolveConflict(local, remoteLuta);
-      if (winner === remoteLuta) {
-        try {
-          await window.electronAPI.updateLutaCasada(winner);
+      try {
+        const [ativas, deletadas] = await Promise.all([
+          window.electronAPI.loadLutasCasadas(),
+          window.electronAPI.loadDeletedLutasCasadas(),
+        ]);
+        const local = [...ativas, ...deletadas].find(l => l.id === remoteLuta.id) ?? null;
+        const winner = resolveConflict(local, remoteLuta);
+        if (winner === remoteLuta) {
+          await window.electronAPI.applyRemoteLutaCasada(winner);
           await loadList();
-        } catch {
-          // ignora — tentativa seguinte de sincronização corrige
         }
+      } catch {
+        // ignora — tentativa seguinte de sincronização corrige
       }
     });
     return unsubscribe;
