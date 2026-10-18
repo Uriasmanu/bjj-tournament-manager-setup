@@ -126,6 +126,11 @@ export function deleteRecordFile(
   id: string,
   parentPath?: string
 ): void {
+  if (collection === 'chaves' && !parentPath) {
+    const chaveDir = path.join(getCollectionDir(torneioId, collection), id)
+    if (fs.existsSync(chaveDir)) fs.rmSync(chaveDir, { recursive: true, force: true })
+    return
+  }
   const filePath = getRecordPath(torneioId, collection, id, parentPath)
   if (fs.existsSync(filePath)) fs.unlinkSync(filePath)
 }
@@ -227,20 +232,37 @@ function writeRecordIfChanged<T extends StampedRecord>(
   writeRecord(torneioId, collection, record, parentPath)
 }
 
+function pruneRemovedRecords(
+  torneioId: string,
+  collection: string,
+  incoming: StampedRecord[],
+  parentPath?: string
+): void {
+  const incomingIds = new Set(incoming.map(r => r.id))
+  for (const existing of listAllRecords<StampedRecord>(torneioId, collection, parentPath)) {
+    if (!incomingIds.has(existing.id)) deleteRecordFile(torneioId, collection, existing.id, parentPath)
+  }
+}
+
 export function saveTorneioCompat(torneio: Torneio): void {
   const { atletas, arbitros, areas, lutasCasadas, chaves, ...meta } = torneio
   writeTorneioMeta(meta as Torneio)
 
   const byKey: Record<string, StampedRecord[] | undefined> = { atletas, arbitros, areas, lutasCasadas }
   for (const { key, collection } of COMPAT_COLLECTIONS) {
-    for (const record of (byKey[key] as StampedRecord[] | undefined) ?? []) {
+    const records = (byKey[key] as StampedRecord[] | undefined) ?? []
+    pruneRemovedRecords(torneio.id, collection, records)
+    for (const record of records) {
       writeRecordIfChanged(torneio.id, collection, record)
     }
   }
 
-  for (const chave of chaves ?? []) {
-    const { lutas, ...chaveMeta } = chave as unknown as { id: string; lutas?: StampedRecord[] } & Record<string, unknown>
+  const chaveRecords = (chaves ?? []) as unknown as Array<{ id: string; lutas?: StampedRecord[] } & Record<string, unknown>>
+  pruneRemovedRecords(torneio.id, 'chaves', chaveRecords.map(c => ({ id: c.id, updatedAt: '' })))
+  for (const chave of chaveRecords) {
+    const { lutas, ...chaveMeta } = chave
     writeRecordIfChanged(torneio.id, 'chaves', chaveMeta as unknown as StampedRecord)
+    pruneRemovedRecords(torneio.id, 'lutas', lutas ?? [], `chaves/${chaveMeta.id}`)
     for (const luta of lutas ?? []) {
       writeRecordIfChanged(torneio.id, 'lutas', luta, `chaves/${chaveMeta.id}`)
     }

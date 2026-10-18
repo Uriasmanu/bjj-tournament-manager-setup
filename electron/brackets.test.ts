@@ -2,7 +2,8 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { writeTorneioMeta, writeRecord, listRecords } from './storage/torneioStorage'
+import { writeTorneioMeta, writeRecord, listRecords, getTorneioDir } from './storage/torneioStorage'
+import { existsSync } from 'node:fs'
 import type { Atleta } from '../src/types/athlete'
 import type { Luta, Chave } from '../src/types/bracket'
 
@@ -62,5 +63,25 @@ describe('brackets (file-per-record storage)', () => {
     const [lutaAtualizada] = listRecords<Luta>('t1', 'lutas', `chaves/${chave.id}`)
     expect(lutaAtualizada.vencedorId).toBe('a1')
     expect(lutaAtualizada.status).toBe('completed')
+  })
+
+  it('delete-chave remove a pasta da chave e suas lutas do disco', async () => {
+    const chave = await handlers.get('gerar-chave')!({}, { categoriaId: 'manual', atletaIds: ['a1', 'a2'] }) as Chave
+
+    await handlers.get('delete-chave')!({}, chave.id)
+
+    expect(existsSync(`${getTorneioDir('t1')}/chaves/${chave.id}`)).toBe(false)
+    expect(await handlers.get('load-chaves')!({})).toEqual([])
+  })
+
+  it('randomizar-chave não deixa lutas antigas órfãs em disco', async () => {
+    const chave = await handlers.get('gerar-chave')!({}, { categoriaId: 'manual', atletaIds: ['a1', 'a2'] }) as Chave
+    const lutaOriginalId = chave.lutas[0].id
+
+    await handlers.get('randomizar-chave')!({}, { chaveId: chave.id })
+
+    const lutasEmDisco = listRecords<Luta>('t1', 'lutas', `chaves/${chave.id}`)
+    expect(lutasEmDisco.some(l => l.id === lutaOriginalId)).toBe(false)
+    expect(lutasEmDisco).toHaveLength(1)
   })
 })

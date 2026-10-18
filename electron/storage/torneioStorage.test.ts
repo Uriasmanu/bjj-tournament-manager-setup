@@ -12,6 +12,7 @@ import {
   readTorneioMeta,
   loadTorneioCompat,
   saveTorneioCompat,
+  getTorneioDir,
 } from './torneioStorage'
 import type { Torneio } from '../../src/types/tournament'
 
@@ -105,6 +106,45 @@ describe('torneioStorage', () => {
       expect(loaded.lutasCasadas?.map(l => l.id)).toEqual(['lc1'])
       expect(loaded.chaves?.[0]?.id).toBe('c1')
       expect(loaded.chaves?.[0]?.lutas?.map(l => l.id)).toEqual(['l1'])
+    })
+
+    it('remove do disco um atleta que não está mais no array salvo (ex.: exclusão permanente)', () => {
+      saveTorneioCompat({
+        id: 't6', nome: 'Copa', data: '2026-01-01', createdAt: '', updatedAt: '',
+        atletas: [{ id: 'a1', updatedAt: '' }, { id: 'a2', updatedAt: '' }] as unknown as Torneio['atletas'],
+      })
+      saveTorneioCompat({
+        id: 't6', nome: 'Copa', data: '2026-01-01', createdAt: '', updatedAt: '',
+        atletas: [{ id: 'a1', updatedAt: '' }] as unknown as Torneio['atletas'],
+      })
+      expect(loadTorneioCompat('t6').atletas?.map(a => a.id)).toEqual(['a1'])
+    })
+
+    it('remove a pasta inteira de uma chave (e suas lutas) quando ela não está mais no array salvo', () => {
+      saveTorneioCompat({
+        id: 't7', nome: 'Copa', data: '2026-01-01', createdAt: '', updatedAt: '',
+        chaves: [{ id: 'c1', updatedAt: '', lutas: [{ id: 'l1', updatedAt: '' }] }] as unknown as Torneio['chaves'],
+      })
+      saveTorneioCompat({
+        id: 't7', nome: 'Copa', data: '2026-01-01', createdAt: '', updatedAt: '',
+        chaves: [],
+      })
+      const loaded = loadTorneioCompat('t7')
+      expect(loaded.chaves).toEqual([])
+      expect(existsSync(getTorneioDir('t7') + '/chaves/c1')).toBe(false)
+    })
+
+    it('remove lutas antigas de uma chave quando a chave é regravada com ids de luta diferentes (ex.: randomizar)', () => {
+      saveTorneioCompat({
+        id: 't8', nome: 'Copa', data: '2026-01-01', createdAt: '', updatedAt: '',
+        chaves: [{ id: 'c1', updatedAt: '', lutas: [{ id: 'l1', updatedAt: '' }] }] as unknown as Torneio['chaves'],
+      })
+      saveTorneioCompat({
+        id: 't8', nome: 'Copa', data: '2026-01-01', createdAt: '', updatedAt: '',
+        chaves: [{ id: 'c1', updatedAt: '', lutas: [{ id: 'l2', updatedAt: '' }] }] as unknown as Torneio['chaves'],
+      })
+      const loaded = loadTorneioCompat('t8')
+      expect(loaded.chaves?.[0]?.lutas?.map(l => l.id)).toEqual(['l2'])
     })
 
     it('não altera updatedAt de um registro que não mudou entre dois saveTorneioCompat', () => {
