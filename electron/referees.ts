@@ -1,26 +1,8 @@
-import { app, dialog } from 'electron'
-import path from 'node:path'
+import { dialog } from 'electron'
 import fs from 'node:fs'
 import crypto from 'node:crypto'
 import type { Arbitro } from '../src/types/referee'
-import type { Torneio } from '../src/types/tournament'
-
-const DATA_DIR = path.join(app.getPath('userData'), 'data')
-const TORNEIOS_DIR = path.join(DATA_DIR, 'torneios')
-
-function getTorneioPath(torneioId: string): string {
-  return path.join(TORNEIOS_DIR, `${torneioId}.json`)
-}
-
-function loadTorneio(torneioId: string): Torneio {
-  const filePath = getTorneioPath(torneioId)
-  if (!fs.existsSync(filePath)) throw new Error('Torneio não encontrado')
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-}
-
-function saveTorneio(torneio: Torneio): void {
-  fs.writeFileSync(getTorneioPath(torneio.id), JSON.stringify(torneio, null, 2), 'utf-8')
-}
+import { loadTorneioCompat as loadTorneio, saveTorneioCompat as saveTorneio } from './storage/torneioStorage'
 
 function loadArbitros(torneioId: string): Arbitro[] {
   const torneio = loadTorneio(torneioId)

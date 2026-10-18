@@ -7,6 +7,8 @@ import type { Arbitro } from '../types/referee';
 import type { Faixa } from '../types/athlete';
 import { ArbitroForm } from '../components/ArbitroForm';
 import { PageLayout } from '../components/PageLayout';
+import { pushArbitroToFirestore, subscribeArbitrosFromFirestore } from '../services/sync/arbitrosSync';
+import { resolveConflict } from '../services/sync/resolveConflict';
 
 const faixaLabels: Record<Faixa, string> = {
   branca: 'Branca',
@@ -38,6 +40,7 @@ export function AdminArbitros() {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkPermanentOpen, setBulkPermanentOpen] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [torneioId, setTorneioId] = useState<string | null>(null);
   const [formOpened, { open: openForm, close: closeForm }] = useDisclosure(false);
   const [deleteOpened, { open: openDelete, close: closeDelete }] = useDisclosure(false);
   const [permanentOpened, { open: openPermanent, close: closePermanent }] = useDisclosure(false);
@@ -76,6 +79,28 @@ export function AdminArbitros() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDeleted]);
 
+  useEffect(() => {
+    window.electronAPI.getActiveTournament().then(t => setTorneioId(t?.id ?? null)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!torneioId) return;
+    const unsubscribe = subscribeArbitrosFromFirestore(torneioId, async (remoteArbitro) => {
+      const local = arbitros.find(a => a.id === remoteArbitro.id) ?? null;
+      const winner = resolveConflict(local, remoteArbitro);
+      if (winner === remoteArbitro) {
+        try {
+          await window.electronAPI.updateArbitro(winner);
+          await loadList();
+        } catch {
+          // ignora — tentativa seguinte de sincronização corrige
+        }
+      }
+    });
+    return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [torneioId]);
+
   const handleNew = () => {
     setSelectedArbitro(null);
     openForm();
@@ -94,6 +119,7 @@ export function AdminArbitros() {
   const handleRestore = async (arbitro: Arbitro) => {
     try {
       await window.electronAPI.restoreArbitro(arbitro.id);
+      if (torneioId) pushArbitroToFirestore(torneioId, { ...arbitro, deletedAt: null, updatedAt: new Date().toISOString() });
       notifications.show({ title: 'Sucesso', message: 'Árbitro restaurado com sucesso!', color: 'green' });
       await loadList();
     } catch {
@@ -122,15 +148,17 @@ export function AdminArbitros() {
     }
     try {
       if (selectedArbitro) {
-        await window.electronAPI.updateArbitro(arbitro);
+        const salvo = await window.electronAPI.updateArbitro(arbitro);
+        if (torneioId) pushArbitroToFirestore(torneioId, salvo);
         notifications.show({ title: 'Sucesso', message: 'Árbitro atualizado com sucesso!', color: 'green' });
       } else {
-        await window.electronAPI.saveArbitro({
+        const salvo = await window.electronAPI.saveArbitro({
           nome: arbitro.nome,
           equipe: arbitro.equipe,
           faixa: arbitro.faixa,
           chaveIds: arbitro.chaveIds,
         });
+        if (torneioId) pushArbitroToFirestore(torneioId, salvo);
         notifications.show({ title: 'Sucesso', message: 'Árbitro cadastrado com sucesso!', color: 'green' });
       }
       await loadList();
@@ -145,6 +173,7 @@ export function AdminArbitros() {
     if (!deleteTarget) return;
     try {
       await window.electronAPI.deleteArbitro(deleteTarget.id);
+      if (torneioId) pushArbitroToFirestore(torneioId, { ...deleteTarget, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
       closeDelete();
       setDeleteTarget(null);
       notifications.show({ title: 'Sucesso', message: 'Árbitro movido para os deletados.', color: 'green' });
