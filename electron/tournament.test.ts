@@ -72,4 +72,16 @@ describe('tournament (file-per-record storage)', () => {
     expect(active?.nome).toBe('Importado')
     expect(active?.atletas).toHaveLength(1)
   })
+
+  it('list-tournaments não quebra a listagem inteira se um torneio estiver corrompido', async () => {
+    writeTorneioMeta({ id: 't1', nome: 'Copa Boa', data: '2026-01-01', createdAt: '', updatedAt: '' })
+    const { mkdirSync, writeFileSync } = await import('node:fs')
+    const corruptDir = path.join(dataDir, 'data', 'torneios', 't-corrompido')
+    mkdirSync(corruptDir, { recursive: true })
+    writeFileSync(path.join(corruptDir, '_torneio.json'), '{ json invalido')
+
+    const list = await handlers.get('list-tournaments')!({}) as Torneio[]
+
+    expect(list.map(t => t.id)).toEqual(['t1'])
+  })
 })

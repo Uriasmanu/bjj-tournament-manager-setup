@@ -24,10 +24,17 @@ describe('resolveConflict', () => {
     expect(resolveConflict(null, null)).toBeNull()
   })
 
-  it('trata updatedAt ausente ou inválido como a data mais antiga possível', () => {
+  it('trata updatedAt ausente como a data mais antiga possível', () => {
     const semData: { id: string; updatedAt?: string } = { id: 'a' }
     const comData = { id: 'a', updatedAt: '2026-01-01T00:00:00.000Z' }
     expect(resolveConflict(semData, comData)).toBe(comData)
     expect(resolveConflict(comData, semData)).toBe(comData)
+  })
+
+  it('trata updatedAt com texto inválido (não parseável como data) como a data mais antiga possível', () => {
+    const invalido = { id: 'a', updatedAt: 'não é uma data' }
+    const valido = { id: 'a', updatedAt: '2026-01-01T00:00:00.000Z' }
+    expect(resolveConflict(invalido, valido)).toBe(valido)
+    expect(resolveConflict(valido, invalido)).toBe(valido)
   })
 })

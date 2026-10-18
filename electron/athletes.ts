@@ -8,8 +8,8 @@ import { listRecords, listAllRecords, readRecord, writeRecord, readTorneioMeta, 
 
 function loadAthletes(torneioId: string): Atleta[] {
   const list = listAllRecords<Atleta>(torneioId, 'atletas')
-  let modified = false
   for (const a of list) {
+    let modified = false
     if (!a.id) {
       a.id = crypto.randomUUID()
       modified = true
@@ -22,9 +22,7 @@ function loadAthletes(torneioId: string): Atleta[] {
       a.deletedAt = null
       modified = true
     }
-  }
-  if (modified) {
-    for (const a of list) writeRecord(torneioId, 'atletas', a)
+    if (modified) writeRecord(torneioId, 'atletas', a)
   }
   return list.filter(a => a.deletedAt == null)
 }

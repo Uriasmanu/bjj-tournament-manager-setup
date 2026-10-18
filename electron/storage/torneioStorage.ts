@@ -1,4 +1,5 @@
 import { app } from 'electron'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import type { Torneio } from '../../src/types/tournament'
@@ -167,6 +168,7 @@ export function migrateLegacyTorneioIfNeeded(torneioId: string): void {
   for (const { key, collection } of LEGACY_COLLECTIONS) {
     const list = (legacy[key] as StampedRecord[] | undefined) ?? []
     for (const record of list) {
+      if (!record.id) record.id = crypto.randomUUID()
       atomicWriteFile(
         getRecordPath(torneioId, collection, record.id),
         JSON.stringify(record, null, 2)
@@ -176,11 +178,13 @@ export function migrateLegacyTorneioIfNeeded(torneioId: string): void {
 
   for (const chave of chaves ?? []) {
     const { lutas, ...chaveMeta } = chave as unknown as { id: string; lutas?: StampedRecord[] } & Record<string, unknown>
+    if (!chaveMeta.id) chaveMeta.id = crypto.randomUUID()
     atomicWriteFile(
       getRecordPath(torneioId, 'chaves', chaveMeta.id),
       JSON.stringify(chaveMeta, null, 2)
     )
     for (const luta of lutas ?? []) {
+      if (!luta.id) luta.id = crypto.randomUUID()
       atomicWriteFile(
         getRecordPath(torneioId, 'lutas', luta.id, `chaves/${chaveMeta.id}`),
         JSON.stringify(luta, null, 2)
@@ -216,8 +220,20 @@ export function loadTorneioCompat(torneioId: string): Torneio {
   } as Torneio
 }
 
+function sortKeysDeep(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortKeysDeep)
+  if (value && typeof value === 'object') {
+    const sorted: Record<string, unknown> = {}
+    for (const key of Object.keys(value as Record<string, unknown>).sort()) {
+      sorted[key] = sortKeysDeep((value as Record<string, unknown>)[key])
+    }
+    return sorted
+  }
+  return value
+}
+
 function sameRecordIgnoringUpdatedAt(a: unknown, b: unknown): boolean {
-  const strip = (x: unknown) => JSON.stringify(x, (key, value) => (key === 'updatedAt' ? undefined : value))
+  const strip = (x: unknown) => JSON.stringify(sortKeysDeep(x), (key, value) => (key === 'updatedAt' ? undefined : value))
   return strip(a) === strip(b)
 }
 

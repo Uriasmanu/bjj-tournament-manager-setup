@@ -161,10 +161,16 @@ export function registerTournamentHandlers(): void {
 
   ipcMain.handle('list-tournaments', (): Torneio[] => {
     ensureDirs();
-    return listTournamentIds().map(id => {
-      migrateLegacyTorneioIfNeeded(id);
-      return readTorneioMeta(id);
-    });
+    const result: Torneio[] = [];
+    for (const id of listTournamentIds()) {
+      try {
+        migrateLegacyTorneioIfNeeded(id);
+        result.push(readTorneioMeta(id));
+      } catch (err) {
+        console.error(`[tournament] torneio '${id}' corrompido ou ilegível, ignorando na listagem:`, err);
+      }
+    }
+    return result;
   });
 
   ipcMain.handle('start-tournament', (_event, payload: { id: string; mode: 'admin' | 'area' }): Torneio => {

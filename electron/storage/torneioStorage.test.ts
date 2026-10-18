@@ -80,6 +80,22 @@ describe('torneioStorage', () => {
     expect(existsSync(path.join(legacyDir, 't1.json'))).toBe(false)
   })
 
+  it('migrateLegacyTorneioIfNeeded atribui um id a registros legados sem id, em vez de colidir em um arquivo só', () => {
+    const legacyDir = path.join(dataDir, 'torneios')
+    mkdirSync(legacyDir, { recursive: true })
+    writeFileSync(path.join(legacyDir, 't9.json'), JSON.stringify({
+      id: 't9', nome: 'Copa', data: '2026-01-01', createdAt: '', updatedAt: '',
+      atletas: [{ nome: 'joao', updatedAt: '' }, { nome: 'pedro', updatedAt: '' }],
+    }))
+
+    migrateLegacyTorneioIfNeeded('t9')
+
+    const atletas = listRecords<TestRecord>('t9', 'atletas')
+    expect(atletas).toHaveLength(2)
+    expect(new Set(atletas.map(a => a.id)).size).toBe(2)
+    expect(atletas.every(a => !!a.id)).toBe(true)
+  })
+
   it('migrateLegacyTorneioIfNeeded não faz nada se já está no formato novo', () => {
     writeRecord<TestRecord>('t2', 'atletas', { id: 'a1', updatedAt: '' })
     migrateLegacyTorneioIfNeeded('t2') // não deve lançar nem apagar nada
@@ -145,6 +161,22 @@ describe('torneioStorage', () => {
       })
       const loaded = loadTorneioCompat('t8')
       expect(loaded.chaves?.[0]?.lutas?.map(l => l.id)).toEqual(['l2'])
+    })
+
+    it('não altera updatedAt quando o registro é logicamente igual mas as chaves vêm em outra ordem (ex.: normalizeLutaCasada reconstrói o objeto)', () => {
+      saveTorneioCompat({
+        id: 't10', nome: 'Copa', data: '2026-01-01', createdAt: '', updatedAt: '',
+        lutasCasadas: [{ id: 'lc1', areaId: 'a1', arbitroId: null, updatedAt: '' }] as unknown as Torneio['lutasCasadas'],
+      })
+      const antes = readRecord<TestRecord>('t10', 'lutasCasadas', 'lc1')
+
+      saveTorneioCompat({
+        id: 't10', nome: 'Copa', data: '2026-01-01', createdAt: '', updatedAt: '',
+        lutasCasadas: [{ arbitroId: null, id: 'lc1', updatedAt: '', areaId: 'a1' }] as unknown as Torneio['lutasCasadas'],
+      })
+      const depois = readRecord<TestRecord>('t10', 'lutasCasadas', 'lc1')
+
+      expect(depois?.updatedAt).toBe(antes?.updatedAt)
     })
 
     it('não altera updatedAt de um registro que não mudou entre dois saveTorneioCompat', () => {
